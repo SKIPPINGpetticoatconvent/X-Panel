@@ -1,6 +1,6 @@
 module x-ui
 
-go 1.25.2
+go 1.25.3
 
 replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20250503011706-39ed1f5ac29c
 
