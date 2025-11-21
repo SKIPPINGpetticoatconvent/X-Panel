@@ -98,7 +98,7 @@ jobs:
     - name: Run Govulncheck
       run: |
         go install golang.org/x/vuln/cmd/govulncheck@latest
-        govulncheck ./...
+        govulncheck -format sarif ./... > govulncheck-report.sarif
 
     - name: Upload SARIF file
       if: always()
