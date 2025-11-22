@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"regexp"
 	"text/template"
 	"time"
 
@@ -61,6 +62,18 @@ func (a *IndexController) login(c *gin.Context) {
 	}
 	if form.Password == "" {
 		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.emptyPassword"))
+		return
+	}
+	if len(form.Username) < 6 {
+		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.usernameTooShort"))
+		return
+	}
+	if len(form.Password) < 6 {
+		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.passwordTooShort"))
+		return
+	}
+	if !regexp.MatchString("^[a-zA-Z0-9_]+$", form.Username) {
+		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.invalidUsernameFormat"))
 		return
 	}
 
