@@ -36,12 +36,15 @@ func GetName() string {
 
 func GetLogLevel() LogLevel {
 	if IsDebug() {
+		fmt.Printf("DEBUG: XUI_DEBUG is set to true, using Debug log level\n")
 		return Debug
 	}
 	logLevel := os.Getenv("XUI_LOG_LEVEL")
 	if logLevel == "" {
+		fmt.Printf("DEBUG: XUI_LOG_LEVEL not set, using default Info log level\n")
 		return Info
 	}
+	fmt.Printf("DEBUG: XUI_LOG_LEVEL set to: %s\n", logLevel)
 	return LogLevel(logLevel)
 }
 

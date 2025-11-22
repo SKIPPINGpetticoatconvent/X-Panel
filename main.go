@@ -30,8 +30,10 @@ import (
 
 // runWebServer 是【设备限制】项目的主执行函数
 func runWebServer() {
+	log.Printf("DEBUG: Calling config.GetName() and config.GetVersion()")
 	log.Printf("Starting %v %v", config.GetName(), config.GetVersion())
 
+	log.Printf("DEBUG: Calling config.GetLogLevel()")
 	switch config.GetLogLevel() {
 	case config.Debug:
 		logger.InitLogger(logging.DEBUG)
@@ -44,14 +46,15 @@ func runWebServer() {
 	case config.Error:
 		logger.InitLogger(logging.ERROR)
 	default:
-		log.Fatalf("Unknown log level: %v", config.GetLogLevel())
+		logger.Warningf("Unknown log level: %v, using default Info level", config.GetLogLevel())
+		logger.InitLogger(logging.INFO)
 	}
 
 	godotenv.Load()
 
 	err := database.InitDB(config.GetDBPath())
 	if err != nil {
-		log.Fatalf("Error initializing database: %v", err)
+		logger.Warningf("Error initializing database: %v, continuing with default settings", err)
 	}
 
 	// 〔中文注释〕: 1. 初始化所有需要的服务实例
@@ -535,6 +538,7 @@ func migrateDb() {
 }
 
 func main() {
+	logger.Info(fmt.Sprintf("Starting main function with arguments: %v", os.Args))
 	if len(os.Args) < 2 {
 		runWebServer()
 		return
@@ -589,7 +593,10 @@ func main() {
 		fmt.Println("    setting        set settings")
 	}
 
+	// Add debug logging before flag.Parse() to diagnose exit code 2
+	logger.Info("About to parse command line flags...")
 	flag.Parse()
+	logger.Info("Command line flags parsed successfully")
 	if showVersion {
 		fmt.Println(config.GetVersion())
 		return
@@ -597,20 +604,27 @@ func main() {
 
 	switch os.Args[1] {
 	case "run":
+		logger.Info("Parsing 'run' subcommand flags...")
 		err := runCmd.Parse(os.Args[2:])
 		if err != nil {
+			logger.Errorf("Error parsing 'run' subcommand flags: %v", err)
 			fmt.Println(err)
 			return
 		}
+		logger.Info("'run' subcommand flags parsed successfully")
 		runWebServer()
 	case "migrate":
+		logger.Info("Executing 'migrate' command")
 		migrateDb()
 	case "setting":
+		logger.Info("Parsing 'setting' subcommand flags...")
 		err := settingCmd.Parse(os.Args[2:])
 		if err != nil {
+			logger.Errorf("Error parsing 'setting' subcommand flags: %v", err)
 			fmt.Println(err)
 			return
 		}
+		logger.Info("'setting' subcommand flags parsed successfully")
 		if reset {
 			resetSetting()
 		} else {
