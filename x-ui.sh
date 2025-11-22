@@ -211,6 +211,120 @@ custom_version() {
     eval $install_command
 }
 
+# Function to validate domain NS records for Cloudflare
+validate_domain_ns() {
+    local domain=$1
+    local cf_ns_servers=("ns.cloudflare.com" "ns2.cloudflare.com" "ns3.cloudflare.com" "ns4.cloudflare.com")
+
+    LOGI "正在验证域名 ${domain} 的 NS 记录..."
+
+    # Get NS records for the domain
+    local ns_records=$(dig NS "${domain}" +short 2>/dev/null | tr '[:upper:]' '[:lower:]')
+
+    if [[ -z "$ns_records" ]]; then
+        LOGE "无法获取域名 ${domain} 的 NS 记录，请检查域名配置"
+        return 1
+    fi
+
+    LOGD "域名 ${domain} 的 NS 记录: ${ns_records}"
+
+    # Check if any NS record points to Cloudflare
+    local found_cf_ns=false
+    for ns in $ns_records; do
+        for cf_ns in "${cf_ns_servers[@]}"; do
+            if [[ "$ns" == *"$cf_ns"* ]]; then
+                found_cf_ns=true
+                break 2
+            fi
+        done
+    done
+
+    if [[ "$found_cf_ns" == "true" ]]; then
+        LOGI "域名 ${domain} 已正确托管在 Cloudflare 上"
+        return 0
+    else
+        LOGE "域名 ${domain} 未托管在 Cloudflare 上"
+        LOGE "请确认以下步骤："
+        LOGE "1. 在 Cloudflare 控制台添加域名"
+        LOGE "2. 将域名的 NS 记录更新为 Cloudflare 提供的 NS 服务器"
+        LOGE "3. 等待 DNS 传播完成（可能需要几分钟到几小时）"
+        return 1
+    fi
+}
+
+# Function to test Cloudflare API permissions
+test_cf_api_permissions() {
+    local cf_email=$1
+    local cf_key=$2
+    local domain=$3
+
+    LOGI "正在测试 Cloudflare API 权限..."
+
+    # Test API key by getting zone information
+    local zone_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=${domain}" \
+        -H "X-Auth-Email: ${cf_email}" \
+        -H "X-Auth-Key: ${cf_key}" \
+        -H "Content-Type: application/json")
+
+    # Check if API call was successful
+    if [[ $? -ne 0 ]]; then
+        LOGE "Cloudflare API 调用失败，请检查网络连接"
+        return 1
+    fi
+
+    # Check API response
+    local success=$(echo "$zone_response" | jq -r '.success' 2>/dev/null)
+    if [[ "$success" != "true" ]]; then
+        local errors=$(echo "$zone_response" | jq -r '.errors[].message' 2>/dev/null)
+        LOGE "Cloudflare API 权限验证失败: $errors"
+        LOGE "请确认："
+        LOGE "1. API 密钥正确"
+        LOGE "2. API 密钥具有 DNS 编辑权限"
+        LOGE "3. 域名已在 Cloudflare 中添加"
+        return 1
+    fi
+
+    # Check if zone exists and API key has permissions
+    local zone_count=$(echo "$zone_response" | jq -r '.result | length')
+    if [[ "$zone_count" -eq 0 ]]; then
+        LOGE "在 Cloudflare 账户中未找到域名 ${domain}"
+        LOGE "请确认域名已添加到 Cloudflare 控制台"
+        return 1
+    fi
+
+    # Get zone ID and verify permissions
+    local zone_id=$(echo "$zone_response" | jq -r '.result[0].id')
+    local zone_name=$(echo "$zone_response" | jq -r '.result[0].name')
+
+    LOGI "成功连接到 Cloudflare 区域: ${zone_name} (ID: ${zone_id})"
+
+    # Test DNS record creation permission (create a test TXT record)
+    local test_record_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records" \
+        -H "X-Auth-Email: ${cf_email}" \
+        -H "X-Auth-Key: ${cf_key}" \
+        -H "Content-Type: application/json" \
+        --data "{\"type\":\"TXT\",\"name\":\"_acme-challenge-test.${domain}\",\"content\":\"test-record-for-permissions\",\"ttl\":120}")
+
+    local test_success=$(echo "$test_record_response" | jq -r '.success' 2>/dev/null)
+    if [[ "$test_success" != "true" ]]; then
+        local test_errors=$(echo "$test_record_response" | jq -r '.errors[].message' 2>/dev/null)
+        LOGE "Cloudflare API DNS 权限测试失败: $test_errors"
+        LOGE "请确认 API 密钥具有 DNS 编辑权限"
+        return 1
+    fi
+
+    # Clean up test record
+    local test_record_id=$(echo "$test_record_response" | jq -r '.result.id')
+    if [[ -n "$test_record_id" ]]; then
+        curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records/${test_record_id}" \
+            -H "X-Auth-Email: ${cf_email}" \
+            -H "X-Auth-Key: ${cf_key}" >/dev/null 2>&1
+    fi
+
+    LOGI "Cloudflare API 权限验证成功"
+    return 0
+}
+
 # Function to handle the deletion of the script file
 delete_script() {
     rm "$0"  # Remove the script file itself
