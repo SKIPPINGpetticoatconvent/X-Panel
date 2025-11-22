@@ -1,36 +1,3 @@
-<p align="center"><a href="#"><img src="./media/X-Panel.png" alt="Image"></a></p>
-
-**---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
-
-
-[![](https://img.shields.io/github/v/release/xeefei/x-panel.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xeefei/x-panel/release.yml.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xeefei/x-panel.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/xeefei/x-panel/total.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/releases/latest)
-[![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-
-> **声明：** 此项目仅供个人学习、交流使用，请遵守当地法律法规，勿用于非法用途；请勿用于生产环境。
-
-> **注意：** 在使用此项目和〔教程〕过程中，若因违反以上声明使用规则而产生的一切后果由使用者自负。
-
-**如果此项目对你有用，请给一个**:star2:
-
-<p align="left">
-  <a href="https://buymeacoffee.com/xeefeiz" target="_blank">
-    <img src="./media/buymeacoffe.png" alt="Image">
-  </a>
-</p>
-
-- “支持项目”赞助地址（USDT）：
-- TRC20 ---->>> `TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ`
-- Polygon ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
-- Solana ---->>> `7qVEZuV98QTDN5qUmsFwvqTSvkYpmLtNf8o1sh1mppwR`
-- BSC/BEP20 ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
-
-## [【X-Panel面板】交流群：https://t.me/XUI_CN](https://t.me/XUI_CN)
-## [【X-Panel面板】详细安装流程步骤：https://xeefei.blogspot.com/2025/09/x-panel.html](https://xeefei.blogspot.com/2025/09/x-panel.html)
-
-------------
 ## ✰〔X-Panel面板〕跟原版3X-UI的区别？✰
 ### 大部分功能基于原版3X-UI进行汉化优化，主要的优化内容如下：
 #### 1、最大限度地汉化了面板项目，更适合中文宝宝的体质，包括：
