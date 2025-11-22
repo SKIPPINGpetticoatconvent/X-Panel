@@ -1923,13 +1923,13 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				}	
 	        }() // 异步执行结束
 					
-			// 〔中文注释〕: 记录中奖结果 (调用在 database 中实现的函数)。
-			err := database.RecordUserWin(userID, prize)
-			if err != nil {
-				logger.Warningf("记录用户 %d 中奖信息失败: %v", userID, err)
-				// 〔中文注释〕: 即使记录失败，也要告知用户中奖了，但提示管理员后台可能出错了。
-				finalMessage += "\n\n(后台警告：数据库记录失败，请管理员手动核实给予兑奖)"
-			}
+			// 〔中文注释〕: 抽奖功能已清理，此处代码已移除。
+			// err := database.RecordUserWin(userID, prize)
+			// if err != nil {
+			//     logger.Warningf("记录用户 %d 中奖信息失败: %v", userID, err)
+			//     // 〔中文注释〕: 即使记录失败，也要告知用户中奖了，但提示管理员后台可能出错了。
+			//     finalMessage += "\n\n(后台警告：数据库记录失败，请管理员手动核实给予兑奖)"
+			// }
 			// 〔中文注释〕: 编辑原消息，显示最终的中奖结果。
 				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), finalMessage)
 			} else {
