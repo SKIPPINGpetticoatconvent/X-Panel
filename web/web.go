@@ -116,8 +116,8 @@ type Server struct {
 	panel  *controller.XUIController
 	api    *controller.APIController
 
-	xrayService    service.XrayService
-	settingService service.SettingService
+	xrayService    *service.XrayService
+	settingService *service.SettingService
 	tgbotService    service.TelegramService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService  service.ServerService
