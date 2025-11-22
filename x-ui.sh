@@ -1014,13 +1014,13 @@ ssl_cert_issue_main() {
             echo "$domains" 
             read -rp "请选择要为面板设置路径的域名：" domain 
  
-            if echo "$domains" | grep -qw "$domain"; then 
-                local webCertFile="/root/cert/${domain}/fullchain.pem" 
-                local webKeyFile="/root/cert/${domain}/privkey.pem" 
- 
-                if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then 
-                    /usr/local/x-ui/x-ui setting -setCert "$webCertFile" "$webKeyFile"
-                    echo "已为域名设置面板路径：$domain" 
+            if echo "$domains" | grep -qw "$domain"; then
+                local webCertFile="/root/cert/${domain}/fullchain.pem"
+                local webKeyFile="/root/cert/${domain}/privkey.pem"
+
+                if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then
+                    /usr/local/x-ui/x-ui setting -webCert "$webCertFile" -webCertKey "$webKeyFile"
+                    echo "已为域名设置面板路径：$domain"
                     echo "  - 证书文件：$webCertFile" 
                     echo "  - 私钥文件：$webKeyFile" 
                     restart 
@@ -1183,7 +1183,7 @@ ssl_cert_issue() {
      local webKeyFile="/root/cert/${domain}/privkey.pem"
 
      if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-         /usr/local/x-ui/x-ui setting -setCert "$webCertFile" "$webKeyFile"
+         /usr/local/x-ui/x-ui setting -webCert "$webCertFile" -webCertKey "$webKeyFile"
          LOGI "已为域名设置面板路径: $domain"
          echo ""
          LOGI "  - 证书文件: $webCertFile"
@@ -1323,7 +1323,7 @@ ssl_cert_issue_CF() {
          local webKeyFile="${certPath}/privkey.pem"
 
          if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-             /usr/local/x-ui/x-ui setting -setCert "$webCertFile" "$webKeyFile"
+             /usr/local/x-ui/x-ui setting -webCert "$webCertFile" -webCertKey "$webKeyFile"
              if [[ $? == 0 ]]; then
                  LOGI "已为域名设置面板路径: $CF_Domain"
                  echo ""
