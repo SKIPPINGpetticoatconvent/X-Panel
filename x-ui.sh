@@ -430,8 +430,8 @@ check_config() {
     v6=$(curl -s6m8 http://ip.sb -k)
     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
@@ -1019,7 +1019,7 @@ ssl_cert_issue_main() {
                 local webKeyFile="/root/cert/${domain}/privkey.pem" 
  
                 if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then 
-                    /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+                    /usr/local/x-ui/x-ui setting -setCert "$webCertFile" "$webKeyFile"
                     echo "已为域名设置面板路径：$domain" 
                     echo "  - 证书文件：$webCertFile" 
                     echo "  - 私钥文件：$webKeyFile" 
@@ -1183,7 +1183,7 @@ ssl_cert_issue() {
      local webKeyFile="/root/cert/${domain}/privkey.pem"
 
      if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-         /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+         /usr/local/x-ui/x-ui setting -setCert "$webCertFile" "$webKeyFile"
          LOGI "已为域名设置面板路径: $domain"
          echo ""
          LOGI "  - 证书文件: $webCertFile"
@@ -1323,17 +1323,21 @@ ssl_cert_issue_CF() {
          local webKeyFile="${certPath}/privkey.pem"
 
          if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
-             LOGI "已为域名设置面板路径: $CF_Domain"
-             echo ""
-             LOGI "  - 证书文件: $webCertFile"
-             LOGI "  - 私钥文件: $webKeyFile"
-             echo ""
-             echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}"
-             echo ""
-             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
-             echo ""
-             restart
+             /usr/local/x-ui/x-ui setting -setCert "$webCertFile" "$webKeyFile"
+             if [[ $? == 0 ]]; then
+                 LOGI "已为域名设置面板路径: $CF_Domain"
+                 echo ""
+                 LOGI "  - 证书文件: $webCertFile"
+                 LOGI "  - 私钥文件: $webKeyFile"
+                 echo ""
+                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+                 echo ""
+                 echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
+                 echo ""
+                 restart
+             else
+                 LOGE "设置证书失败，请检查证书文件路径和权限"
+             fi
          else
              LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。"
          fi
@@ -1382,8 +1386,8 @@ echo -e "5. 可直观在前端页面配置订阅"
 echo -e "作者：〔X-Panel面板〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
     echo -e "${green}面板已安装证书采用SSL保护${plain}"
@@ -1418,10 +1422,11 @@ fi
 
 # --------- 拷贝X-Panel已有证书到 Nginx ----------
 mkdir -p /etc/nginx/ssl
-acme_path="/root/.acme.sh/${domain}_ecc"
+cert_path="$existing_cert"
+key_path="$existing_key"
 
-cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
-cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
+cp "$cert_path" "/etc/nginx/ssl/${domain}.cer"
+cp "$key_path" "/etc/nginx/ssl/${domain}.key"
 
 
 # --------- 配置 Nginx 反向代理 ----------
