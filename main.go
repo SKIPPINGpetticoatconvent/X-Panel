@@ -56,8 +56,8 @@ func runWebServer() {
 
 	// 〔中文注释〕: 1. 初始化所有需要的服务实例
 	xrayService := &service.XrayService{}
-	settingService := service.SettingService{}
-	serverService := service.ServerService{}
+	settingService := &service.SettingService{}
+	serverService := &service.ServerService{}
 	// 还需要 InboundService 等，按需添加
 	inboundService := service.InboundService{}
 	lastStatus := service.Status{}
@@ -157,7 +157,7 @@ func runWebServer() {
 		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
 		for {
 			<-ticker.C
-			checkJob.Run()
+			statsJob.Run()
 		}
 	}()
 
