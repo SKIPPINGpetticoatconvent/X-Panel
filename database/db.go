@@ -21,10 +21,6 @@ import (
 
 var db *gorm.DB
 
-const (
-	defaultUsername = "admin"
-	defaultPassword = "admin"
-)
 
 func initModels() error {
 	models := []any{
@@ -42,29 +38,6 @@ func initModels() error {
 			log.Printf("Error auto migrating model: %v", err)
 			return err
 		}
-	}
-	return nil
-}
-
-func initUser() error {
-	empty, err := isTableEmpty("users")
-	if err != nil {
-		log.Printf("Error checking if users table is empty: %v", err)
-		return err
-	}
-	if empty {
-		hashedPassword, err := crypto.HashPasswordAsBcrypt(defaultPassword)
-
-		if err != nil {
-			log.Printf("Error hashing default password: %v", err)
-			return err
-		}
-
-		user := &model.User{
-			Username: defaultUsername,
-			Password: hashedPassword,
-		}
-		return db.Create(user).Error
 	}
 	return nil
 }
@@ -142,8 +115,7 @@ func InitDB(dbPath string) error {
 	}
 
 	isUsersEmpty, err := isTableEmpty("users")
-
-	if err := initUser(); err != nil {
+	if err != nil {
 		return err
 	}
 	return runSeeders(isUsersEmpty)
