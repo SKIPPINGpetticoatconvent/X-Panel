@@ -112,7 +112,7 @@ apt update -y&&apt install -y curl&&apt install -y socat
 若要安装指定的版本，请使用以下安装命令。 e.g., ver `v25.10.25`:
 
 ```
-VERSION=v25.10.25 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-panel/$VERSION/install.sh") $VERSION
+VERSION=v25.10.25 && bash <(curl -Ls "https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/$VERSION/install.sh") $VERSION
 ```
 ------------
 ## 若你的VPS默认有防火墙，请在安装完成之后放行指定端口
@@ -387,7 +387,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xeefei/x-panel/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. 下载压缩包后，执行以下命令安装或升级 x-ui：
@@ -438,7 +438,7 @@ systemctl restart x-ui
 2. **克隆项目仓库**
 
    ```sh
-   git clone https://github.com/xeefei/x-panel.git
+   git clone https://github.com/SKIPPINGpetticoatconvent/X-Panel.git
    cd x-panel
    ```
 
@@ -460,7 +460,7 @@ systemctl restart x-ui
       --network=host \
       --restart=unless-stopped \
       --name x-panel \
-      ghcr.io/xeefei/x-panel:latest
+      ghcr.io/SKIPPINGpetticoatconvent/X-Panel:latest
    ```
 
 4. **更新至最新版本**
@@ -821,4 +821,4 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 ------------
 ## Star 趋势
 
-[![Stargazers over time](https://starchart.cc/xeefei/x-panel.svg)](https://starchart.cc/xeefei/x-panel)
+[![Stargazers over time](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
