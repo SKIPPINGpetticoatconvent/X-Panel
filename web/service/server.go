@@ -1013,6 +1013,19 @@ func (s *ServerService) InstallSubconverter() error {
             ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
         }
 
+        // 【改进】: 在安装前再次验证证书文件
+        certResult, certErr := s.ValidateCertFiles()
+        if certErr != nil {
+            logger.Warningf("安装前证书验证失败: %v", certErr)
+        } else if !certResult["valid"].(bool) {
+            logger.Warningf("安装前证书验证发现问题: %s", certResult["message"].(string))
+            // 记录警告但不中断安装流程
+            certWarning := fmt.Sprintf("⚠️ **证书状态警告**\n\n安装前证书验证发现问题：%s\n\n安装将继续进行，但建议检查证书配置。\n\n", certResult["message"].(string))
+            if s.tgService != nil && s.tgService.IsRunning() {
+                s.tgService.SendMessage(certWarning)
+            }
+        }
+
 		// 〔中文注释〕: 检查全局的 TgBot 实例是否存在并且正在运行
 		if s.tgService == nil || !s.tgService.IsRunning() {
 			logger.Warning("TgBot 未运行，无法发送【订阅转换】状态通知。")
@@ -1045,8 +1058,17 @@ func (s *ServerService) InstallSubconverter() error {
 
 		if err != nil {
 			if s.tgService != nil && s.tgService.IsRunning() {
-				// 构造失败消息
-				message := fmt.Sprintf("❌ **订阅转换安装失败**！\n\n**错误信息**: %v\n**输出**: %s", err, string(output))
+				// 【改进】: 区分超时和其他错误，提供针对性解决方案
+				var errorType string
+				var suggestions string
+				if ctx.Err() == context.DeadlineExceeded {
+					errorType = "安装超时"
+					suggestions = "\n• 网络连接缓慢\n• 系统资源不足\n• 依赖下载时间过长\n\n**建议**: 检查网络连接，重试安装，或联系技术支持。"
+				} else {
+					errorType = "安装失败"
+					suggestions = "\n• 网络连接问题\n• 系统权限不足\n• 依赖包安装失败\n• 磁盘空间不足\n\n**建议**: 检查系统日志，确认网络连接和磁盘空间。"
+				}
+				message := fmt.Sprintf("❌ **订阅转换%s**！\n\n**错误信息**: %v%s\n\n**最后输出**: %s", errorType, err, suggestions, string(output))
 				s.tgService.SendMessage(message)
 			}
 			logger.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
@@ -1084,6 +1106,21 @@ func (s *ServerService) InstallSubconverter() error {
 			}
 
 			logger.Info("订阅转换安装成功。")
+
+			// 【改进】: 安装成功后进行最终证书验证
+			finalCertResult, finalCertErr := s.ValidateCertFiles()
+			if finalCertErr != nil {
+				logger.Warningf("安装后证书验证失败: %v", finalCertErr)
+			} else if !finalCertResult["valid"].(bool) {
+				logger.Warningf("安装后证书验证发现问题: %s", finalCertResult["message"].(string))
+				if s.tgService != nil && s.tgService.IsRunning() {
+					warningMsg := fmt.Sprintf("⚠️ **安装成功但证书异常**\n\n订阅转换已安装但证书验证发现问题：%s\n\n请检查证书配置以确保服务正常运行。", finalCertResult["message"].(string))
+					s.tgService.SendMessage(warningMsg)
+				}
+			} else {
+				logger.Info("安装后证书验证通过")
+			}
+
 			return
 		}
 	}()
@@ -1253,6 +1290,71 @@ func (s *ServerService) OpenPort(port string) {
 	}()
 }
 
+// 【新增API】: 验证证书文件是否存在且有效
+// 这个函数用于检查订阅转换模块所需的证书文件是否可用
+func (s *ServerService) ValidateCertFiles() (map[string]interface{}, error) {
+	result := map[string]interface{}{
+		"valid": false,
+		"message": "",
+		"details": map[string]interface{}{
+			"certExists": false,
+			"keyExists": false,
+			"certValid": false,
+			"keyValid": false,
+		},
+	}
+
+	// 获取订阅证书文件路径
+	settingService := SettingService{}
+	certFile, err := settingService.GetSubCertFile()
+	if err != nil {
+		result["message"] = fmt.Sprintf("获取证书文件路径失败: %v", err)
+		return result, nil
+	}
+
+	keyFile, err := settingService.GetSubKeyFile()
+	if err != nil {
+		result["message"] = fmt.Sprintf("获取私钥文件路径失败: %v", err)
+		return result, nil
+	}
+
+	// 检查文件是否存在
+	if certFile != "" {
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			result["message"] = fmt.Sprintf("证书文件不存在: %s", certFile)
+			return result, nil
+		}
+		result["details"].(map[string]interface{})["certExists"] = true
+	}
+
+	if keyFile != "" {
+		if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+			result["message"] = fmt.Sprintf("私钥文件不存在: %s", keyFile)
+			return result, nil
+		}
+		result["details"].(map[string]interface{})["keyExists"] = true
+	}
+
+	// 如果证书文件都存在，验证证书内容
+	if certFile != "" && keyFile != "" {
+		_, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			result["message"] = fmt.Sprintf("证书验证失败: %v", err)
+			result["details"].(map[string]interface{})["certValid"] = false
+			result["details"].(map[string]interface{})["keyValid"] = false
+			return result, nil
+		}
+		result["details"].(map[string]interface{})["certValid"] = true
+		result["details"].(map[string]interface{})["keyValid"] = true
+		result["valid"] = true
+		result["message"] = "证书文件有效"
+	} else {
+		result["message"] = "证书文件路径未配置"
+	}
+
+	return result, nil
+}
+
 // 〔中文注释〕: 【新增函数】 - 重启面板服务
 // 这个函数会执行 /usr/bin/x-ui restart 命令来重启整个面板服务。
 func (s *ServerService) RestartPanel() error {
@@ -1265,7 +1367,7 @@ func (s *ServerService) RestartPanel() error {
 		logger.Error(errMsg)
 		return fmt.Errorf(errMsg)
 	}
-	
+
 	// 〔中文注释〕: 定义要执行的命令和参数。
 	cmd := exec.Command(scriptPath, "restart")
 

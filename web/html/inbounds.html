@@ -1752,7 +1752,7 @@ async openPort(port) {
             },
 
 
-            // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
+            // 〔中文注释〕: 处理"订阅转换"按钮的点击事件 (已更新为完整逻辑)
             handleSubscriptionConversion() {
                 // 【第一步】: 检查当前协议是否为 HTTPS
                 if (window.location.protocol !== "https:") {
@@ -1763,6 +1763,33 @@ async openPort(port) {
                     });
                     return; // 如果是 http，则终止后续所有操作
                 }
+
+                // 【新增】: 在尝试访问订阅转换前，先验证证书文件
+                this.verifyCertFilesBeforeConversion();
+            },
+
+            // 【新增方法】: 验证证书文件后继续订阅转换流程
+            async verifyCertFilesBeforeConversion() {
+                try {
+                    const certMsg = await HttpUtil.get('/panel/api/server/validateCertFiles');
+                    if (!certMsg.success) {
+                        this.$error({
+                            title: '证书验证失败',
+                            content: '无法验证证书文件状态，请检查后端服务。',
+                            class: themeSwitcher.currentTheme,
+                        });
+                        return;
+                    }
+
+                    const certData = certMsg.obj;
+                    if (!certData.valid) {
+                        this.$warning({
+                            title: '证书文件问题',
+                            content: `订阅转换需要有效的证书文件，但当前状态：${certData.message}`,
+                            class: themeSwitcher.currentTheme,
+                        });
+                        return;
+                    }
 
                 // 【第二步】：弹出确认框，询问用户是否继续
                 this.$confirm({
@@ -1806,10 +1833,43 @@ async openPort(port) {
                                 cancelText: '稍后再说',
                                 class: themeSwitcher.currentTheme,
                                 onOk: async () => {
-                                    // 〔中文注释〕：从这里开始是全新的轮询检测逻辑
-									// 确保 loginUrl 被定义，用于成功提示
-                                    const subConverterUrl = `https://${window.location.hostname}:15268`;
-                                    const loginUrl = subConverterUrl; 
+                                    this.installSubconverterWithCertCheck();
+                                },
+                                onCancel: () => {
+                                    this.$message.info('安装已取消。');
+                                }
+                            });
+                        });
+                    },
+                    onCancel: () => {
+                        this.$message.info('操作已取消。');
+                    }
+                });
+            },
+
+            // 【新增方法】: 带证书检查的订阅转换安装流程
+            async installSubconverterWithCertCheck() {
+                // 【新增】: 再次验证证书文件，确保安装前证书有效
+                try {
+                    const certMsg = await HttpUtil.get('/panel/api/server/validateCertFiles');
+                    if (!certMsg.success) {
+                        this.$message.error('无法验证证书文件状态，安装已取消。');
+                        return;
+                    }
+
+                    const certData = certMsg.obj;
+                    if (!certData.valid) {
+                        this.$message.warning(`证书文件验证失败：${certData.message}，但将继续安装流程。`);
+                        // 不中断安装流程，只给出警告
+                    }
+                } catch (certErr) {
+                    console.warn('证书验证请求失败，但继续安装：', certErr);
+                }
+
+                // 〔中文注释〕：从这里开始是原有的安装逻辑
+    // 确保 loginUrl 被定义，用于成功提示
+                                const subConverterUrl = `https://${window.location.hostname}:15268`;
+                                const loginUrl = subConverterUrl;
 									
 									const portsToOpen = [8000, 15268];
                                     let openPortFailed = false; // 用于标记是否有端口放行失败

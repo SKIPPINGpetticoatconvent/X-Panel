@@ -374,3 +374,37 @@ func (a *ServerController) openPort(c *gin.Context) {
 	//    直接向前端返回一个成功的消息，告知用户指令已发送。
 	jsonMsg(c, "端口放行指令已成功发送，正在后台执行...", nil)
 }
+
+// 【新增接口实现】: 验证证书文件
+func (a *ServerController) validateCertFiles(c *gin.Context) {
+	result, err := a.serverService.ValidateCertFiles()
+	if err != nil {
+		jsonMsg(c, "证书验证失败", err)
+		return
+	}
+	jsonObj(c, result, nil)
+}
+
+// 【新增接口实现】: 获取订阅转换安装状态
+func (a *ServerController) getSubconverterStatus(c *gin.Context) {
+	// 检查subconverter进程是否在运行
+	cmd := exec.Command("pgrep", "-f", "subconverter")
+	err := cmd.Run()
+	running := err == nil
+
+	// 检查配置文件
+	configDir := "/etc/subconverter"
+	_, configErr := os.Stat(configDir)
+
+	// 检查端口监听
+	portCheck := exec.Command("netstat", "-tlnp", "|", "grep", ":8000")
+	portErr := portCheck.Run()
+
+	result := map[string]interface{}{
+		"installed": configErr == nil,
+		"running":   running,
+		"portOpen":  portErr == nil,
+	}
+
+	jsonObj(c, result, nil)
+}
