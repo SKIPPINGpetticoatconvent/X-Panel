@@ -2,6 +2,7 @@ package database
 
 import (
 	"time"
+	"x-ui/database/model"
 	"gorm.io/gorm" // 【中文注释】: 确保 gorm 被导入，以便在函数签名中使用
 )
 
@@ -11,6 +12,28 @@ type LinkHistory struct {
 	Type       string    `gorm:"type:varchar(255);not null"`
 	Link       string    `gorm:"type:text;not null"`
 	CreatedAt  time.Time `gorm:"not null"`
+}
+
+// HasUserWonToday 检查用户今天是否已经中奖
+func HasUserWonToday(userId int64) (bool, error) {
+	var count int64
+	today := time.Now().Truncate(24 * time.Hour)
+	tomorrow := today.Add(24 * time.Hour)
+
+	err := db.Model(&model.LotteryWin{}).
+		Where("user_id = ? AND won_at >= ? AND won_at < ?", userId, today.Unix(), tomorrow.Unix()).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// RecordUserWin 记录用户中奖信息
+func RecordUserWin(userId int64, prize string) error {
+	win := &model.LotteryWin{
+		UserId: userId,
+		Prize:  prize,
+		WonAt:  time.Now().Unix(),
+	}
+	return db.Create(win).Error
 }
 
 // AddLinkHistory 在一个事务中添加新链接记录并修剪旧记录。
