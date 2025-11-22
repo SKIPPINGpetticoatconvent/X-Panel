@@ -116,6 +116,13 @@ type Client struct {
 	UpdatedAt  int64  `json:"updated_at,omitempty"`
 }
 
+type LotteryWin struct {
+	Id       int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserId   int    `json:"userId"`
+	Prize    string `json:"prize"`
+	WonAt    int64  `json:"wonAt"`
+}
+
 type VLESSSettings struct {
 	Clients    []Client `json:"clients"`
 	Decryption string   `json:"decryption"`

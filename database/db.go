@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"time"
 
 	"x-ui/config"
 	"x-ui/database/model"
@@ -36,7 +35,6 @@ func initModels() error {
 		&model.InboundClientIps{},
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},
-		&LinkHistory{},   // 把 LinkHistory 表也迁移
 		&model.LotteryWin{},  // 新增 抽奖游戏LotteryWin 数据模型
 	}
 	for _, model := range models {
