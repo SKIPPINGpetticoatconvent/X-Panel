@@ -29,7 +29,7 @@ func HasUserWonToday(userId int64) (bool, error) {
 // RecordUserWin 记录用户中奖信息
 func RecordUserWin(userId int64, prize string) error {
 	win := &model.LotteryWin{
-		UserId: userId,
+		UserId: int(userId),
 		Prize:  prize,
 		WonAt:  time.Now().Unix(),
 	}

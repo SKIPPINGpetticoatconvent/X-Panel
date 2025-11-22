@@ -55,7 +55,7 @@ func runWebServer() {
 	}
 
 	// 〔中文注释〕: 1. 初始化所有需要的服务实例
-	xrayService := service.XrayService{}
+	xrayService := &service.XrayService{}
 	settingService := service.SettingService{}
 	serverService := service.ServerService{}
 	// 还需要 InboundService 等，按需添加
@@ -148,7 +148,10 @@ func runWebServer() {
 		
 		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
 		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService)
+		statsJob := job.NewStatsNotifyJob(xrayService, tgBotService)
+
+		// 启动定时任务
+		// statsJob.Run()
 
 
 		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
