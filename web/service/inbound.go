@@ -32,12 +32,16 @@ func (s *InboundService) SetTelegramService(tgService TelegramService) {
     s.tgService = tgService
 }
 
-func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
+func (s *InboundService) GetInbounds(ctx context.Context, userId int) ([]*model.Inbound, error) {
+	if common.IsContextDone(ctx) {
+		return nil, common.NewAppError(common.ErrCodeTimeout, "request timeout", nil)
+	}
+
 	db := database.GetDB()
 	var inbounds []*model.Inbound
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Find(&inbounds).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
+		return nil, common.NewAppError(common.ErrCodeInternal, "failed to get inbounds", err)
 	}
 	return inbounds, nil
 }
@@ -52,7 +56,11 @@ func (s *InboundService) GetAllInbounds() ([]*model.Inbound, error) {
 	return inbounds, nil
 }
 
-func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (bool, error) {
+func (s *InboundService) checkPortExist(ctx context.Context, listen string, port int, ignoreId int) (bool, error) {
+	if common.IsContextDone(ctx) {
+		return false, common.NewAppError(common.ErrCodeTimeout, "request timeout", nil)
+	}
+
 	db := database.GetDB()
 	if listen == "" || listen == "0.0.0.0" || listen == "::" || listen == "::0" {
 		db = db.Model(model.Inbound{}).Where("port = ?", port)
@@ -77,16 +85,20 @@ func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (
 	var count int64
 	err := db.Count(&count).Error
 	if err != nil {
-		return false, err
+		return false, common.NewAppError(common.ErrCodeInternal, "failed to check port existence", err)
 	}
 	return count > 0, nil
 }
 
-func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, error) {
+func (s *InboundService) GetClients(ctx context.Context, inbound *model.Inbound) ([]model.Client, error) {
+	if common.IsContextDone(ctx) {
+		return nil, common.NewAppError(common.ErrCodeTimeout, "request timeout", nil)
+	}
+
 	settings := map[string][]model.Client{}
 	json.Unmarshal([]byte(inbound.Settings), &settings)
 	if settings == nil {
-		return nil, fmt.Errorf("setting is null")
+		return nil, common.NewValidationError("setting is null", nil)
 	}
 
 	clients := settings["clients"]
@@ -176,12 +188,12 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	}
 
 	// 中文注释：检查邮箱是否重复
-	existEmail, err := s.checkEmailExistForInbound(inbound)
+	existEmail, err := s.checkEmailExistForInbound(ctx, inbound)
 	if err != nil {
 		return inbound, false, err
 	}
 	if existEmail != "" {
-		return inbound, false, common.NewError("Duplicate email:", existEmail)
+		return inbound, false, common.NewConflictError(fmt.Sprintf("Duplicate email: %s", existEmail), nil)
 	}
 
 	// 中文注释：获取入站规则中的客户端信息

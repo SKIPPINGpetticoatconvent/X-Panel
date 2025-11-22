@@ -48,10 +48,22 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 }
 
 func (a *InboundController) getInbounds(c *gin.Context) {
+	// 添加超时控制
+	ctx, cancel := common.WithTimeout(c.Request.Context(), 30)
+	defer cancel()
+
 	user := session.GetLoginUser(c)
-	inbounds, err := a.inboundService.GetInbounds(user.Id)
+	inbounds, err := a.inboundService.GetInbounds(ctx, user.Id)
 	if err != nil {
-		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+		// 处理AppError类型错误
+		if appErr, ok := err.(*common.AppError); ok {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"msg":     appErr.Message,
+			})
+		} else {
+			jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+		}
 		return
 	}
 	jsonObj(c, inbounds, nil)
