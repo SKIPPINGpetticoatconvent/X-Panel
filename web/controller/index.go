@@ -72,7 +72,12 @@ func (a *IndexController) login(c *gin.Context) {
 		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.passwordTooShort"))
 		return
 	}
-	if !regexp.MatchString("^[a-zA-Z0-9_]+$", form.Username) {
+	matched, err := regexp.MatchString("^[a-zA-Z0-9_]+$", form.Username)
+	if err != nil {
+		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.invalidUsernameFormat"))
+		return
+	}
+	if !matched {
 		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.invalidUsernameFormat"))
 		return
 	}
