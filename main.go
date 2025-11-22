@@ -98,12 +98,14 @@ func runWebServer() {
 	
 	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
 	server = web.NewServer(*serverService)
-    // 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
-    if tgBotService != nil {
+	   // 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
+	   if tgBotService != nil {
 		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
-        // 同时，也确保了 Web 层的回调处理能使用到这个完整的 Bot 实例
-        server.SetTelegramService(tgBotService)
-    }
+	       // 同时，也确保了 Web 层的回调处理能使用到这个完整的 Bot 实例
+	       server.SetTelegramService(tgBotService)
+	   }
+	   // 将 xrayService 注入到 web.Server 中，修复 nil 指针问题
+	   server.SetXrayService(xrayService)
 	
 	global.SetWebServer(server)
 	err = server.Start()
@@ -185,9 +187,11 @@ func runWebServer() {
 
 			server = web.NewServer(*serverService)
 			// 重新注入 tgBotService
-            if tgBotService != nil {
-                 server.SetTelegramService(tgBotService)
-            }
+			         if tgBotService != nil {
+			              server.SetTelegramService(tgBotService)
+			         }
+			         // 重新注入 xrayService
+			         server.SetXrayService(xrayService)
 			global.SetWebServer(server)
 			err = server.Start()
 			if err != nil {

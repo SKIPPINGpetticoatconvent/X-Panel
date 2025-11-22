@@ -134,6 +134,11 @@ func (s *Server) SetTelegramService(tgService service.TelegramService) {
     s.tgbotService = tgService
 }
 
+// 【新增方法】：用于 main.go 将创建好的 xrayService 注入进来，修复 nil 指针问题
+func (s *Server) SetXrayService(xrayService *service.XrayService) {
+    s.xrayService = xrayService
+}
+
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
 func NewServer(serverService service.ServerService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
