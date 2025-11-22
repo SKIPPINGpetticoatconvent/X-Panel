@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"regexp"
 	"time"
 
 	"x-ui/util/crypto"
