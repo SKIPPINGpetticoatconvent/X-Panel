@@ -1178,30 +1178,25 @@ ssl_cert_issue() {
          chmod 755 $certPath/* 
      fi 
  
-     # 成功安装证书后提示用户设置面板路径
-     read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
-     if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
-         local webCertFile="/root/cert/${domain}/fullchain.pem" 
-         local webKeyFile="/root/cert/${domain}/privkey.pem" 
- 
-         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
-             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
-             LOGI "已为域名设置面板路径: $domain" 
-             echo ""
-             LOGI "  - 证书文件: $webCertFile" 
-             LOGI "  - 私钥文件: $webKeyFile" 
-             echo ""
-             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
-             echo ""
-             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
-             echo ""
-             restart 
-         else 
-             LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
-         fi 
-     else 
-         LOGI "跳过面板路径设置。" 
-     fi 
+     # 自动为面板设置证书路径
+     local webCertFile="/root/cert/${domain}/fullchain.pem"
+     local webKeyFile="/root/cert/${domain}/privkey.pem"
+
+     if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
+         /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+         LOGI "已为域名设置面板路径: $domain"
+         echo ""
+         LOGI "  - 证书文件: $webCertFile"
+         LOGI "  - 私钥文件: $webKeyFile"
+         echo ""
+         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+         echo ""
+         echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
+         echo ""
+         restart
+     else
+         LOGE "错误：未找到域名的证书或私钥文件: $domain。"
+     fi
  } 
 ssl_cert_issue_CF() { 
      local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
@@ -1323,30 +1318,25 @@ ssl_cert_issue_CF() {
              chmod 755 ${certPath}/* 
          fi 
  
-         # 成功安装证书后提示用户设置面板路径
-         read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
-         if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
-             local webCertFile="${certPath}/fullchain.pem" 
-             local webKeyFile="${certPath}/privkey.pem" 
- 
-             if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
-                 /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
-                 LOGI "已为域名设置面板路径: $CF_Domain" 
-                 echo ""
-                 LOGI "  - 证书文件: $webCertFile" 
-                 LOGI "  - 私钥文件: $webKeyFile" 
-                 echo ""
-                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
-                 echo ""
-                 echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
-                 echo ""
-                 restart 
-             else 
-                 LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
-             fi 
-         else 
-             LOGI "跳过面板路径设置。" 
-         fi 
+         # 自动为面板设置证书路径
+         local webCertFile="${certPath}/fullchain.pem"
+         local webKeyFile="${certPath}/privkey.pem"
+
+         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
+             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+             LOGI "已为域名设置面板路径: $CF_Domain"
+             echo ""
+             LOGI "  - 证书文件: $webCertFile"
+             LOGI "  - 私钥文件: $webKeyFile"
+             echo ""
+             echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+             echo ""
+             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
+             echo ""
+             restart
+         else
+             LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。"
+         fi
      else 
          show_menu 
      fi 
