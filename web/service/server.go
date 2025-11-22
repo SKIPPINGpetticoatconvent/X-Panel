@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1050,7 +1051,10 @@ func (s *ServerService) InstallSubconverter() error {
 		}
 
 		// 〔中文注释〕: 正确的调用方式是：命令是 "x-ui"，参数是 "subconverter"。
-		cmd := exec.Command(scriptPath, "subconverter")
+		// 添加超时context，防止命令挂起
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, scriptPath, "subconverter")
 
 		// 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
 		// 〔重要〕: 这个命令可能需要几分钟才能执行完毕，Go程序会在此等待直到脚本执行完成。
