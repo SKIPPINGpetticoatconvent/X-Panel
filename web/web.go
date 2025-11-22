@@ -244,7 +244,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	})
 
 	// init i18n
-	err = locale.InitLocalizer(i18nFS, &s.settingService)
+	err = locale.InitLocalizer(i18nFS, s.settingService)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func (s *Server) startTask() {
 			runtime = "@daily"
 		}
 		logger.Infof("Tg notify enabled,run at %s", runtime)
-		_, err = s.cron.AddJob(runtime, job.NewStatsNotifyJob())
+		_, err = s.cron.AddJob(runtime, job.NewStatsNotifyJob(s.xrayService, s.tgbotService))
 		if err != nil {
 			logger.Warning("Add NewStatsNotifyJob error", err)
 			return
