@@ -1,6 +1,6 @@
 [Unit]
 Description=x-ui Service
-Documentation=https://github.com/xeefei/X-Panel
+Documentation=https://github.com/SKIPPINGpetticoatconvent/X-Panel
 After=network.target
 Wants=network.target
 
