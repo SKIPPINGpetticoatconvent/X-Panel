@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"x-ui/database/model"
+	"x-ui/logger"
 	"x-ui/web/service"
 	"x-ui/web/session"
 
@@ -49,11 +50,24 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 
 func (a *InboundController) getInbounds(c *gin.Context) {
 	user := session.GetLoginUser(c)
+	
+	// 〔中文注释〕: 增加登录用户验证日志
+	logger.Debugf("获取入站列表: 用户ID %d, 用户名 %s", user.Id, user.Username)
+	
 	inbounds, err := a.inboundService.GetInbounds(user.Id)
 	if err != nil {
+		logger.Errorf("获取入站列表失败: %v", err)
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return
 	}
+	
+	// 〔中文注释〕: 确保inbounds不为nil，防止前端白屏
+	if inbounds == nil {
+		logger.Warning("获取到空的入站列表，返回空数组")
+		inbounds = make([]*model.Inbound, 0)
+	}
+	
+	logger.Debugf("成功返回 %d 个入站记录", len(inbounds))
 	jsonObj(c, inbounds, nil)
 }
 

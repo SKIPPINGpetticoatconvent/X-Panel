@@ -842,14 +842,11 @@
         width: 40,
         scopedSlots: { customRender: 'clients' },
     }, {
-       // 【中文注释】: 这是修改后的“设备限制”列定义
+       // 【中文注释】: 这是修改后的"设备限制"列定义
         title: '{{ i18n "pages.inbounds.deviceLimit" }}',
         dataIndex: "deviceLimit",
         align: "center",
         width: 40,
-       // 【修复】: 修复设备限制列的渲染器语法
-        scopedSlots: { customRender: 'deviceLimit' },
-       // 【中文注释】: 将错误的 customRender 改为 scopedSlots
         scopedSlots: { customRender: 'deviceLimit' },
     }, {
         title: '{{ i18n "pages.inbounds.traffic" }}',
@@ -894,15 +891,14 @@
         { title: '{{ i18n "pages.inbounds.traffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'traffic' } },
         { title: '{{ i18n "pages.inbounds.allTimeTraffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'allTime' } },
 
-		// 中文注释: 在子表格中新增“限速”列
-        {
-            title: '{{ i18n "pages.inbounds.speedLimit" }}',
-            customRender: (text) => (text > 0 ? `${text} KB/s` : '无限制'),
-            width: 80,
-            align: 'center',
-            dataIndex: 'speedLimit',
-            customRender: (text) => (text > 0 ? `${text} KB/s` : {{ i18n "pages.inbounds.unlimited" }}),
-        },
+		// 中文注释: 在子表格中新增"限速"列
+		      {
+		          title: '{{ i18n "pages.inbounds.speedLimit" }}',
+		          customRender: (text) => (text > 0 ? `${text} KB/s` : `{{ i18n "pages.inbounds.unlimited" }}`),
+		          width: 80,
+		          align: 'center',
+		          dataIndex: 'speedLimit',
+		      },
 
         { title: '{{ i18n "pages.inbounds.expireDate" }}', width: 80, align: 'center', scopedSlots: { customRender: 'expiryTime' } },
     ];
@@ -1019,14 +1015,24 @@
                 this.refreshing = true;
                 const msg = await HttpUtil.get('/panel/api/inbounds/list');
                 if (!msg.success) {
+                    console.error('获取入站列表失败:', msg.msg || '未知错误');
                     this.refreshing = false;
+                    // 〔中文注释〕: 即使API调用失败，也应该清空数据并显示空列表，而不是白屏
+                    this.setInbounds([]);
                     return;
                 }
 
-                await this.getLastOnlineMap();
-                await this.getOnlineUsers();
+                // 〔中文注释〕: 确保响应数据存在，如果为null或undefined则设置为空数组
+                const inboundsData = msg.obj || [];
+                
+                try {
+                    await this.getLastOnlineMap();
+                    await this.getOnlineUsers();
+                } catch (error) {
+                    console.warn('获取附加数据时出错，但不影响主数据显示:', error);
+                }
 
-                this.setInbounds(msg.obj);
+                this.setInbounds(inboundsData);
                 setTimeout(() => {
                     this.refreshing = false;
                 }, 500);
@@ -1067,44 +1073,98 @@
                 }
             },
             setInbounds(dbInbounds) {
+                // 〔中文注释〕: 添加安全检查，防止输入为 null 或 undefined
+                if (!Array.isArray(dbInbounds)) {
+                    console.warn('setInbounds: 输入数据不是数组，已重置为空数组');
+                    dbInbounds = [];
+                }
+                
                 this.inbounds.splice(0);
                 this.dbInbounds.splice(0);
-                    const to_inbound = dbInbound.toInbound()
                 this.clientCount.splice(0);
-                for (const inbound of dbInbounds) {
-                    const dbInbound = new DBInbound(inbound);
-                    to_inbound = dbInbound.toInbound()
-                    this.inbounds.push(to_inbound);
-                    this.dbInbounds.push(dbInbound);
-                    if ([Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
-                        if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
+                
+                try {
+                    for (const inbound of dbInbounds) {
+                        // 〔中文注释〕: 对每个入站数据进行安全检查
+                        if (!inbound) {
+                            console.warn('跳过无效的入站数据:', inbound);
                             continue;
                         }
-                        this.clientCount[inbound.id] = this.getClientCounts(inbound, to_inbound);
+                        
+                        const dbInbound = new DBInbound(inbound);
+                        if (!dbInbound) {
+                            console.warn('无法创建 DBInbound 实例:', inbound);
+                            continue;
+                        }
+                        
+                        const to_inbound = dbInbound.toInbound();
+                        if (!to_inbound) {
+                            console.warn('无法转换入站配置:', inbound);
+                            continue;
+                        }
+                        
+                        this.inbounds.push(to_inbound);
+                        this.dbInbounds.push(dbInbound);
+                        
+                        // 〔中文注释〕: 安全地处理客户端计数
+                        if (inbound.protocol && [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
+                            if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
+                                continue;
+                            }
+                            try {
+                                this.clientCount[inbound.id] = this.getClientCounts(inbound, to_inbound);
+                            } catch (error) {
+                                console.warn('计算客户端统计时出错:', error);
+                                this.clientCount[inbound.id] = {
+                                    clients: 0,
+                                    active: [],
+                                    deactive: [],
+                                    depleted: [],
+                                    expiring: [],
+                                    online: [],
+                                    comments: new Map()
+                                };
+                            }
+                        }
                     }
+                } catch (error) {
+                    console.error('处理入站数据时发生严重错误:', error);
+                    // 〔中文注释〕: 发生错误时，清空数据以防止白屏
+                    this.inbounds.splice(0);
+                    this.dbInbounds.splice(0);
+                    this.clientCount.splice(0);
                 }
+                
+                // 〔中文注释〕: 确保总是设置 fetched 状态，防止无限加载
                 if (!this.loadingStates.fetched) {
-                    this.loadingStates.fetched = true
+                    this.loadingStates.fetched = true;
                 }
-                if(this.enableFilter){
-                let clients, clientStats, now;
-                    this.filterInbounds();
-                } else {
-                    this.searchInbounds(this.searchKey);
+                
+                // 〔中文注释〕: 安全地执行过滤和搜索
+                try {
+                    if(this.enableFilter){
+                        this.filterInbounds();
+                    } else {
+                        this.searchInbounds(this.searchKey);
+                    }
+                } catch (error) {
+                    console.warn('执行搜索/过滤时出错:', error);
+                    // 〔中文注释〕: 发生错误时，直接显示所有数据
+                    this.searchedInbounds = this.dbInbounds.slice();
                 }
-                now = new Date().getTime();
             },
             getClientCounts(dbInbound, inbound) {
                 let clientCount = 0, active = [], deactive = [], depleted = [], expiring = [], online = [], comments = new Map();
-                clients = inbound.clients;
-                clientStats = dbInbound.clientStats
-                now = new Date().getTime()
+                const clients = inbound.clients;
+                const clientStats = dbInbound.clientStats || [];
+                const now = new Date().getTime();
+                
                 if (clients) {
                     clientCount = clients.length;
                     if (dbInbound.enable) {
                         clients.forEach(client => {
                             if (client.comment) {
-                              comments.set(client.email, client.comment)
+                              comments.set(client.email, client.comment);
                             }
                             if (client.enable) {
                                 active.push(client.email);
@@ -1118,7 +1178,9 @@
                                 depleted.push(client.email);
                             } else {
                                 if ((client.expiryTime > 0 && (client.expiryTime - now < this.expireDiff)) ||
-                                    (client.total > 0 && (client.total - (client.up + client.down) < this.trafficDiff))) expiring.push(client.email);
+                                    (client.total > 0 && (client.total - (client.up + client.down) < this.trafficDiff))) {
+                                    expiring.push(client.email);
+                                }
                             }
                         });
                     } else {
@@ -1139,26 +1201,74 @@
             },
 
             searchInbounds(key) {
+                // 〔中文注释〕: 安全检查，防止 dbInbounds 为 null 或 undefined
+                if (!this.dbInbounds || !Array.isArray(this.dbInbounds)) {
+                    console.warn('searchInbounds: dbInbounds 数据无效，设置空数组');
+                    this.searchedInbounds = [];
+                    return;
+                }
+                
                 if (ObjectUtil.isEmpty(key)) {
                     this.searchedInbounds = this.dbInbounds.slice();
                 } else {
                     this.searchedInbounds.splice(0, this.searchedInbounds.length);
-                    this.dbInbounds.forEach(inbound => {
-                        if (ObjectUtil.deepSearch(inbound, key)) {
-                            const newInbound = new DBInbound(inbound);
-                            const inboundSettings = JSON.parse(inbound.settings);
-                            if (inboundSettings.hasOwnProperty('clients')) {
-                                const searchedSettings = { "clients": [] };
-                                inboundSettings.clients.forEach(client => {
-                                    if (ObjectUtil.deepSearch(client, key)) {
-                                        searchedSettings.clients.push(client);
-                                    }
-                                });
-                                newInbound.settings = Inbound.Settings.fromJson(inbound.protocol, searchedSettings);
+                    
+                    // 〔中文注释〕: 添加 try-catch 包装整个搜索过程
+                    try {
+                        this.dbInbounds.forEach(inbound => {
+                            // 〔中文注释〕: 跳过无效的入站数据
+                            if (!inbound) {
+                                console.warn('跳过无效的入站数据:', inbound);
+                                return;
                             }
-                            this.searchedInbounds.push(newInbound);
-                        }
-                    });
+                            
+                            if (ObjectUtil.deepSearch(inbound, key)) {
+                                const newInbound = new DBInbound(inbound);
+                                if (!newInbound) {
+                                    console.warn('无法创建 DBInbound 实例:', inbound);
+                                    return;
+                                }
+                                
+                                // 〔中文注释〕: 安全地解析 settings
+                                let inboundSettings = null;
+                                try {
+                                    if (inbound.settings && typeof inbound.settings === 'string') {
+                                        inboundSettings = JSON.parse(inbound.settings);
+                                    } else if (inbound.settings && typeof inbound.settings === 'object') {
+                                        inboundSettings = inbound.settings;
+                                    }
+                                } catch (parseError) {
+                                    console.warn('解析入站设置失败:', parseError);
+                                    return;
+                                }
+                                
+                                if (inboundSettings && inboundSettings.hasOwnProperty('clients')) {
+                                    const searchedSettings = { "clients": [] };
+                                    
+                                    // 〔中文注释〕: 安全地遍历客户端
+                                    if (Array.isArray(inboundSettings.clients)) {
+                                        inboundSettings.clients.forEach(client => {
+                                            if (client && ObjectUtil.deepSearch(client, key)) {
+                                                searchedSettings.clients.push(client);
+                                            }
+                                        });
+                                    }
+                                    
+                                    try {
+                                        newInbound.settings = Inbound.Settings.fromJson(inbound.protocol, searchedSettings);
+                                    } catch (settingsError) {
+                                        console.warn('创建设置对象失败:', settingsError);
+                                        // 〔中文注释〕: 如果设置创建失败，仍然使用原始数据
+                                    }
+                                }
+                                this.searchedInbounds.push(newInbound);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('搜索入站时发生严重错误:', error);
+                        // 〔中文注释〕: 发生错误时，显示所有数据而不是空白
+                        this.searchedInbounds = this.dbInbounds.slice();
+                    }
                 }
             },
             filterInbounds() {
@@ -2099,7 +2209,7 @@ async openPort(port) {
                 });
             },
             openEditInbound(dbInboundId) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 const inbound = dbInbound.toInbound();
                 inModal.show({
                     title: '{{ i18n "pages.inbounds.modifyInbound"}}',
@@ -2165,7 +2275,7 @@ async openPort(port) {
                 await this.submit(`/panel/api/inbounds/update/${dbInbound.id}`, data, inModal);
             },
             openAddClient(dbInboundId) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 clientModal.show({
                     title: '{{ i18n "pages.client.add"}}',
                     okText: '{{ i18n "pages.client.submitAdd"}}',
@@ -2177,7 +2287,7 @@ async openPort(port) {
                 });
             },
             openAddBulkClient(dbInboundId) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 clientsBulkModal.show({
                     title: '{{ i18n "pages.client.bulk"}} ' + dbInbound.remark,
                     okText: '{{ i18n "pages.client.bulk"}}',
@@ -2188,9 +2298,9 @@ async openPort(port) {
                 });
             },
             openEditClient(dbInboundId, client) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                clients = this.getInboundClients(dbInbound);
-                index = this.findIndexOfClient(dbInbound.protocol, clients, client);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const clients = this.getInboundClients(dbInbound);
+                const index = this.findIndexOfClient(dbInbound.protocol, clients, client);
                 clientModal.show({
                     title: '{{ i18n "pages.client.edit"}}',
                     okText: '{{ i18n "pages.client.submitEdit"}}',
@@ -2227,7 +2337,7 @@ async openPort(port) {
                 await this.submit(`/panel/api/inbounds/updateClient/${clientId}`, data, clientModal);
             },
             resetTraffic(dbInboundId) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 this.$confirm({
                     title: '{{ i18n "pages.inbounds.resetTraffic"}}' + ' #' + dbInboundId,
                     content: '{{ i18n "pages.inbounds.resetTrafficContent"}}',
@@ -2252,10 +2362,10 @@ async openPort(port) {
                     onOk: () => this.submit('/panel/api/inbounds/del/' + dbInboundId),
                 });
             },
-            delClient(dbInboundId, client,confirmation = true) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                clientId = this.getClientId(dbInbound.protocol, client);
-                if (confirmation){
+            delClient(dbInboundId, client, confirmation = true) {
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const clientId = this.getClientId(dbInbound.protocol, client);
+                if (confirmation) {
                     this.$confirm({
                         title: '{{ i18n "pages.inbounds.deleteClient"}}' + ' ' + client.email,
                         content: '{{ i18n "pages.inbounds.deleteClientContent"}}',
@@ -2306,9 +2416,9 @@ async openPort(port) {
                 }
             },
             checkFallback(dbInbound) {
-                newDbInbound = new DBInbound(dbInbound);
+                const newDbInbound = new DBInbound(dbInbound);
                 if (dbInbound.listen.startsWith("@")){
-                    rootInbound = this.inbounds.find((i) =>
+                    const rootInbound = this.inbounds.find((i) =>
                         i.isTcp &&
                         ['trojan','vless'].includes(i.protocol) &&
                         i.settings.fallbacks.find(f => f.dest === dbInbound.listen)
@@ -2316,7 +2426,7 @@ async openPort(port) {
                     if (rootInbound) {
                         newDbInbound.listen = rootInbound.listen;
                         newDbInbound.port = rootInbound.port;
-                        newInbound = newDbInbound.toInbound();
+                        const newInbound = newDbInbound.toInbound();
                         newInbound.stream.security = rootInbound.stream.security;
                         newInbound.stream.tls = rootInbound.stream.tls;
                         newInbound.stream.externalProxy = rootInbound.stream.externalProxy;
@@ -2326,34 +2436,34 @@ async openPort(port) {
                 return newDbInbound;
             },
             showQrcode(dbInboundId, client) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                newDbInbound = this.checkFallback(dbInbound);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const newDbInbound = this.checkFallback(dbInbound);
                 qrModal.show('{{ i18n "qrCode"}}', newDbInbound, client);
             },
             showInfo(dbInboundId, client) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                index=0;
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                let index = 0;
                 if (dbInbound.isMultiUser()){
-                    inbound = dbInbound.toInbound();
-                    clients = inbound.clients;
+                    const inbound = dbInbound.toInbound();
+                    const clients = inbound.clients;
                     index = this.findIndexOfClient(dbInbound.protocol, clients, client);
                 }
-                newDbInbound = this.checkFallback(dbInbound);
+                const newDbInbound = this.checkFallback(dbInbound);
                 infoModal.show(newDbInbound, index);
             },
-            switchEnable(dbInboundId,state) {
-              dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-              dbInbound.enable = state;
-              this.submit(`/panel/api/inbounds/update/${dbInboundId}`, dbInbound);
+            switchEnable(dbInboundId, state) {
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                dbInbound.enable = state;
+                this.submit(`/panel/api/inbounds/update/${dbInboundId}`, dbInbound);
             },
             async switchEnableClient(dbInboundId, client) {
-                this.loading()
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                inbound = dbInbound.toInbound();
-                clients = inbound.clients;
-                index = this.findIndexOfClient(dbInbound.protocol, clients, client);
+                this.loading();
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const inbound = dbInbound.toInbound();
+                const clients = inbound.clients;
+                const index = this.findIndexOfClient(dbInbound.protocol, clients, client);
                 clients[index].enable = !clients[index].enable;
-                clientId = this.getClientId(dbInbound.protocol, clients[index]);
+                const clientId = this.getClientId(dbInbound.protocol, clients[index]);
                 await this.updateClient(clients[index], dbInboundId, clientId);
                 this.loading(false);
             },
@@ -2409,76 +2519,72 @@ async openPort(port) {
                     class: themeSwitcher.currentTheme,
                     okText: '{{ i18n "delete"}}',
                     cancelText: '{{ i18n "cancel"}}',
-                let clientStats;
                     onOk: () => this.submit('/panel/api/inbounds/delDepletedClients/' + dbInboundId),
-                })
+                });
             },
             isExpiry(dbInbound, index) {
                 return dbInbound.toInbound().isExpiry(index);
             },
             getUpStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 return clientStats ? clientStats.up : 0;
             },
             getDownStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 return clientStats ? clientStats.down : 0;
             },
             getSumStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 return clientStats ? clientStats.up + clientStats.down : 0;
             },
             getAllTimeClient(dbInbound, email) {
-                let remained;
                 if (email.length == 0) return 0;
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
                 return clientStats.allTime || (clientStats.up + clientStats.down);
             },
             getRemStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
-                remained = clientStats.total - (clientStats.up + clientStats.down);
-                return remained>0 ? remained : 0;
+                const remained = clientStats.total - (clientStats.up + clientStats.down);
+                return remained > 0 ? remained : 0;
             },
             clientStatsColor(dbInbound, email) {
                 if (email.length == 0) return ColorUtils.clientUsageColor();
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
-                return ColorUtils.clientUsageColor(clientStats, app.trafficDiff)
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                return ColorUtils.clientUsageColor(clientStats, app.trafficDiff);
             },
             statsProgress(dbInbound, email) {
-                let now, remainedSeconds, resetSeconds;
                 if (email.length == 0) return 100;
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
                 if (clientStats.total == 0) return 100;
-                return 100*(clientStats.down + clientStats.up)/clientStats.total;
+                return 100 * (clientStats.down + clientStats.up) / clientStats.total;
             },
             expireProgress(expTime, reset) {
-                let statsColor, expColor;
-                now = new Date().getTime();
-                remainedSeconds = expTime < 0 ? -expTime/1000 : (expTime-now)/1000;
-                resetSeconds = reset * 86400;
+                const now = new Date().getTime();
+                const remainedSeconds = expTime < 0 ? -expTime / 1000 : (expTime - now) / 1000;
+                const resetSeconds = reset * 86400;
                 if (remainedSeconds >= resetSeconds) return 0;
-                return 100*(1-(remainedSeconds/resetSeconds));
+                return 100 * (1 - (remainedSeconds / resetSeconds));
             },
-            remainedDays(expTime){
+            remainedDays(expTime) {
                 if (expTime == 0) return null;
-                if (expTime < 0) return TimeFormatter.formatSecond(expTime/-1000);
-                now = new Date().getTime();
+                if (expTime < 0) return TimeFormatter.formatSecond(expTime / -1000);
+                const now = new Date().getTime();
                 if (expTime < now) return '{{ i18n "depleted" }}';
-                return TimeFormatter.formatSecond((expTime-now)/1000);
+                return TimeFormatter.formatSecond((expTime - now) / 1000);
             },
-            statsExpColor(dbInbound, email){
+            statsExpColor(dbInbound, email) {
                 if (email.length == 0) return '#7a316f';
-                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return '#7a316f';
-                statsColor = ColorUtils.usageColor(clientStats.down + clientStats.up, this.trafficDiff, clientStats.total);
-                expColor = ColorUtils.usageColor(new Date().getTime(), this.expireDiff, clientStats.expiryTime);
+                const statsColor = ColorUtils.usageColor(clientStats.down + clientStats.up, this.trafficDiff, clientStats.total);
+                const expColor = ColorUtils.usageColor(new Date().getTime(), this.expireDiff, clientStats.expiryTime);
                 switch (true) {
                     case statsColor == "red" || expColor == "red":
                         return "#cf3c3c"; // Red
@@ -2491,7 +2597,7 @@ async openPort(port) {
                 }
             },
             isClientEnabled(dbInbound, email) {
-                clientStats = dbInbound.clientStats ? dbInbound.clientStats.find(stats => stats.email === email) : null;
+                const clientStats = dbInbound.clientStats ? dbInbound.clientStats.find(stats => stats.email === email) : null;
                 return clientStats ? clientStats['enable'] : true;
             },
             isClientOnline(email) {
@@ -2512,20 +2618,20 @@ async openPort(port) {
                 return this.getInboundClients(this.dbInbounds.find(row => row.id === dbInboundId)).length > 1;
             },
             inboundLinks(dbInboundId) {
-                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                newDbInbound = this.checkFallback(dbInbound);
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                const newDbInbound = this.checkFallback(dbInbound);
                 txtModal.show('{{ i18n "pages.inbounds.export"}}', newDbInbound.genInboundLinks(this.remarkModel), newDbInbound.remark);
             },
             exportSubs(dbInboundId) {
                 const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 const clients = this.getInboundClients(dbInbound);
-                let subLinks = []
-                if (clients != null){
+                let subLinks = [];
+                if (clients != null) {
                     clients.forEach(c => {
-                        if (c.subId && c.subId.length>0){
-                            subLinks.push(this.subSettings.subURI + c.subId)
+                        if (c.subId && c.subId.length > 0) {
+                            subLinks.push(this.subSettings.subURI + c.subId);
                         }
-                    })
+                    });
                 }
                 txtModal.show(
                     '{{ i18n "pages.inbounds.export"}} - {{ i18n "pages.settings.subSettings" }}',
@@ -2544,15 +2650,15 @@ async openPort(port) {
                 });
             },
             exportAllSubs() {
-                let subLinks = []
+                let subLinks = [];
                 for (const dbInbound of this.dbInbounds) {
                     const clients = this.getInboundClients(dbInbound);
-                    if (clients != null){
+                    if (clients != null) {
                         clients.forEach(c => {
-                            if (c.subId && c.subId.length>0){
-                                subLinks.push(this.subSettings.subURI + c.subId)
+                            if (c.subId && c.subId.length > 0) {
+                                subLinks.push(this.subSettings.subURI + c.subId);
                             }
-                        })
+                        });
                     }
                 }
                 txtModal.show(
@@ -2568,8 +2674,8 @@ async openPort(port) {
                 txtModal.show('{{ i18n "pages.inbounds.export"}}', copyText.join('\r\n'), 'All-Inbounds');
             },
             copy(dbInboundId) {
-              dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-              txtModal.show('{{ i18n "pages.inbounds.inboundData" }}', JSON.stringify(dbInbound, null, 2));
+                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                txtModal.show('{{ i18n "pages.inbounds.inboundData" }}', JSON.stringify(dbInbound, null, 2));
             },
             async startDataRefreshLoop() {
                 while (this.isRefreshEnabled) {

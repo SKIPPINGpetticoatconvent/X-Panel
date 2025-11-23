@@ -35,10 +35,24 @@ func (s *InboundService) SetTelegramService(tgService TelegramService) {
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	db := database.GetDB()
 	var inbounds []*model.Inbound
+	
+	// 〔中文注释〕: 增加详细的错误日志来帮助调试白屏问题
+	logger.Debugf("开始获取用户ID为 %d 的入站列表", userId)
+	
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Find(&inbounds).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
+		logger.Errorf("获取入站列表时发生数据库错误: %v", err)
 		return nil, err
 	}
+	
+	// 〔中文注释〕: 记录成功获取的入站数量
+	logger.Debugf("成功获取 %d 个入站记录", len(inbounds))
+	
+	// 〔中文注释〕: 确保返回的切片不为 nil，避免前端处理时出现空指针错误
+	if inbounds == nil {
+		inbounds = make([]*model.Inbound, 0)
+	}
+	
 	return inbounds, nil
 }
 
