@@ -3332,8 +3332,28 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, string, error) {
 
 	// 按照要求格式：inbound-端口号
 	tag := fmt.Sprintf("inbound-%d", port)
-
-	realityDests := []string{"tesla.com:443", "sega.com:443", "apple.com:443", "icloud.com:443", "lovelive-anime.jp:443", "meta.com:443"}
+	//Reality的SNI伪装域名
+	realityDests := []string{
+		"apple.com:443",
+		"www.apple.com:443",
+		"google.com:443",
+		"www.google.com:443",
+		"youtube.com:443",
+		"www.youtube.com:443",
+		"microsoft.com:443",
+		"www.microsoft.com:443",
+		"www.bing.com:443",
+		"facebook.com:443",
+		"www.facebook.com:443",
+		"instagram.com:443",
+		"www.instagram.com:443",
+		"meta.com:443",
+		"www.meta.com:443",
+		"cloudflare.com:443",
+		"www.cloudflare.com:443",
+		"akamai.com:443",
+		"fastly.com:443",
+	}
 	randomDest := realityDests[common.RandomInt(len(realityDests))]
 	randomSni := strings.Split(randomDest, ":")[0]
 	shortIds := t.generateShortIds()
@@ -3582,8 +3602,19 @@ func (t *Tgbot) buildXhttpRealityInbound() (*model.Inbound, string, error) {
 	}
 
 	tag := fmt.Sprintf("inbound-%d", port)
-
-	realityDests := []string{"tesla.com:443", "sega.com:443", "apple.com:443", "icloud.com:443", "lovelive-anime.jp:443", "meta.com:443"}
+	//适用于XHTTP的SNI伪装域名
+	realityDests := []string{
+		"www.wikipedia.org:443",
+		"www.bbc.com:443",
+		"www.nytimes.com:443",
+		"www.reuters.com:443",
+		"www.cnn.com:443",
+		"www.youtube.com:443",
+		"www.netflix.com:443",
+		"www.spotify.com:443",
+		"www.apple.com:443",
+		"www.microsoft.com:443",
+	}
 	randomDest := realityDests[common.RandomInt(len(realityDests))]
 	randomSni := strings.Split(randomDest, ":")[0]
 	shortIds := t.generateShortIds()
