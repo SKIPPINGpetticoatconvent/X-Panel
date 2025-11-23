@@ -2,7 +2,7 @@
 
 [![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
 
-基于 [3X-UI](https://github.com/MHSanaei/3x-ui) 的汉化优化版，支持 Xray 核心，提供多协议代理管理面板。
+基于[xeefei/X-Panel](https://github.com/xeefei/X-Panel) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
 
 ## 🚀 快速开始
 
@@ -112,11 +112,6 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 ## 📸 预览
 ![概览](media/1.png) ![入站](media/2.png) ![客户端](media/3.png)
 
-## 🤝 社区 & 支持
-- **TG 群**: [X-Panel 交流群](https://t.me/XUI_CN)
-- **教程**: [详细安装教程](https://xeefei.blogspot.com/2025/09/x-panel.html)
-- **Issue**: [提交问题](https://github.com/SKIPPINGpetticoatconvent/X-Panel/issues)
-
 ## 💝 赞助商
 - [搬瓦工](https://bandwagonhost.com/aff.php?aff=75015)
 - [RackNerd](https://my.racknerd.com/aff.php?aff=15268&pid=912)
@@ -124,4 +119,5 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 
 ## 🙏 致谢
 - [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)
+- [xeefei/X-Panel](https://github.com/xeefei/X-Panel)
 - [FranzKafkaYu/x-ui](https://github.com/FranzKafkaYu/x-ui)
