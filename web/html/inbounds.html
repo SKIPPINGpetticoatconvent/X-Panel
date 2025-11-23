@@ -847,6 +847,8 @@
         dataIndex: "deviceLimit",
         align: "center",
         width: 40,
+       // 【修复】: 修复设备限制列的渲染器语法
+        scopedSlots: { customRender: 'deviceLimit' },
        // 【中文注释】: 将错误的 customRender 改为 scopedSlots
         scopedSlots: { customRender: 'deviceLimit' },
     }, {
@@ -895,6 +897,7 @@
 		// 中文注释: 在子表格中新增“限速”列
         {
             title: '{{ i18n "pages.inbounds.speedLimit" }}',
+            customRender: (text) => (text > 0 ? `${text} KB/s` : '无限制'),
             width: 80,
             align: 'center',
             dataIndex: 'speedLimit',
@@ -1066,6 +1069,7 @@
             setInbounds(dbInbounds) {
                 this.inbounds.splice(0);
                 this.dbInbounds.splice(0);
+                    const to_inbound = dbInbound.toInbound()
                 this.clientCount.splice(0);
                 for (const inbound of dbInbounds) {
                     const dbInbound = new DBInbound(inbound);
@@ -1083,10 +1087,12 @@
                     this.loadingStates.fetched = true
                 }
                 if(this.enableFilter){
+                let clients, clientStats, now;
                     this.filterInbounds();
                 } else {
                     this.searchInbounds(this.searchKey);
                 }
+                now = new Date().getTime();
             },
             getClientCounts(dbInbound, inbound) {
                 let clientCount = 0, active = [], deactive = [], depleted = [], expiring = [], online = [], comments = new Map();
@@ -2403,6 +2409,7 @@ async openPort(port) {
                     class: themeSwitcher.currentTheme,
                     okText: '{{ i18n "delete"}}',
                     cancelText: '{{ i18n "cancel"}}',
+                let clientStats;
                     onOk: () => this.submit('/panel/api/inbounds/delDepletedClients/' + dbInboundId),
                 })
             },
@@ -2425,6 +2432,7 @@ async openPort(port) {
                 return clientStats ? clientStats.up + clientStats.down : 0;
             },
             getAllTimeClient(dbInbound, email) {
+                let remained;
                 if (email.length == 0) return 0;
                 clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
@@ -2443,6 +2451,7 @@ async openPort(port) {
                 return ColorUtils.clientUsageColor(clientStats, app.trafficDiff)
             },
             statsProgress(dbInbound, email) {
+                let now, remainedSeconds, resetSeconds;
                 if (email.length == 0) return 100;
                 clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
@@ -2450,6 +2459,7 @@ async openPort(port) {
                 return 100*(clientStats.down + clientStats.up)/clientStats.total;
             },
             expireProgress(expTime, reset) {
+                let statsColor, expColor;
                 now = new Date().getTime();
                 remainedSeconds = expTime < 0 ? -expTime/1000 : (expTime-now)/1000;
                 resetSeconds = reset * 86400;
@@ -2580,6 +2590,7 @@ async openPort(port) {
             changeRefreshInterval() {
                 localStorage.setItem("refreshInterval", this.refreshInterval);
             },
+                let sizeOptions, i, p;
             async manualRefresh() {
                 if (!this.refreshing) {
                     this.loadingStates.spinning = true;
