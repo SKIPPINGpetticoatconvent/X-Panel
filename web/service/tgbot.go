@@ -89,15 +89,6 @@ var (
 
 var userStates = make(map[int64]string)
 
-// 〔中文注释〕: 贴纸的发送顺序将在运行时被随机打乱。
-var LOTTERY_STICKER_IDS = [3]string{
-	// STICKER_ID_1: 官方 Telegram Loading 动画 (经典)
-	"CAACAgIAAxkBAAIDxWX-R5hGfI9xXb6Q-iJ2XG8275TfAAI-BQACx0LhSb86q20xK0-rMwQ", 
-	// STICKER_ID_2: 官方 Telegram 思考/忙碌动画
-	"CAACAgIAAxkBAAIBv2X3F9c_pS8i0tF5N0Q-vF0Jc-oUAAJPAgACVwJpS2rN0xV8dFm2MwQ",
-	// STICKER_ID_3: 官方 Telegram 进度条动画
-	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
-}
 
 const REPORT_BOT_TOKEN = "8419563495:AAGu6jceeYaJNnKqj0v-6j-g0BASsUvzlbU"
 var REPORT_CHAT_IDS = []int64{
@@ -2078,13 +2069,20 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "操作已取消")
 		// 〔中文注释〕: 发送一个临时消息提示用户，3秒后自动删除
 		t.SendMsgToTgbotDeleteAfter(chatId, "已取消重启操作。", 3)
-
-	case "lottery_play_menu":
-		// 〔中文注释〕: 从菜单触发抽奖，复用现有逻辑
+	case "system_update":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在准备游戏......")
-		// 〔中文注释〕: 直接调用您代码中已有的 sendLotteryGameInvitation 函数即可
-		t.sendLotteryGameInvitation()
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在执行系统更新...")
+		t.SendMsgToTgbot(chatId, "🔄 正在执行系统更新...\n\n这可能需要几分钟时间，请耐心等待。")
+
+		// 在后台执行系统更新
+		go func() {
+			err := t.runSystemUpdate()
+			if err != nil {
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 系统更新失败: %v", err))
+			} else {
+				t.SendMsgToTgbot(chatId, "✅ 系统更新成功完成！")
+			}
+		}()
 
 	case "vps_recommend":
 		// 〔中文注释〕: 发送您指定的VPS推荐信息
@@ -2311,12 +2309,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
 		),
-		// 〔中文注释〕: 【新增功能行】 - 添加娱乐抽奖和VPS推荐按钮
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🎁 娱乐抽奖").WithCallbackData(t.encodeQuery("lottery_play_menu")),
-			tu.InlineKeyboardButton("🛰️ VPS 推荐").WithCallbackData(t.encodeQuery("vps_recommend")),
+			tu.InlineKeyboardButton("🔄 系统更新").WithCallbackData(t.encodeQuery("system_update")),
 		),
-		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
 	numericKeyboardClient := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -2397,67 +2392,7 @@ func (t *Tgbot) SendMsgToTgbotAdmins(msg string, replyMarkup ...telego.ReplyMark
 }
 
 
-// 〔中文注释〕: 新增函数，执行抽奖逻辑并返回结果。
-func (t *Tgbot) runLotteryDraw() (prize string, message string) {
-	// 〔中文注释〕: 使用 crypto/rand 生成一个 0-999 的安全随机数，确保公平性。
-	n, err := rand.Int(rand.Reader, big.NewInt(1000))
-    if err != nil {
-        logger.Warningf("生成抽奖随机数失败: %v", err)
-        // 〔中文注释〕: 如果安全随机数生成失败，返回一个错误提示，避免继续执行。
-        return "错误", "抽奖系统暂时出现问题，请联系管理员。"
-    }
-	roll := n.Int64()
 
-	// 〔中文注释〕: 设置不同奖项的中奖概率。总中奖概率：3%+8%+12%+20%=43% 。
-	// 一等奖: 30/1000 (3%)
-	if roll < 30 {
-		prize = "一等奖"
-		message = "🎉 **天选之人！恭喜您抽中【一等奖】！** 🎉\n\n请联系管理员兑换神秘大奖！"
-		return
-	}
-	// 二等奖: 80/1000 (8%)，累计上限 110
-	if roll < 110 {
-		prize = "二等奖"
-		message = "🎊 **欧气满满！恭喜您抽中【二等奖】！** 🎊\n\n请联系管理员兑换牛逼奖品！"
-		return
-	}
-	// 三等奖: 120/1000 (12%)，累计上限 230
-	if roll < 230 {
-		prize = "三等奖"
-		message = "🎁 **运气不错！恭喜您抽中【三等奖】！** 🎁\n\n请联系管理员兑换小惊喜！"
-		return
-	}
-	// 安慰奖: 200/1000 (20%)，累计上限 430
-	if roll < 430 {
-		prize = "安慰奖"
-		message = "👍 **重在参与！恭喜您抽中【安慰奖】！** 👍\n\n请联系管理员兑换鼓励奖！"
-		return
-	}
-
-	// 〔中文注释〕: 如果未中任何奖项。未中奖概率 57% 。
-	prize = "未中奖"
-	message = "😕 **谢谢参与**倒霉的宝子。\n\n很遗憾，本次您未中奖，明天再来试试吧！"
-	return
-}
-
-// 〔中文注释〕: 新增函数，用于发送抽奖游戏邀请。
-func (t *Tgbot) sendLotteryGameInvitation() {
-	// 〔中文注释〕: 构建邀请消息和内联键盘。
-	msg := "-------🎉 福利区 🎉-------\n\n✨ **每日幸运抽奖游戏**\n\n-->您想试试今天的手气吗？"
-
-	// 〔中文注释〕: "lottery_play" 和 "lottery_skip" 将作为回调数据，用于后续处理。
-	inlineKeyboard := tu.InlineKeyboard(
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🤩玩，我要赢奖品/萝莉！！！").WithCallbackData(t.encodeQuery("lottery_play")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("❌劳资不玩，我要看美图......").WithCallbackData(t.encodeQuery("lottery_skip")),
-		),
-	)
-
-	// 〔中文注释〕: 将带键盘的消息发送给所有管理员。
-	t.SendMsgToTgbotAdmins(msg, inlineKeyboard)
-}
 
 func (t *Tgbot) SendBackupToAdmins() {
 	if !t.IsRunning() {
@@ -4901,17 +4836,29 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 	params := telego.SendStickerParams{
 		ChatID: tu.ID(chatId),
 		// 对于现有 File ID 字符串，必须封装在 telego.InputFile 结构中。
-		Sticker: telego.InputFile{FileID: fileId}, 
+		Sticker: telego.InputFile{FileID: fileId},
 	}
-	
+
 	// 使用全局变量 bot 调用 SendSticker，并传入 context.Background() 和参数指针
 	msg, err := bot.SendSticker(context.Background(), &params)
-	
+
 	if err != nil {
 		logger.Errorf("发送贴纸失败到聊天 ID %d: %v", chatId, err)
 		return nil, err
 	}
-	
+
 	// 成功返回 *telego.Message 对象
 	return msg, nil
+}
+
+// 【新增函数】: 执行系统更新 (apt update && apt upgrade)
+func (t *Tgbot) runSystemUpdate() error {
+	cmd := exec.Command("bash", "-c", "apt update && apt upgrade -y")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Errorf("系统更新失败: %v, 输出: %s", err, string(output))
+		return fmt.Errorf("系统更新失败: %v", err)
+	}
+	logger.Info("系统更新成功完成")
+	return nil
 }
