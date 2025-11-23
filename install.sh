@@ -175,7 +175,7 @@ gen_random_string() {
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
-    read -p "$(echo -e "${green}想继续修改吗？${red}选择"n"以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
+    read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
         read -p "请设置您的用户名: " config_account
         echo -e "${yellow}您的用户名将是: ${config_account}${plain}"
@@ -416,19 +416,6 @@ ssh_forwarding
     echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     echo ""
     echo -e "${yellow}----->>>X-Panel面板和Xray启动成功<<<-----${plain}"
-}
-
-# 安装BBR
-bbrInstall() {
-    echo -e "${red}\n==============================================================${plain}"
-    echo -e "${green}BBR、DD脚本用的[ylx2016]的成熟作品，地址[https://github.com/ylx2016/Linux-NetSpeed]，请熟知${plain}"
-    echo -e "${yellow}1.安装脚本【推荐原版BBR+FQ】${plain}"
-    echo -e "${yellow}2.回退主目录${plain}"
-    echo -e "${red}==============================================================${plain}"
-    read -r -p "请选择:" installBBRStatus
-    if [[ "${installBBRStatus}" == "1" ]]; then
-        wget -O tcpx.sh "https://github.com/ylx2016/Linux-NetSpeed/raw/master/tcpx.sh" && chmod +x tcpx.sh && ./tcpx.sh
-    fi
 }
 
 # 设置VPS中的时区/时间为【上海时间】
