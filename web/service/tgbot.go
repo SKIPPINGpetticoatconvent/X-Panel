@@ -23,8 +23,6 @@ import (
 	"io/ioutil" // 〔中文注释〕: 新增，用于读取 HTTP API 响应体。
 	rng "math/rand"    // 用于随机排列
 	"encoding/xml"   // 【新增】: 用于直接解析 RSS XML 响应体
-	"crypto/sha256"
-	"encoding/hex"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -67,18 +65,6 @@ var (
 	isRunning   bool
 	hostname    string
 	hashStorage *global.HashStorage
-
-	// Lottery sticker IDs for animation
-	LOTTERY_STICKER_IDS = []string{
-		"CAACAgIAAxkBAAIBBmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5",
-		"CAACAgIAAxkBAAIBCmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK6",
-		"CAACAgIAAxkBAAIBDmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK7",
-		"CAACAgIAAxkBAAIBE2V5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK8",
-		"CAACAgIAAxkBAAIBFmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK9",
-		"CAACAgIAAxkBAAIBGmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK0",
-		"CAACAgIAAxkBAAIBHmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK1",
-		"CAACAgIAAxkBAAIBImV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK2",
-	}
 
 	// clients data to adding new client
 	receiver_inbound_ID int
@@ -1772,226 +1758,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 		}
 
-	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
-	case "lottery_play":
-		
-		// 确保本次 Shuffle 是随机的。
-		rng.Seed(time.Now().UnixNano()) 
-		chatId := callbackQuery.Message.GetChat().ID // 【确保 chatId 在函数开始时被初始化】
-		messageId := callbackQuery.Message.GetMessageID() // 获取原消息 ID
-		
-		// 〔中文注释〕: 首先，回应 TG 的回调请求，告诉用户机器人已收到操作。
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖，请稍后......")
-		
-		// 这条消息会永久停留在聊天窗口，作为等待提示。
-		t.editMessageTgBot(
-			chatId,
-			messageId,
-			"⏳ **抽奖结果生成中...**\n\n------->>>请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
-			// 【关键】: 不传入键盘参数，自动移除旧键盘
-		)
-
-		// --- 【发送动态贴纸（实现随机、容错、不中断）】 ---
-		var stickerMessageID int // 用于存储成功发送的贴纸消息 ID
-		
-        // 〔中文注释〕: 1. 将数组转换为可操作的切片
-		stickerIDsSlice := LOTTERY_STICKER_IDS[:] 
-
-		// 〔中文注释〕: 2. 随机化贴纸的发送顺序，确保每次动画不同。
-		// 注意: 依赖于文件头部导入的 rng "math/rand"
-		rng.Shuffle(len(stickerIDsSlice), func(i, j int) {
-			stickerIDsSlice[i], stickerIDsSlice[j] = stickerIDsSlice[j], stickerIDsSlice[i]
-		})
-        
-		// 〔中文注释〕: 3. 遍历随机化后的贴纸 ID，尝试发送，直到成功为止。
-		for _, stickerID := range stickerIDsSlice {
-			stickerMessage, err := t.SendStickerToTgbot(chatId, stickerID)
-			if err == nil {
-				// 成功发送，记录 ID 并跳出循环。
-				stickerMessageID = stickerMessage.MessageID
-				break
-			}
-			// 如果失败，记录日志并尝试下一个 ID。
-			logger.Warningf("尝试发送贴纸 %s 失败: %v", stickerID, err)
-		}
-		
-		// 【保持】: 程序在此处暂停 5 秒，用户可以看到动画。
-		time.Sleep(5000 * time.Millisecond)
-		
-		// 【新增：5秒后，删除动画贴纸】
-		if stickerMessageID != 0 {
-			// 〔中文注释〕: 抽奖结束后，删除刚才成功发送的动态贴纸消息。
-			t.deleteMessageTgBot(chatId, stickerMessageID)
-		}
-    
-        // 程序将在 5 秒后，继续执行下面的逻辑：
-		userID := callbackQuery.From.ID
-
-		// --- 【新增】: 获取用户信息，用于防伪 ---
-		user := callbackQuery.From
-		// 优先使用 Username，如果没有则使用 FirstName
-		userInfo := user.FirstName
-		if user.Username != "" {
-			userInfo = "@" + user.Username
-		}
-
-		
-		// 〔中文注释〕: 检查用户今天是否已经中过奖 (调用您在 database 中实现的函数)。
-		hasWon, err := database.HasUserWonToday(userID)
-		    if err != nil {
-				logger.Warningf("查询用户 %d 中奖记录失败: %v", userID, err)
-				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), "抱歉，抽奖数据库查询失败，请联系管理员。")
-				return
-			}
-
-			if hasWon {
-				// 〔中文注释〕: 如果已经中奖，则告知用户并结束。
-				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), "您今天已经中过奖啦，请明天再来！\n\n机会还多的是，贪心可是不好的哦~")
-				return
-			}
-
-			// 〔中文注释〕: 执行抽奖逻辑。
-			prize, resultMessage := t.runLotteryDraw()
-
-			// 〔中文注释〕: 如果中奖了（不是 "未中奖" 或 "错误"）。
-			if prize != "未中奖" && prize != "错误" {
-
-			// --- 【新增】: 获取当前时间并格式化 ---
-			winningTime := time.Now().Format("2006-01-02 15:04:05")	
-				
-			// --- 【新增】: 生成防伪校验哈希 ---
-			// 1. 组合所有关键信息：UserID + Prize + WinningTime
-			//    注意：使用 prize 而不是 resultMessage，因为 prize 是干净的奖项名称。
-			dataToHash := strconv.FormatInt(user.ID, 10) + "|" + prize + "|" + winningTime
-			
-			// 2. 计算 SHA256 哈希值
-			hasher := sha256.New()
-			hasher.Write([]byte(dataToHash))
-			// 3. 转换为 16 进制字符串（方便显示）
-			validationHash := hex.EncodeToString(hasher.Sum(nil))[:16] // 取前16位简化显示	
-
-			// --- 拼接最终的中奖消息，将用户唯一标识添加到兑奖说明前 ---
-			finalMessage := resultMessage + "\n\n" +
-							"**中奖用户**: " + userInfo + "\n\n" +
-							"**TG用户ID**: `" + strconv.FormatInt(user.ID, 10) + "`\n\n" +
-				            "**中奖时间**: " + winningTime + "\n\n" +
-				            "**防伪码 (Hash)**: `" + validationHash + "`\n\n" +
-							"**兑奖说明**：请截图此完整消息，\n\n" +
-							"并联系交流群内管理员进行兑奖。\n\n" +
-							"------------->>>>〔X-Panel 面板〕交流群：\n\n" +
-							"------------->>>> https://t.me/XUI_CN"
-
-			// --- 【向中央统计频道发送报告（异步）】 ---
-			go func() {
-				// 尝试获取主机名作为唯一标识
-				vpsIdentifier, err := os.Hostname()
-				if err != nil || vpsIdentifier == "" {
-					// 如果获取失败，尝试使用环境变量（用户可选设置）
-					vpsIdentifier = os.Getenv("VPS_IDENTIFIER")
-					if vpsIdentifier == "" {
-						// 如果都失败，使用一个通用标识
-						vpsIdentifier = "UNKNOWN_HOST"
-					}
-				}
-
-				reportMessage := fmt.Sprintf(
-					"✅ **[中奖报告 - %s]**\n\n" +
-					"**用户名**: `%s`\n\n" +
-					"**用户ID**: `%d`\n\n" +
-					"**中奖时间**: %s\n\n" + 
-					"**部署来源**: `%s`", // 自动获取的主机名
-					prize,
-					userInfo,
-					userID,
-					winningTime,
-					vpsIdentifier,
-				)
-				// --- 【核心】: 创建一个临时的、专用于报告的机器人实例 ---
-		        reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
-		        if err != nil {
-			        logger.Errorf("无法创建报告机器人实例: %v", err)
-			        return // 如果无法创建报告机器人，则静默失败，不影响用户
-		        }
-
-				// --- 遍历所有报告频道 ID 并发送 ---
-				for _, chatID := range REPORT_CHAT_IDS {
-					// 构建正确的 SendMessageParams
-					params := tu.Message(tu.ID(chatID), reportMessage).WithParseMode(telego.ModeMarkdown)
-
-					// 使用临时机器人的 SendMessage 方法发送报告
-					_, err = reportBot.SendMessage(context.Background(), params)
-					if err != nil {
-						logger.Warningf("发送【中奖报告】到频道 %d 失败: %v", chatID, err)
-					}
-				}	
-	        }() // 异步执行结束
-					
-			// 〔中文注释〕: 抽奖功能已清理，此处代码已移除。
-			// err := database.RecordUserWin(userID, prize)
-			// if err != nil {
-			//     logger.Warningf("记录用户 %d 中奖信息失败: %v", userID, err)
-			//     // 〔中文注释〕: 即使记录失败，也要告知用户中奖了，但提示管理员后台可能出错了。
-			//     finalMessage += "\n\n(后台警告：数据库记录失败，请管理员手动核实给予兑奖)"
-			// }
-			// 〔中文注释〕: 编辑原消息，显示最终的中奖结果。
-				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), finalMessage)
-			} else {
-				// 〔中文注释〕: 如果未中奖或抽奖出错，则直接显示相应信息。
-				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), resultMessage)
-
-				// --- 【新增：未中奖也发送报告到中央频道（异步）】 ---
-				go func() {
-					// 尝试获取主机名作为唯一标识
-					vpsIdentifier, err := os.Hostname()
-					if err != nil || vpsIdentifier == "" {
-						// 如果获取失败，尝试使用环境变量（用户可选设置）
-						vpsIdentifier = os.Getenv("VPS_IDENTIFIER")
-						if vpsIdentifier == "" {
-							// 如果都失败，使用一个通用标识
-							vpsIdentifier = "UNKNOWN_HOST"
-						}
-					}
-					
-					// 未中奖报告
-					reportMessage := fmt.Sprintf(
-						"❌ [未中奖报告]\n\n" +
-						"**用户名**: `%s`\n\n" +
-						"**用户ID**: `%d`\n\n" +
-						"**部署来源**: `%s`",
-						userInfo,
-						userID,
-						vpsIdentifier,
-					)
-					// --- 【核心】: 创建一个临时的、专用于报告的机器人实例 ---
-		            reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
-		            if err != nil {
-			            logger.Errorf("无法创建报告机器人实例: %v", err)
-			            return // 如果无法创建报告机器人，则静默失败，不影响用户
-		            }
-
-				    // --- 遍历所有报告频道 ID 并发送 ---
-					for _, chatID := range REPORT_CHAT_IDS {
-						// 构建正确的 SendMessageParams
-						params := tu.Message(tu.ID(chatID), reportMessage).WithParseMode(telego.ModeMarkdown)
-
-						// 使用临时机器人的 SendMessage 方法发送报告
-						_, err = reportBot.SendMessage(context.Background(), params)
-						if err != nil {
-							logger.Warningf("发送【未中奖报告】到频道 %d 失败: %v", chatID, err)
-						}
-					}	
-	           }() // 异步执行结束
-			}
-			return // 〔中文注释〕: 处理完毕，直接返回，避免执行后续逻辑。
-
-	 // 〔中文注释〕: 新增 - 处理用户点击 "不玩" 抽奖游戏
-	 case "lottery_skip":
-			// 〔中文注释〕: 回应回调请求。
-			t.sendCallbackAnswerTgBot(callbackQuery.ID, "您已跳过游戏。")
-			// 〔中文注释〕: 编辑原消息，移除按钮并显示友好提示。
-			t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), "您选择不参与本次游戏，祝您一天愉快！")
-			return // 〔中文注释〕: 处理完毕，直接返回。	
-
+	 // 【新增代码】: 在这里处理新按钮的回调
 	 // 【新增代码】: 在这里处理新按钮的回调
 	 case "oneclick_options":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -2040,7 +1807,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")
-	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
+	// 〔中文注释〕: 【新增回调处理】 - 重启面板
 	case "restart_panel":
 		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -4830,64 +4597,6 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 	return msg, nil
 }
 
-// runLotteryDraw 执行抽奖逻辑，返回奖品名称和结果消息
-func (t *Tgbot) runLotteryDraw() (string, string) {
-	// 定义抽奖奖品和权重（权重越高，中奖概率越大）
-	prizes := []struct {
-		name   string
-		weight int
-	}{
-		{"未中奖", 70},     // 70% 概率未中奖
-		{"100MB流量", 10}, // 10% 概率
-		{"500MB流量", 8},  // 8% 概率
-		{"1GB流量", 5},    // 5% 概率
-		{"1天VIP", 3},    // 3% 概率
-		{"3天VIP", 2},    // 2% 概率
-		{"7天VIP", 1},    // 1% 概率
-		{"30天VIP", 1},   // 1% 概率
-	}
-
-	// 计算总权重
-	totalWeight := 0
-	for _, prize := range prizes {
-		totalWeight += prize.weight
-	}
-
-	// 生成随机数（0 到 totalWeight-1）
-	randomNum, err := rand.Int(rand.Reader, big.NewInt(int64(totalWeight)))
-	if err != nil {
-		logger.Errorf("抽奖随机数生成失败: %v", err)
-		return "错误", "❌ 抽奖系统出现故障，请稍后再试！"
-	}
-
-	// 根据权重选择奖品
-	selectedPrize := ""
-	currentWeight := int64(0)
-	for _, prize := range prizes {
-		currentWeight += int64(prize.weight)
-		if randomNum.Int64() < currentWeight {
-			selectedPrize = prize.name
-			break
-		}
-	}
-
-	// 如果未中奖
-	if selectedPrize == "未中奖" {
-		resultMessage := "🎉 **抽奖结果**\n\n" +
-			"很遗憾，您本次抽奖结果为：\n\n" +
-			"**未中奖**\n\n" +
-			"😊 机会还很多，明天再来试试吧！"
-		return selectedPrize, resultMessage
-	}
-
-	// 如果中奖
-	resultMessage := "🎉 **恭喜中奖！**\n\n" +
-		"您本次抽奖中得：\n\n" +
-		fmt.Sprintf("**%s**\n\n", selectedPrize) +
-		"🏆 请联系管理员兑奖！"
-
-	return selectedPrize, resultMessage
-}
 
 // 【新增函数】: 执行系统更新 (apt update && apt upgrade -y && apt autoremove -y && apt autoclean)
 func (t *Tgbot) runSystemUpdate() error {

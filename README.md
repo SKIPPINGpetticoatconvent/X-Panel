@@ -39,7 +39,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 | 流量统计 | 实时/历史流量, 自动重置 |
 | 限速/设备限制 | 独立限速, IP/设备数限制 |
 | 一键配置 | 面板/TG 机器人快速生成节点 |
-| TG 机器人 | 通知, 备份, 管理, 抽奖游戏 |
+| TG 机器人 | 通知, 备份, 管理 |
 | 订阅转换 | Clash/Surge 等格式 |
 | 备份恢复 | 自动/手动数据库备份 |
 | 多语言 | 中文/英文/波斯语 等 11 种 |

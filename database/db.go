@@ -31,7 +31,6 @@ func initModels() error {
 		&model.InboundClientIps{},
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},
-		&model.LotteryWin{},  // 新增 抽奖游戏LotteryWin 数据模型
 		&LinkHistory{},
 	}
 	for _, model := range models {
