@@ -4,6 +4,7 @@
 .cache/
 .sync*
 .taskmaster
+test
 
 # Ignore log files
 *.log
