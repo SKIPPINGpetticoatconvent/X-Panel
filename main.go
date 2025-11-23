@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 //	"os/exec"
 //	"strings"
 	"syscall"
@@ -108,6 +109,10 @@ func runWebServer() {
 	   server.SetXrayService(xrayService)
 	
 	global.SetWebServer(server)
+	
+	// 【新增】: 启动前检查并自动配置证书路径
+	autoConfigureCertPath(settingService)
+	
 	err = server.Start()
 	if err != nil {
 		log.Fatalf("Error starting web server: %v", err)
@@ -539,6 +544,98 @@ func migrateDb() {
 	fmt.Println("Start migrating database... ---->>开始迁移数据库...")
 	inboundService.MigrateDB()
 	fmt.Println("Migration done! ------------>>迁移完成！")
+}
+
+// 【新增函数】: 自动检查并配置证书路径
+func autoConfigureCertPath(settingService *service.SettingService) {
+	// 检查是否已经配置了证书路径
+	certFile, err := settingService.GetCertFile()
+	if err != nil {
+		logger.Warningf("无法获取当前证书文件设置: %v", err)
+	}
+	
+	keyFile, err := settingService.GetKeyFile()
+	if err != nil {
+		logger.Warningf("无法获取当前密钥文件设置: %v", err)
+	}
+	
+	// 如果已经有证书配置，先检查文件是否存在
+	if certFile != "" && keyFile != "" {
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			logger.Warningf("配置的证书文件不存在: %s", certFile)
+			certFile = "" // 清除无效路径
+		}
+		if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+			logger.Warningf("配置的密钥文件不存在: %s", keyFile)
+			keyFile = "" // 清除无效路径
+		}
+		
+		// 如果两个文件都有效，跳过自动配置
+		if certFile != "" && keyFile != "" {
+			logger.Info("面板证书路径已正确配置")
+			return
+		}
+	}
+	
+	// 自动检测 /root/cert/ 目录下的证书
+	certDir := "/root/cert"
+	if _, err := os.Stat(certDir); os.IsNotExist(err) {
+		logger.Info("未找到证书目录 /root/cert/")
+		return
+	}
+	
+	// 获取域名列表（目录名）
+	domains, err := os.ReadDir(certDir)
+	if err != nil {
+		logger.Warningf("无法读取证书目录: %v", err)
+		return
+	}
+	
+	// 遍历目录查找有效的证书文件
+	var foundCert, foundKey, foundDomain string
+	for _, domain := range domains {
+		if domain.IsDir() {
+			domainName := domain.Name()
+			certPath := filepath.Join(certDir, domainName, "fullchain.pem")
+			keyPath := filepath.Join(certDir, domainName, "privkey.pem")
+			
+			// 检查证书文件是否存在
+			if _, err := os.Stat(certPath); err == nil {
+				if _, err := os.Stat(keyPath); err == nil {
+					foundCert = certPath
+					foundKey = keyPath
+					foundDomain = domainName
+					break // 找到第一个有效的证书就停止
+				}
+			}
+		}
+	}
+	
+	// 如果找到了有效的证书，自动配置路径
+	if foundCert != "" && foundKey != "" {
+		logger.Infof("自动检测到证书文件，正在配置面板证书路径...")
+		logger.Infof("域名: %s", foundDomain)
+		logger.Infof("证书文件: %s", foundCert)
+		logger.Infof("密钥文件: %s", foundKey)
+		
+		// 设置证书路径
+		if err := settingService.SetCertFile(foundCert); err != nil {
+			logger.Warningf("设置证书文件路径失败: %v", err)
+		} else {
+			logger.Info("✅ 证书文件路径设置成功")
+		}
+		
+		if err := settingService.SetKeyFile(foundKey); err != nil {
+			logger.Warningf("设置密钥文件路径失败: %v", err)
+		} else {
+			logger.Info("✅ 密钥文件路径设置成功")
+		}
+		
+		logger.Infof("🎉 面板证书路径自动配置完成！")
+		logger.Infof("建议重启面板以使证书配置生效：%s", "systemctl restart x-ui")
+	} else {
+		logger.Info("未在 /root/cert/ 目录下找到有效的证书文件")
+	}
 }
 
 func main() {
