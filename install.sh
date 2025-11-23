@@ -428,8 +428,6 @@ bbrInstall() {
     read -r -p "请选择:" installBBRStatus
     if [[ "${installBBRStatus}" == "1" ]]; then
         wget -O tcpx.sh "https://github.com/ylx2016/Linux-NetSpeed/raw/master/tcpx.sh" && chmod +x tcpx.sh && ./tcpx.sh
-    else
-        echo -e "${green}已取消BBR安装，返回...${plain}"
     fi
 }
 
