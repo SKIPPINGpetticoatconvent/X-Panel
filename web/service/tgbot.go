@@ -4889,9 +4889,9 @@ func (t *Tgbot) runLotteryDraw() (string, string) {
 	return selectedPrize, resultMessage
 }
 
-// 【新增函数】: 执行系统更新 (apt update && apt upgrade)
+// 【新增函数】: 执行系统更新 (apt update && apt upgrade -y && apt autoremove -y && apt autoclean)
 func (t *Tgbot) runSystemUpdate() error {
-	cmd := exec.Command("bash", "-c", "apt update && apt upgrade -y")
+	cmd := exec.Command("bash", "-c", "apt update && apt upgrade -y && apt autoremove -y && apt autoclean")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		logger.Errorf("系统更新失败: %v, 输出: %s", err, string(output))
