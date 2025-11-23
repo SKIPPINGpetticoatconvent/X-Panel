@@ -68,6 +68,18 @@ var (
 	hostname    string
 	hashStorage *global.HashStorage
 
+	// Lottery sticker IDs for animation
+	LOTTERY_STICKER_IDS = []string{
+		"CAACAgIAAxkBAAIBBmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5",
+		"CAACAgIAAxkBAAIBCmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK6",
+		"CAACAgIAAxkBAAIBDmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK7",
+		"CAACAgIAAxkBAAIBE2V5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK8",
+		"CAACAgIAAxkBAAIBFmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK9",
+		"CAACAgIAAxkBAAIBGmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK0",
+		"CAACAgIAAxkBAAIBHmV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK1",
+		"CAACAgIAAxkBAAIBImV5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK5Q4Q2q3qZ3dK2",
+	}
+
 	// clients data to adding new client
 	receiver_inbound_ID int
 	client_Id           string
@@ -4816,6 +4828,65 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 
 	// 成功返回 *telego.Message 对象
 	return msg, nil
+}
+
+// runLotteryDraw 执行抽奖逻辑，返回奖品名称和结果消息
+func (t *Tgbot) runLotteryDraw() (string, string) {
+	// 定义抽奖奖品和权重（权重越高，中奖概率越大）
+	prizes := []struct {
+		name   string
+		weight int
+	}{
+		{"未中奖", 70},     // 70% 概率未中奖
+		{"100MB流量", 10}, // 10% 概率
+		{"500MB流量", 8},  // 8% 概率
+		{"1GB流量", 5},    // 5% 概率
+		{"1天VIP", 3},    // 3% 概率
+		{"3天VIP", 2},    // 2% 概率
+		{"7天VIP", 1},    // 1% 概率
+		{"30天VIP", 1},   // 1% 概率
+	}
+
+	// 计算总权重
+	totalWeight := 0
+	for _, prize := range prizes {
+		totalWeight += prize.weight
+	}
+
+	// 生成随机数（0 到 totalWeight-1）
+	randomNum, err := rand.Int(rand.Reader, big.NewInt(int64(totalWeight)))
+	if err != nil {
+		logger.Errorf("抽奖随机数生成失败: %v", err)
+		return "错误", "❌ 抽奖系统出现故障，请稍后再试！"
+	}
+
+	// 根据权重选择奖品
+	selectedPrize := ""
+	currentWeight := int64(0)
+	for _, prize := range prizes {
+		currentWeight += int64(prize.weight)
+		if randomNum.Int64() < currentWeight {
+			selectedPrize = prize.name
+			break
+		}
+	}
+
+	// 如果未中奖
+	if selectedPrize == "未中奖" {
+		resultMessage := "🎉 **抽奖结果**\n\n" +
+			"很遗憾，您本次抽奖结果为：\n\n" +
+			"**未中奖**\n\n" +
+			"😊 机会还很多，明天再来试试吧！"
+		return selectedPrize, resultMessage
+	}
+
+	// 如果中奖
+	resultMessage := "🎉 **恭喜中奖！**\n\n" +
+		"您本次抽奖中得：\n\n" +
+		fmt.Sprintf("**%s**\n\n", selectedPrize) +
+		"🏆 请联系管理员兑奖！"
+
+	return selectedPrize, resultMessage
 }
 
 // 【新增函数】: 执行系统更新 (apt update && apt upgrade)
