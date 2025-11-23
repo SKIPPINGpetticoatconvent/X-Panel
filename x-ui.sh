@@ -592,22 +592,17 @@ show_log() {
 }
 
 bbr_menu() {
-    echo -e "${green}\t1.${plain} 启用 BBR"
-    echo -e "${green}\t2.${plain} 禁用 BBR"
-    echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
-    case "$choice" in
-    0)
+    echo -e "${red}\n==============================================================${plain}"
+    echo -e "${green}BBR、DD脚本用的[ylx2016]的成熟作品，地址[https://github.com/ylx2016/Linux-NetSpeed]，请熟知${plain}"
+    echo -e "${yellow}1.安装脚本【推荐原版BBR+FQ】${plain}"
+    echo -e "${yellow}2.回退主目录${plain}"
+    echo -e "${red}==============================================================${plain}"
+    read -r -p "请选择:" installBBRStatus
+    if [[ "${installBBRStatus}" == "1" ]]; then
+        wget -O tcpx.sh "https://github.com/ylx2016/Linux-NetSpeed/raw/master/tcpx.sh" && chmod +x tcpx.sh && ./tcpx.sh
+    else
         show_menu
-        ;;
-    1)
-        enable_bbr
-        ;;
-    2)
-        disable_bbr
-        ;;
-    *) echo "无效选项" ;;
-    esac
+    fi
 }
 
 disable_bbr() {
