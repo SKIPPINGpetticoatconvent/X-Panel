@@ -30,29 +30,143 @@ class HttpUtil {
     }
 
     static async postForm(url, data) {
-    const formData = new URLSearchParams();
-    for (const key in data) {
-        formData.append(key, data[key]);
+        const formData = new URLSearchParams();
+        for (const key in data) {
+            formData.append(key, data[key]);
+        }
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+        return this.handleResponse(res);
     }
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData.toString()
-    });
-    return res.json();
-}
+    
+    static async handleResponse(res) {
+        // 检测是否为登录页面的HTML响应（session过期）
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            const text = await res.text();
+            if (text.includes('XPanel System') || text.includes('login') || text.includes('Sign In')) {
+                // Session过期，重定向到登录页
+                this.handleSessionExpired();
+                return { success: false, msg: '登录已过期，请重新登录', obj: null };
+            }
+        }
+        return res.json();
+    }
+    
+    static handleSessionExpired() {
+        // 清空本地存储的用户信息
+        localStorage.removeItem('user_session');
+        sessionStorage.clear();
+        
+        // 显示登录过期提示
+        if (Vue && Vue.prototype && Vue.prototype.$message) {
+            Vue.prototype.$warning({
+                title: '登录已过期',
+                content: '您的登录会话已过期，请重新登录以继续使用。',
+                okText: '重新登录',
+                onOk: () => {
+                    window.location.href = '/login';
+                }
+            });
+        } else {
+            // 如果Vue还没加载，直接重定向
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1000);
+        }
+    }
+    
+    static async checkAuthStatus() {
+        try {
+            const res = await fetch('/panel/api/inbounds/list', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            if (res.status === 401 || res.status === 403) {
+                this.handleSessionExpired();
+                return false;
+            }
+            
+            // 检查是否返回了HTML（表示重定向到登录页）
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                const text = await res.text();
+                if (text.includes('XPanel System') || text.includes('login') || text.includes('Sign In')) {
+                    this.handleSessionExpired();
+                    return false;
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            console.warn('检查登录状态失败:', error);
+            return true; // 网络错误不视为session过期
+        }
+    }
+    
+    static async refreshSession() {
+        try {
+            const res = await fetch('/panel/setting/defaultSettings', {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+            
+            if (res.ok) {
+                console.log('Session自动续期成功');
+                return true;
+            } else if (res.status === 401 || res.status === 403) {
+                this.handleSessionExpired();
+                return false;
+            }
+            return false;
+        } catch (error) {
+            console.warn('Session自动续期失败:', error);
+            return false;
+        }
+    }
 
 
     static async get(url, params, options = {}) {
         try {
+            // 预检查session状态
+            if (!await this._preRequestCheck()) {
+                return new Msg(false, '登录已过期，请重新登录', null);
+            }
+            
             const resp = await axios.get(url, { params, ...options });
             const msg = this._respToMsg(resp);
             this._handleMsg(msg);
             return msg;
         } catch (error) {
             console.error('GET request failed:', error);
+            
+            // 检查是否是因为session过期导致的401/403错误
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                // 尝试自动续期
+                if (await this.refreshSession()) {
+                    // 续期成功后重试请求
+                    try {
+                        const resp = await axios.get(url, { params, ...options });
+                        const msg = this._respToMsg(resp);
+                        this._handleMsg(msg);
+                        return msg;
+                    } catch (retryError) {
+                        // 重试失败，使用session过期处理
+                        this.handleSessionExpired();
+                        return new Msg(false, '登录已过期，请重新登录', null);
+                    }
+                } else {
+                    this.handleSessionExpired();
+                    return new Msg(false, '登录已过期，请重新登录', null);
+                }
+            }
+            
             const errorMsg = new Msg(false, error.response?.data?.message || error.message || 'Request failed');
             this._handleMsg(errorMsg);
             return errorMsg;
@@ -61,16 +175,60 @@ class HttpUtil {
 
     static async post(url, data, options = {}) {
         try {
+            // 预检查session状态
+            if (!await this._preRequestCheck()) {
+                return new Msg(false, '登录已过期，请重新登录', null);
+            }
+            
             const resp = await axios.post(url, data, options);
             const msg = this._respToMsg(resp);
             this._handleMsg(msg);
             return msg;
         } catch (error) {
             console.error('POST request failed:', error);
+            
+            // 检查是否是因为session过期导致的401/403错误
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                // 尝试自动续期
+                if (await this.refreshSession()) {
+                    // 续期成功后重试请求
+                    try {
+                        const resp = await axios.post(url, data, options);
+                        const msg = this._respToMsg(resp);
+                        this._handleMsg(msg);
+                        return msg;
+                    } catch (retryError) {
+                        // 重试失败，使用session过期处理
+                        this.handleSessionExpired();
+                        return new Msg(false, '登录已过期，请重新登录', null);
+                    }
+                } else {
+                    this.handleSessionExpired();
+                    return new Msg(false, '登录已过期，请重新登录', null);
+                }
+            }
+            
             const errorMsg = new Msg(false, error.response?.data?.message || error.message || 'Request failed');
             this._handleMsg(errorMsg);
             return errorMsg;
         }
+    }
+    
+    static async _preRequestCheck() {
+        // 定期检查session状态，避免每个请求都检查
+        const now = Date.now();
+        const lastCheck = localStorage.getItem('last_session_check') || 0;
+        
+        // 如果距离上次检查超过30秒，才进行检查
+        if (now - lastCheck < 30000) {
+            return true;
+        }
+        
+        // 更新检查时间
+        localStorage.setItem('last_session_check', now);
+        
+        // 执行session状态检查
+        return await this.checkAuthStatus();
     }
 
     static async postWithModal(url, data, modal) {

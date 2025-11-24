@@ -1005,12 +1005,59 @@
             
             // 【核心修改】: 从后端加载历史记录，而不是从 localStorage
             this.loadHistoryFromServer();
+            
+            // 【新增】: 启动Session监控和自动续期
+            this.startSessionMonitoring();
         },
-		
-        methods: {
-            loading(spinning = true) {
-                this.loadingStates.spinning = spinning;
-            },
+methods: {
+    loading(spinning = true) {
+        this.loadingStates.spinning = spinning;
+    },
+    
+    // 【新增】: Session监控和自动续期功能
+    startSessionMonitoring() {
+        // 每5分钟检查一次session状态
+        this.sessionCheckInterval = setInterval(() => {
+            this.checkSessionHealth();
+        }, 5 * 60 * 1000);
+        
+        // 页面失焦时也检查一次
+        window.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.checkSessionHealth();
+            }
+        });
+        
+        // 定时自动续期（每25分钟进行一次）
+        this.sessionRefreshInterval = setInterval(() => {
+            this.attemptSessionRefresh();
+        }, 25 * 60 * 1000);
+    },
+    
+    async checkSessionHealth() {
+        try {
+            const isValid = await HttpUtil.checkAuthStatus();
+            if (!isValid) {
+                console.log('Session状态异常，已触发自动处理');
+            }
+        } catch (error) {
+            console.warn('Session健康检查失败:', error);
+        }
+    },
+    
+    async attemptSessionRefresh() {
+        try {
+            const refreshed = await HttpUtil.refreshSession();
+            if (refreshed) {
+                console.log('自动Session续期成功');
+                // 更新下次检查时间
+                localStorage.setItem('last_session_refresh', Date.now().toString());
+            }
+        } catch (error) {
+            console.warn('自动Session续期失败:', error);
+        }
+    },
+
             async getDBInbounds() {
                 this.refreshing = true;
                 const msg = await HttpUtil.get('/panel/api/inbounds/list');
