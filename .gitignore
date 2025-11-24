@@ -5,7 +5,7 @@
 .sync*
 .taskmaster
 test
-X-Panel
+Old-X-Panel
 
 # Ignore log files
 *.log
