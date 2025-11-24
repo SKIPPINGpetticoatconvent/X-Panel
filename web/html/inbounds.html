@@ -1058,13 +1058,96 @@
                 }
             },
 
+            // 【增强】: 带超时控制、指数退避重试机制的getDBInbounds方法
             async getDBInbounds() {
                 this.refreshing = true;
                 console.log('开始获取入站列表数据...');
                 this.loadingStates.spinning = true;
                 
+                // 【新增】: 指数退避重试机制配置
+                const maxRetries = 3;
+                const baseDelay = 1000; // 1秒基础延迟
+                let retryCount = 0;
+                
+                // 【新增】: 带超时控制的API调用函数
+                const fetchWithTimeout = async (url, timeout = 30000) => {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), timeout);
+                    
+                    try {
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            signal: controller.signal,
+                            credentials: 'same-origin'
+                        });
+                        clearTimeout(timeoutId);
+                        return await response.json();
+                    } catch (error) {
+                        clearTimeout(timeoutId);
+                        throw error;
+                    }
+                };
+                
+                // 【新增】: 重试函数（带指数退避）
+                const retryWithBackoff = async (operation, maxRetries, baseDelay) => {
+                    let lastError;
+                    
+                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                        try {
+                            return await operation();
+                        } catch (error) {
+                            lastError = error;
+                            
+                            console.warn(`第 ${attempt + 1} 次尝试失败:`, error.message);
+                            
+                            // 如果是最后一次尝试，不再重试
+                            if (attempt === maxRetries) {
+                                break;
+                            }
+                            
+                            // 【新增】: 计算指数退避延迟时间
+                            const delay = baseDelay * Math.pow(2, attempt);
+                            console.log(`等待 ${delay}ms 后进行第 ${attempt + 2} 次重试...`);
+                            
+                            // 显示重试提示（用户友好）
+                            if (attempt === 0) {
+                                this.$message.warning(`连接失败，${Math.round(delay/1000)}秒后自动重试...`, 2);
+                            }
+                            
+                            // 使用Promise.race实现延迟
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                    }
+                    
+                    throw lastError;
+                };
+                
+                // 【新增】: 错误类型判断函数
+                const getErrorMessage = (error) => {
+                    if (error.name === 'AbortError') {
+                        return '请求超时（30秒），请检查网络连接或后端服务状态';
+                    }
+                    if (error.message.includes('fetch')) {
+                        return '网络连接失败，请检查网络设置';
+                    }
+                    if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                        return '网络请求失败，请确认后端服务正常运行';
+                    }
+                    return `网络请求异常: ${error.message}`;
+                };
+                
                 try {
-                    const msg = await HttpUtil.get('/panel/api/inbounds/list');
+                    // 【核心修改】: 使用重试机制包装API调用
+                    const msg = await retryWithBackoff(
+                        () => fetchWithTimeout('/panel/api/inbounds/list'),
+                        maxRetries,
+                        baseDelay
+                    );
+                    
                     console.log('API 响应:', msg);
                     
                     // 优先确保 fetched 状态被设置，防止无限加载
@@ -1072,7 +1155,10 @@
                     
                     if (!msg || !msg.hasOwnProperty('success')) {
                         console.error('API 响应格式异常:', msg);
-                        this.$message.error('API响应格式错误，请检查后端服务', 5);
+                        this.$message.error({
+                            content: '⚠️ API响应格式错误，请检查后端服务状态',
+                            duration: 5
+                        });
                         this.setInbounds([]);
                         return;
                     }
@@ -1080,14 +1166,25 @@
                     if (!msg.success) {
                         console.error('获取入站列表失败:', msg.msg || '未知错误');
                         
-                        // 显示用户友好的错误消息
+                        // 【增强】显示更用户友好的错误消息
+                        let errorContent = '🔴 获取入站列表失败';
+                        if (msg.msg) {
+                            errorContent += `: ${msg.msg}`;
+                        }
+                        errorContent += '。系统将显示空列表，您可以稍后重试。';
+                        
                         this.$message.error({
-                            content: `获取入站列表失败: ${msg.msg || '未知错误'}. 将显示空列表。`,
-                            duration: 5
+                            content: errorContent,
+                            duration: 6
                         });
                         
                         this.setInbounds([]);
                         return;
+                    }
+
+                    // 【增强】显示成功提示（如果之前有重试）
+                    if (retryCount > 0) {
+                        this.$message.success(`✅ 经过 ${retryCount + 1} 次尝试后成功加载数据`, 3);
                     }
 
                     // 确保响应数据存在
@@ -1096,7 +1193,10 @@
                     
                     if (!inboundsData) {
                         console.warn('后端返回的数据为 null 或 undefined');
-                        this.$message.warning('后端返回数据为空', 3);
+                        this.$message.warning({
+                            content: '⚠️ 后端返回数据为空，请检查服务器配置',
+                            duration: 4
+                        });
                         this.setInbounds([]);
                         return;
                     }
@@ -1104,21 +1204,49 @@
                     // 确保数据是数组格式
                     if (!Array.isArray(inboundsData)) {
                         console.warn('后端返回的数据不是数组格式:', typeof inboundsData);
-                        this.$message.warning('数据格式错误，显示空列表', 3);
+                        this.$message.warning({
+                            content: '⚠️ 数据格式异常，显示空列表。请联系管理员检查后端配置。',
+                            duration: 4
+                        });
                         this.setInbounds([]);
                         return;
                     }
                     
-                    // 尝试获取附加数据，但不阻塞主流程
+                    // 【增强】: 优化附加数据获取逻辑，添加部分失败处理
+                    const additionalDataPromises = [
+                        { name: '在线用户', operation: () => this.getOnlineUsers() },
+                        { name: '最后在线', operation: () => this.getLastOnlineMap() }
+                    ];
+                    
                     try {
-                        await Promise.allSettled([
-                            this.getLastOnlineMap(),
-                            this.getOnlineUsers()
-                        ]);
-                        console.log('附加数据获取完成');
+                        const results = await Promise.allSettled(
+                            additionalDataPromises.map(({ operation }) => operation())
+                        );
+                        
+                        // 统计成功和失败的操作
+                        let successCount = 0;
+                        let failureCount = 0;
+                        
+                        results.forEach((result, index) => {
+                            if (result.status === 'fulfilled') {
+                                successCount++;
+                            } else {
+                                failureCount++;
+                                console.warn(`获取${additionalDataPromises[index].name}失败:`, result.reason);
+                            }
+                        });
+                        
+                        if (successCount > 0 && failureCount > 0) {
+                            console.log(`附加数据获取部分成功: ${successCount}成功, ${failureCount}失败`);
+                            // 不显示错误提示，避免干扰用户，但记录日志
+                        } else if (failureCount > 0) {
+                            console.warn('所有附加数据获取失败，但不影响主数据显示');
+                        } else {
+                            console.log('附加数据全部获取完成');
+                        }
                     } catch (error) {
                         console.warn('获取附加数据时出错，但不影响主数据显示:', error);
-                        // 不显示错误提示，避免干扰用户
+                        // 静默处理，不显示错误提示
                     }
 
                     // 设置入站数据
@@ -1126,9 +1254,12 @@
                     
                     if (inboundsData.length === 0) {
                         console.log('没有入站配置数据');
-                        this.$message.info('暂无入站配置，请点击"添加入站"创建', 3);
+                        this.$message.info({
+                            content: '📝 暂无入站配置，请点击"添加入站"创建您的第一个配置',
+                            duration: 4
+                        });
                     } else {
-                        console.log(`成功加载 ${inboundsData.length} 个入站配置`);
+                        console.log(`✅ 成功加载 ${inboundsData.length} 个入站配置`);
                     }
                     
                 } catch (error) {
@@ -1136,18 +1267,42 @@
                     // 确保即使发生错误也设置 fetched 状态
                     this.loadingStates.fetched = true;
                     
-                    let errorMessage = '网络请求失败';
-                    if (error.message) {
-                        errorMessage += ': ' + error.message;
-                    }
+                    // 【增强】错误消息处理
+                    const errorMessage = getErrorMessage(error);
+                    const displayMessage = `🔴 ${errorMessage}。请检查网络连接或联系管理员。`;
                     
-                    this.$message.error(errorMessage + '，请检查连接并重试', 5);
+                    this.$message.error({
+                        content: displayMessage,
+                        duration: 8
+                    });
+                    
                     this.setInbounds([]);
+                    
+                    // 【新增】: 错误统计和监控
+                    this.logErrorStats(error);
+                    
                 } finally {
                     this.refreshing = false;
                     this.loadingStates.spinning = false;
-                    console.log('数据加载完成');
+                    console.log('数据加载流程完成');
                 }
+            },
+            
+            // 【新增】: 错误统计和监控函数
+            logErrorStats(error) {
+                // 记录错误统计信息，便于后续分析和优化
+                const errorInfo = {
+                    timestamp: new Date().toISOString(),
+                    type: error.name || 'UnknownError',
+                    message: error.message,
+                    userAgent: navigator.userAgent,
+                    url: window.location.href
+                };
+                
+                console.warn('错误统计信息:', errorInfo);
+                
+                // 可以在这里添加错误上报逻辑（如发送到监控服务）
+                // 例如: this.reportError(errorInfo);
             },
             async getOnlineUsers() {
                 const msg = await HttpUtil.post('panel/api/inbounds/onlines');

@@ -2,12 +2,14 @@ package database
 
 import (
 	"bytes"
+	"database/sql"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"path"
 	"slices"
+	"time"
 
 	"x-ui/config"
 	"x-ui/database/model"
@@ -105,10 +107,41 @@ func InitDB(dbPath string) error {
 	c := &gorm.Config{
 		Logger: gormLogger,
 	}
+	
+	// 【新增】: SQLite连接池配置
+	sqlDB, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	
+	// 【增强】: 设置SQLite连接池参数
+	sqlDB.SetMaxOpenConns(25)                    // 最大连接数
+	sqlDB.SetMaxIdleConns(5)                     // 空闲连接数
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)    // 连接最大生存时间
+	sqlDB.SetConnMaxIdleTime(2 * time.Minute)    // 连接最大空闲时间
+	
+	// 【新增】: SQLite性能优化配置
+	sqlDB.Exec("PRAGMA journal_mode=WAL;")       // 启用WAL模式，提高并发性能
+	sqlDB.Exec("PRAGMA synchronous=NORMAL;")     // 同步模式平衡性能和安全
+	sqlDB.Exec("PRAGMA cache_size=10000;")       // 缓存大小（KB）
+	sqlDB.Exec("PRAGMA temp_store=MEMORY;")      // 将临时表存储在内存中
+	sqlDB.Exec("PRAGMA mmap_size=268435456;")    // 内存映射大小（256MB）
+	sqlDB.Exec("PRAGMA foreign_keys=ON;")        // 启用外键约束
+	sqlDB.Exec("PRAGMA busy_timeout=30000;")     // 忙等待超时（毫秒）
+	
 	db, err = gorm.Open(sqlite.Open(dbPath), c)
 	if err != nil {
 		return err
 	}
+	
+	// 【新增】: 设置GORM连接池参数
+	sqlDB2, err := db.DB()
+	if err != nil {
+		return err
+	}
+	sqlDB2.SetMaxOpenConns(25)
+	sqlDB2.SetMaxIdleConns(5)
+	sqlDB2.SetConnMaxLifetime(5 * time.Minute)
 
 	if err := initModels(); err != nil {
 		return err

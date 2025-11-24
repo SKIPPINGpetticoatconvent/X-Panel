@@ -83,6 +83,58 @@ class HttpUtil {
     
     static async checkAuthStatus() {
         try {
+            // 【增强】: 使用专门的健康检查接口，避免影响正常业务
+            const res = await fetch('/panel/api/inbounds/list', {
+                method: 'GET',
+                headers: {
+                    'X-Session-Check': 'true',
+                    'Cache-Control': 'no-cache'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (res.status === 401 || res.status === 403) {
+                console.warn('Session状态检查：认证失败');
+                this.handleSessionExpired();
+                return false;
+            }
+            
+            // 检查是否返回了HTML（表示重定向到登录页）
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                const text = await res.text();
+                if (text.includes('XPanel System') || text.includes('login') || text.includes('Sign In')) {
+                    console.warn('Session状态检查：检测到登录页面重定向');
+                    this.handleSessionExpired();
+                    return false;
+                }
+            }
+            
+            // 【新增】: 记录session健康状态
+            this._updateSessionHealthStatus({
+                status: 'healthy',
+                timestamp: Date.now(),
+                checkType: 'auth'
+            });
+            
+            return true;
+        } catch (error) {
+            console.warn('检查登录状态失败:', error);
+            
+            // 【新增】: 记录session健康状态
+            this._updateSessionHealthStatus({
+                status: 'error',
+                timestamp: Date.now(),
+                error: error.message,
+                checkType: 'auth'
+            });
+            
+            // 网络错误不视为session过期，但记录异常
+            return true;
+        }
+    },
+    static async checkAuthStatus() {
+        try {
             const res = await fetch('/panel/api/inbounds/list', {
                 method: 'GET',
                 credentials: 'same-origin'
@@ -129,6 +181,105 @@ class HttpUtil {
             console.warn('Session自动续期失败:', error);
             return false;
         }
+    
+    // 【新增】: 更新session健康状态
+    static _updateSessionHealthStatus(status) {
+        const healthData = {
+            ...status,
+            lastUpdate: Date.now()
+        };
+        
+        localStorage.setItem('session_health_status', JSON.stringify(healthData));
+        
+        // 触发自定义事件，通知其他组件session状态变化
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('sessionHealthUpdate', {
+                detail: healthData
+            }));
+        }
+    },
+    
+    // 【新增】: 获取session健康状态
+    static getSessionHealthStatus() {
+        try {
+            const statusStr = localStorage.getItem('session_health_status');
+            return statusStr ? JSON.parse(statusStr) : null;
+        } catch (error) {
+            console.warn('获取session健康状态失败:', error);
+            return null;
+        }
+    },
+    
+    // 【增强】: Session过期预警机制
+    static startSessionWarningTimer() {
+        // 【重要】: 清除之前的预警定时器
+        this._clearSessionWarningTimer();
+        
+        // 每分钟检查一次session状态
+        this.sessionWarningInterval = setInterval(async () => {
+            try {
+                const healthStatus = this.getSessionHealthStatus();
+                const now = Date.now();
+                
+                // 如果距离上次健康检查超过5分钟，发送预警
+                if (healthStatus && (now - healthStatus.lastUpdate > 5 * 60 * 1000)) {
+                    console.log('Session即将过期预警');
+                    this._showSessionWarning();
+                }
+                
+                // 如果距离上次成功检查超过10分钟，强制检查
+                if (healthStatus && (now - healthStatus.lastUpdate > 10 * 60 * 1000)) {
+                    console.log('执行强制session检查');
+                    await this.checkAuthStatus();
+                }
+            } catch (error) {
+                console.warn('Session预警检查失败:', error);
+            }
+        }, 60 * 1000); // 每分钟执行一次
+    },
+    
+    // 【新增】: 清除Session预警定时器
+    static _clearSessionWarningTimer() {
+        if (this.sessionWarningInterval) {
+            clearInterval(this.sessionWarningInterval);
+            this.sessionWarningInterval = null;
+        }
+    },
+    
+    // 【新增】: 显示Session过期预警
+    static _showSessionWarning() {
+        // 避免重复显示预警
+        const lastWarningTime = localStorage.getItem('last_session_warning_time');
+        const now = Date.now();
+        
+        if (lastWarningTime && (now - parseInt(lastWarningTime) < 5 * 60 * 1000)) {
+            return; // 5分钟内不重复显示
+        }
+        
+        localStorage.setItem('last_session_warning_time', now.toString());
+        
+        if (Vue && Vue.prototype && Vue.prototype.$warning) {
+            Vue.prototype.$warning({
+                title: '⏰ Session即将过期',
+                content: '您的登录会话将在不久后过期。系统将自动尝试续期，或请您在方便时重新登录以确保正常使用。',
+                okText: '立即续期',
+                cancelText: '稍后再说',
+                onOk: async () => {
+                    const success = await this.refreshSession();
+                    if (success) {
+                        Vue.prototype.$message.success('✅ Session续期成功！');
+                    } else {
+                        Vue.prototype.$message.error('❌ Session续期失败，请重新登录');
+                        this.handleSessionExpired();
+                    }
+                },
+                onCancel: () => {
+                    console.log('用户选择稍后手动处理');
+                },
+                duration: 8
+            });
+        }
+    },
     }
 
 

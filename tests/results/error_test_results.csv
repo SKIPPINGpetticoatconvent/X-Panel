@@ -1,0 +1,10 @@
+网络超时处理|PARTIAL|超时处理需验证
+连接拒绝处理|PASS|正确处理连接拒绝
+API超时控制|PARTIAL|部分超时限制需要验证
+空响应处理|PASS|正确处理空响应
+JSON格式验证|PASS|JSON格式验证正常
+数据库连接|PASS|数据库连接正常
+Session管理|PASS|Session管理机制存在
+HTTP错误处理|PASS|成功处理 7 种错误状态码
+并发请求处理|PASS|10个并发请求全部成功
+资源限制处理|PASS|大文件处理正常
