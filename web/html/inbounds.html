@@ -1060,29 +1060,47 @@
 
             async getDBInbounds() {
                 this.refreshing = true;
-                const msg = await HttpUtil.get('/panel/api/inbounds/list');
-                if (!msg.success) {
-                    console.error('获取入站列表失败:', msg.msg || '未知错误');
-                    this.refreshing = false;
-                    // 〔中文注释〕: 即使API调用失败，也应该清空数据并显示空列表，而不是白屏
-                    this.setInbounds([]);
-                    return;
-                }
-
-                // 〔中文注释〕: 确保响应数据存在，如果为null或undefined则设置为空数组
-                const inboundsData = msg.obj || [];
                 
                 try {
-                    await this.getLastOnlineMap();
-                    await this.getOnlineUsers();
-                } catch (error) {
-                    console.warn('获取附加数据时出错，但不影响主数据显示:', error);
-                }
+                    const msg = await HttpUtil.get('/panel/api/inbounds/list');
+                    if (!msg.success) {
+                        console.error('获取入站列表失败:', msg.msg || '未知错误');
+                        
+                        // 显示用户友好的错误消息
+                        this.$message.error({
+                            content: `获取入站列表失败: ${msg.msg || '未知错误'}. 将显示空列表。`,
+                            duration: 5
+                        });
+                        
+                        this.refreshing = false;
+                        this.setInbounds([]);
+                        return;
+                    }
 
-                this.setInbounds(inboundsData);
-                setTimeout(() => {
+                    // 〔中文注释〕: 确保响应数据存在，如果为null或undefined则设置为空数组
+                    const inboundsData = msg.obj || [];
+                    
+                    try {
+                        await this.getLastOnlineMap();
+                        await this.getOnlineUsers();
+                    } catch (error) {
+                        console.warn('获取附加数据时出错，但不影响主数据显示:', error);
+                        this.$message.warning('部分数据加载失败，请手动刷新重试', 3);
+                    }
+
+                    this.setInbounds(inboundsData);
+                    
+                    if (inboundsData.length === 0) {
+                        this.$message.info('暂无入站配置，请点击"添加入站"创建', 3);
+                    }
+                    
+                } catch (error) {
+                    console.error('网络请求异常:', error);
+                    this.$message.error('网络请求失败，请检查连接并重试', 5);
+                    this.setInbounds([]);
+                } finally {
                     this.refreshing = false;
-                }, 500);
+                }
             },
             async getOnlineUsers() {
                 const msg = await HttpUtil.post('panel/api/inbounds/onlines');

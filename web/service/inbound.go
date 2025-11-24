@@ -39,10 +39,17 @@ func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	// 〔中文注释〕: 增加详细的错误日志来帮助调试白屏问题
 	logger.Debugf("开始获取用户ID为 %d 的入站列表", userId)
 	
+	// 添加数据库连接测试
+	if db == nil {
+		logger.Error("数据库连接为空")
+		return nil, fmt.Errorf("数据库连接异常")
+	}
+	
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Find(&inbounds).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		logger.Errorf("获取入站列表时发生数据库错误: %v", err)
-		return nil, err
+		// 返回更详细的错误信息便于调试
+		return nil, fmt.Errorf("数据库查询失败: %v", err)
 	}
 	
 	// 〔中文注释〕: 记录成功获取的入站数量
@@ -50,7 +57,16 @@ func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	
 	// 〔中文注释〕: 确保返回的切片不为 nil，避免前端处理时出现空指针错误
 	if inbounds == nil {
+		logger.Debug("入站列表为nil，初始化为空数组")
 		inbounds = make([]*model.Inbound, 0)
+	}
+	
+	// 记录每个入站的基本信息，便于调试
+	for i, inbound := range inbounds {
+		if inbound != nil {
+			logger.Debugf("入站 %d: ID=%d, 协议=%s, 端口=%d, 状态=%v",
+				i+1, inbound.Id, inbound.Protocol, inbound.Port, inbound.Enable)
+		}
 	}
 	
 	return inbounds, nil
