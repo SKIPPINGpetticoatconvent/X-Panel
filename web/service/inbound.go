@@ -33,11 +33,17 @@ func (s *InboundService) SetTelegramService(tgService TelegramService) {
 }
 
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
+	// 【修复】: 增加更详细的错误检查和日志
+	logger.Debugf("开始获取用户ID为 %d 的入站列表", userId)
+	
+	// 验证用户ID有效性
+	if userId <= 0 {
+		logger.Errorf("无效的用户ID: %d", userId)
+		return nil, fmt.Errorf("无效的用户ID")
+	}
+	
 	db := database.GetDB()
 	var inbounds []*model.Inbound
-	
-	// 〔中文注释〕: 增加详细的错误日志来帮助调试白屏问题
-	logger.Debugf("开始获取用户ID为 %d 的入站列表", userId)
 	
 	// 添加数据库连接测试
 	if db == nil {
@@ -45,11 +51,34 @@ func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 		return nil, fmt.Errorf("数据库连接异常")
 	}
 	
-	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Find(&inbounds).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	// 测试数据库连接是否正常
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Errorf("获取数据库实例失败: %v", err)
+		return nil, fmt.Errorf("数据库连接测试失败: %v", err)
+	}
+	
+	// 执行ping测试
+	if err := sqlDB.Ping(); err != nil {
+		logger.Errorf("数据库连接ping失败: %v", err)
+		return nil, fmt.Errorf("数据库连接不可用: %v", err)
+	}
+	
+	// 构建查询
+	query := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId)
+	
+	// 执行查询
+	err = query.Find(&inbounds).Error
+	if err != nil {
 		logger.Errorf("获取入站列表时发生数据库错误: %v", err)
-		// 返回更详细的错误信息便于调试
-		return nil, fmt.Errorf("数据库查询失败: %v", err)
+		// 根据错误类型返回不同的错误信息
+		if strings.Contains(err.Error(), "connection") {
+			return nil, fmt.Errorf("数据库连接错误，请检查数据库服务")
+		} else if strings.Contains(err.Error(), "timeout") {
+			return nil, fmt.Errorf("数据库查询超时，请重试")
+		} else {
+			return nil, fmt.Errorf("数据库查询失败: %v", err)
+		}
 	}
 	
 	// 〔中文注释〕: 记录成功获取的入站数量
@@ -64,8 +93,22 @@ func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	// 记录每个入站的基本信息，便于调试
 	for i, inbound := range inbounds {
 		if inbound != nil {
-			logger.Debugf("入站 %d: ID=%d, 协议=%s, 端口=%d, 状态=%v",
-				i+1, inbound.Id, inbound.Protocol, inbound.Port, inbound.Enable)
+			logger.Debugf("入站 %d: ID=%d, 协议=%s, 端口=%d, 状态=%v, 备注=%s",
+				i+1, inbound.Id, inbound.Protocol, inbound.Port, inbound.Enable, inbound.Remark)
+		} else {
+			logger.Warningf("发现空的入站记录在索引 %d", i)
+		}
+	}
+	
+	// 【修复】: 确保返回的数据完整性
+	for i, inbound := range inbounds {
+		if inbound.Settings == "" {
+			logger.Warningf("入站 %d (ID=%d) 的设置为空", i+1, inbound.Id)
+			inbound.Settings = "{}"
+		}
+		if inbound.StreamSettings == "" {
+			logger.Warningf("入站 %d (ID=%d) 的流设置为空", i+1, inbound.Id)
+			inbound.StreamSettings = "{}"
 		}
 	}
 	

@@ -51,24 +51,63 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 func (a *InboundController) getInbounds(c *gin.Context) {
 	user := session.GetLoginUser(c)
 	
-	// 〔中文注释〕: 增加登录用户验证日志
+	// 【修复】: 增加登录用户验证日志
 	logger.Debugf("获取入站列表: 用户ID %d, 用户名 %s", user.Id, user.Username)
 	
-	inbounds, err := a.inboundService.GetInbounds(user.Id)
-	if err != nil {
-		logger.Errorf("获取入站列表失败: %v", err)
-		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+	// 【增强】: 增加额外的安全检查和错误处理
+	if user == nil {
+		logger.Error("用户未登录或登录信息无效")
+		c.JSON(401, map[string]interface{}{
+			"success": false,
+			"msg":     "用户未登录或登录信息无效",
+			"obj":     []interface{}{},
+		})
 		return
 	}
 	
-	// 〔中文注释〕: 确保inbounds不为nil，防止前端白屏
+	// 【增强】: 使用 recover 防止 panic 造成服务端崩溃
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("获取入站列表时发生 panic: %v", r)
+			c.JSON(500, map[string]interface{}{
+				"success": false,
+				"msg":     "服务器内部错误",
+				"obj":     []interface{}{},
+			})
+		}
+	}()
+	
+	// 【增强】: 添加详细的错误日志
+	inbounds, err := a.inboundService.GetInbounds(user.Id)
+	if err != nil {
+		logger.Errorf("获取入站列表失败 (用户ID: %d): %v", user.Id, err)
+		c.JSON(500, map[string]interface{}{
+			"success": false,
+			"msg":     fmt.Sprintf("获取入站列表失败: %v", err),
+			"obj":     []interface{}{},
+		})
+		return
+	}
+	
+	// 【核心修复】: 确保inbounds不为nil，防止前端白屏
 	if inbounds == nil {
-		logger.Warning("获取到空的入站列表，返回空数组")
+		logger.Warningf("用户 %d 获取到空的入站列表，返回空数组", user.Id)
 		inbounds = make([]*model.Inbound, 0)
 	}
 	
-	logger.Debugf("成功返回 %d 个入站记录", len(inbounds))
-	jsonObj(c, inbounds, nil)
+	logger.Debugf("成功返回 %d 个入站记录给用户 %d", len(inbounds), user.Id)
+	
+	// 【修复】: 确保返回的数据格式正确且包含必要的字段
+	response := map[string]interface{}{
+		"success": true,
+		"obj":     inbounds,
+		"msg":     "success",
+		"count":   len(inbounds), // 添加计数信息，便于调试
+	}
+	
+	// 【增强】: 设置合适的HTTP状态码
+	c.Header("Content-Type", "application/json")
+	c.JSON(200, response)
 }
 
 func (a *InboundController) getInbound(c *gin.Context) {

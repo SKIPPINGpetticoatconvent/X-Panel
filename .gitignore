@@ -5,6 +5,7 @@
 .sync*
 .taskmaster
 test
+X-Panel
 
 # Ignore log files
 *.log

@@ -1060,9 +1060,23 @@
 
             async getDBInbounds() {
                 this.refreshing = true;
+                console.log('开始获取入站列表数据...');
+                this.loadingStates.spinning = true;
                 
                 try {
                     const msg = await HttpUtil.get('/panel/api/inbounds/list');
+                    console.log('API 响应:', msg);
+                    
+                    // 优先确保 fetched 状态被设置，防止无限加载
+                    this.loadingStates.fetched = true;
+                    
+                    if (!msg || !msg.hasOwnProperty('success')) {
+                        console.error('API 响应格式异常:', msg);
+                        this.$message.error('API响应格式错误，请检查后端服务', 5);
+                        this.setInbounds([]);
+                        return;
+                    }
+
                     if (!msg.success) {
                         console.error('获取入站列表失败:', msg.msg || '未知错误');
                         
@@ -1072,34 +1086,67 @@
                             duration: 5
                         });
                         
-                        this.refreshing = false;
                         this.setInbounds([]);
                         return;
                     }
 
-                    // 〔中文注释〕: 确保响应数据存在，如果为null或undefined则设置为空数组
-                    const inboundsData = msg.obj || [];
+                    // 确保响应数据存在
+                    const inboundsData = msg.obj;
+                    console.log('获取到的入站数据:', inboundsData);
                     
+                    if (!inboundsData) {
+                        console.warn('后端返回的数据为 null 或 undefined');
+                        this.$message.warning('后端返回数据为空', 3);
+                        this.setInbounds([]);
+                        return;
+                    }
+                    
+                    // 确保数据是数组格式
+                    if (!Array.isArray(inboundsData)) {
+                        console.warn('后端返回的数据不是数组格式:', typeof inboundsData);
+                        this.$message.warning('数据格式错误，显示空列表', 3);
+                        this.setInbounds([]);
+                        return;
+                    }
+                    
+                    // 尝试获取附加数据，但不阻塞主流程
                     try {
-                        await this.getLastOnlineMap();
-                        await this.getOnlineUsers();
+                        await Promise.allSettled([
+                            this.getLastOnlineMap(),
+                            this.getOnlineUsers()
+                        ]);
+                        console.log('附加数据获取完成');
                     } catch (error) {
                         console.warn('获取附加数据时出错，但不影响主数据显示:', error);
-                        this.$message.warning('部分数据加载失败，请手动刷新重试', 3);
+                        // 不显示错误提示，避免干扰用户
                     }
 
+                    // 设置入站数据
                     this.setInbounds(inboundsData);
                     
                     if (inboundsData.length === 0) {
+                        console.log('没有入站配置数据');
                         this.$message.info('暂无入站配置，请点击"添加入站"创建', 3);
+                    } else {
+                        console.log(`成功加载 ${inboundsData.length} 个入站配置`);
                     }
                     
                 } catch (error) {
                     console.error('网络请求异常:', error);
-                    this.$message.error('网络请求失败，请检查连接并重试', 5);
+                    // 确保即使发生错误也设置 fetched 状态
+                    this.loadingStates.fetched = true;
+                    
+                    let errorMessage = '网络请求失败';
+                    if (error.message) {
+                        errorMessage += ': ' + error.message;
+                    }
+                    
+                    this.$message.error(errorMessage + '，请检查连接并重试', 5);
                     this.setInbounds([]);
                 } finally {
                     this.refreshing = false;
+                    this.loadingStates.spinning = false;
+                    console.log('数据加载完成');
                 }
             },
             async getOnlineUsers() {
@@ -1138,74 +1185,102 @@
                 }
             },
             setInbounds(dbInbounds) {
-                // 〔中文注释〕: 添加安全检查，防止输入为 null 或 undefined
+                // 【修复】: 增强的数据安全检查和处理
+                console.log('setInbounds 开始处理数据:', dbInbounds);
+                
+                // 防止输入为 null 或 undefined
+                if (!dbInbounds) {
+                    console.warn('setInbounds: 输入数据为 null 或 undefined，设置为空数组');
+                    dbInbounds = [];
+                }
+                
+                // 确保输入是数组
                 if (!Array.isArray(dbInbounds)) {
                     console.warn('setInbounds: 输入数据不是数组，已重置为空数组');
                     dbInbounds = [];
                 }
                 
+                console.log('处理后的入站数据数量:', dbInbounds.length);
+                
+                // 清空现有数据
                 this.inbounds.splice(0);
                 this.dbInbounds.splice(0);
                 this.clientCount.splice(0);
                 
+                // 如果没有数据，显示空状态
+                if (dbInbounds.length === 0) {
+                    console.log('没有入站数据，设置空状态');
+                    this.searchedInbounds = [];
+                    this.loadingStates.fetched = true;
+                    return;
+                }
+                
                 try {
+                    let processedCount = 0;
                     for (const inbound of dbInbounds) {
-                        // 〔中文注释〕: 对每个入站数据进行安全检查
+                        // 跳过无效的入站数据
                         if (!inbound) {
                             console.warn('跳过无效的入站数据:', inbound);
                             continue;
                         }
                         
-                        const dbInbound = new DBInbound(inbound);
-                        if (!dbInbound) {
-                            console.warn('无法创建 DBInbound 实例:', inbound);
-                            continue;
-                        }
-                        
-                        const to_inbound = dbInbound.toInbound();
-                        if (!to_inbound) {
-                            console.warn('无法转换入站配置:', inbound);
-                            continue;
-                        }
-                        
-                        this.inbounds.push(to_inbound);
-                        this.dbInbounds.push(dbInbound);
-                        
-                        // 〔中文注释〕: 安全地处理客户端计数
-                        if (inbound.protocol && [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
-                            if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
+                        try {
+                            const dbInbound = new DBInbound(inbound);
+                            if (!dbInbound) {
+                                console.warn('无法创建 DBInbound 实例，跳过:', inbound);
                                 continue;
                             }
-                            try {
-                                this.clientCount[inbound.id] = this.getClientCounts(inbound, to_inbound);
-                            } catch (error) {
-                                console.warn('计算客户端统计时出错:', error);
-                                this.clientCount[inbound.id] = {
-                                    clients: 0,
-                                    active: [],
-                                    deactive: [],
-                                    depleted: [],
-                                    expiring: [],
-                                    online: [],
-                                    comments: new Map()
-                                };
+                            
+                            const to_inbound = dbInbound.toInbound();
+                            if (!to_inbound) {
+                                console.warn('无法转换入站配置，跳过:', inbound);
+                                continue;
                             }
+                            
+                            this.inbounds.push(to_inbound);
+                            this.dbInbounds.push(dbInbound);
+                            processedCount++;
+                            
+                            // 处理客户端计数
+                            if (inbound.protocol && [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
+                                if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
+                                    continue;
+                                }
+                                try {
+                                    this.clientCount[inbound.id] = this.getClientCounts(inbound, to_inbound);
+                                } catch (error) {
+                                    console.warn('计算客户端统计时出错:', error);
+                                    this.clientCount[inbound.id] = {
+                                        clients: 0,
+                                        active: [],
+                                        deactive: [],
+                                        depleted: [],
+                                        expiring: [],
+                                        online: [],
+                                        comments: new Map()
+                                    };
+                                }
+                            }
+                        } catch (inboundError) {
+                            console.error('处理单个入站数据时出错:', inboundError, inbound);
+                            continue;
                         }
                     }
+                    
+                    console.log('成功处理的入站数据数量:', processedCount);
+                    
                 } catch (error) {
                     console.error('处理入站数据时发生严重错误:', error);
-                    // 〔中文注释〕: 发生错误时，清空数据以防止白屏
+                    // 发生错误时，清空数据以防止白屏
                     this.inbounds.splice(0);
                     this.dbInbounds.splice(0);
                     this.clientCount.splice(0);
                 }
                 
-                // 〔中文注释〕: 确保总是设置 fetched 状态，防止无限加载
-                if (!this.loadingStates.fetched) {
-                    this.loadingStates.fetched = true;
-                }
+                // 确保总是设置 fetched 状态，防止无限加载
+                this.loadingStates.fetched = true;
                 
-                // 〔中文注释〕: 安全地执行过滤和搜索
+                // 安全地执行过滤和搜索
                 try {
                     if(this.enableFilter){
                         this.filterInbounds();
@@ -1214,9 +1289,12 @@
                     }
                 } catch (error) {
                     console.warn('执行搜索/过滤时出错:', error);
-                    // 〔中文注释〕: 发生错误时，直接显示所有数据
+                    // 发生错误时，直接显示所有数据
                     this.searchedInbounds = this.dbInbounds.slice();
                 }
+                
+                console.log('setInbounds 完成，dbInbounds 数量:', this.dbInbounds.length);
+                console.log('setInbounds 完成，searchedInbounds 数量:', this.searchedInbounds.length);
             },
             getClientCounts(dbInbound, inbound) {
                 let clientCount = 0, active = [], deactive = [], depleted = [], expiring = [], online = [], comments = new Map();
