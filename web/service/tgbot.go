@@ -1849,38 +1849,9 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 
 	case "vps_recommend":
-		// 〔中文注释〕: 发送您指定的VPS推荐信息
+		// VPS推荐功能已移除
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请查看VPS推荐列表")
-		vpsMessage := `✰若需要购买VPS，以下可供选择（包含AFF）✰
-
-1、搬瓦工GIA高端线路，仅推荐购买GIA套餐：
-https://bandwagonhost.com/aff.php?aff=75015
-
-2、Dmit高端GIA线路：
-https://www.dmit.io/aff.php?aff=9326
-
-3、Sharon亚太优化线路机：
-https://gomami.io/aff.php?aff=174
-
-4、Bagevm优质落地鸡（原生IP全解锁）：
-https://www.bagevm.com/aff.php?aff=754
-
-5、白丝云【4837线路】实惠量大管饱：
-https://cloudsilk.io/aff.php?aff=706
-
-6、RackNerd极致性价比机器：
-https://my.racknerd.com/aff.php?aff=15268&pid=912`
-		// 〔中文注释〕: 发送消息时禁用链接预览，使界面更整洁
-		params := tu.Message(
-			tu.ID(chatId),
-			vpsMessage,
-		).WithLinkPreviewOptions(&telego.LinkPreviewOptions{IsDisabled: true})
-
-		_, err := bot.SendMessage(context.Background(), params)
-		if err != nil {
-			logger.Warning("发送VPS推荐消息失败:", err)
-		}	
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "VPS推荐功能已移除")
 	}
 }
 
@@ -2073,10 +2044,7 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
 		),
-		// 〔中文注释〕: 【新增功能行】 - VPS推荐按钮
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🛰️ VPS 推荐").WithCallbackData(t.encodeQuery("vps_recommend")),
-		),
+		// VPS推荐按钮已移除
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
 	numericKeyboardClient := tu.InlineKeyboard(

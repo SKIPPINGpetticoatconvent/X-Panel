@@ -112,11 +112,6 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 ## 📸 预览
 ![概览](media/1.png) ![入站](media/2.png) ![客户端](media/3.png)
 
-## 💝 赞助商
-- [搬瓦工](https://bandwagonhost.com/aff.php?aff=75015)
-- [RackNerd](https://my.racknerd.com/aff.php?aff=15268&pid=912)
-- 更多...
-
 ## 🙏 致谢
 - [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)
 - [EGfrthtu/X-Panel](https://github.com/SKIPPINGpetticoatconvent/X-Panel)

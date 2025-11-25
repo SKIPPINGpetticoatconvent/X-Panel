@@ -828,15 +828,6 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 ![7](./media/7.png)
 
 ------------
-## 广告赞助
-- 如果你觉得本项目对你有用，而且你也恰巧有这方面的需求，你也可以选择通过我的购买链接赞助我。
-- [1、搬瓦工GIA高端线路，仅推荐购买GIA套餐：https://bandwagonhost.com/aff.php?aff=75015](https://bandwagonhost.com/aff.php?aff=75015)
-- [2、Dmit高端GIA线路：https://www.dmit.io/aff.php?aff=9326](https://www.dmit.io/aff.php?aff=9326)
-- [3、Sharon亚太优化线路机：https://gomami.io/aff.php?aff=174](https://gomami.io/aff.php?aff=174)
-- [4、Bagevm优质落地鸡（原生IP全解锁）：https://www.bagevm.com/aff.php?aff=754](https://www.bagevm.com/aff.php?aff=754)
-- [5、白丝云【4837线路】实惠量大管饱：https://cloudsilk.io/aff.php?aff=706](https://cloudsilk.io/aff.php?aff=706)
-- [6、RackNerd极致性价比机器：https://my.racknerd.com/aff.php?aff=15268&pid=912](https://my.racknerd.com/aff.php?aff=15268&pid=912)
-
 ------------
 ## 特别感谢
 
