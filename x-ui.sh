@@ -1779,14 +1779,7 @@ show_menu() {
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} 安装订阅转换 
 ——————————————————————
-  ${green}若在使用过程中有任何问题${plain}
-  ${yellow}请加入〔X-Panel面板〕交流群${plain}
-  ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
-  ${green}〔X-Panel面板〕项目地址${plain}
-  ${yellow}https://github.com/SKIPPINGpetticoatconvent/X-Panel${plain}
-  ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}
-——————————————————————
+
 
 "
     show_status
