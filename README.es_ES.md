@@ -4,10 +4,10 @@
 
 **Un Panel Web Avanzado • Construido sobre Xray Core**
 
-[![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
-[![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg)](#)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg)](#)
-[![Downloads](https://img.shields.io/github/downloads/EGfrthtu/X-Panel/total.svg)](#)
+[![](https://img.shields.io/github/v/release/SKIPPINGpetticoatconvent/X-Panel.svg)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
+[![](https://img.shields.io/github/actions/workflow/status/SKIPPINGpetticoatconvent/X-Panel/release.yml.svg)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/commits/main)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/SKIPPINGpetticoatconvent/X-Panel.svg)](#)
+[![Downloads](https://img.shields.io/github/downloads/SKIPPINGpetticoatconvent/X-Panel/total.svg)](#)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 > **Descargo de responsabilidad:** Este proyecto es solo para aprendizaje personal y comunicación, por favor no lo uses con fines ilegales, por favor no lo uses en un entorno de producción
@@ -29,7 +29,7 @@
 ## Instalar y Actualizar
 
 ```
-bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
 ```
 
 ## Instalar una Versión Personalizada
@@ -37,7 +37,7 @@ bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
 Para instalar la versión deseada, agrega la versión al final del comando de instalación. Por ejemplo, ver `v2.4.1`:
 
 ```
-bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh) v2.4.1
+bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh) v2.4.1
 ```
 
 ## Certificado SSL
@@ -89,7 +89,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://gitlab.com/EGfrthtu/X-Panel/-/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. Una vez que se haya descargado el paquete comprimido, ejecuta los siguientes comandos para instalar o actualizar x-ui:
@@ -136,7 +136,7 @@ systemctl restart x-ui
 2. Clona el Repositorio del Proyecto:
 
    ```sh
-   git clone https://gitlab.com/EGfrthtu/X-Panel.git
+   git clone https://github.com/SKIPPINGpetticoatconvent/X-Panel.git
    cd X-Panel
    ```
 
@@ -499,4 +499,4 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 
 ## Estrellas a lo largo del tiempo
 
-[![Stargazers over time](https://starchart.cc/EGfrthtu/X-Panel.svg)](https://starchart.cc/EGfrthtu/X-Panel)
+[![Stargazers over time](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)

@@ -7,10 +7,10 @@
   </picture>
 </p>
 
-[![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
-[![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/commits/main)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/EGfrthtu/X-Panel/total.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
+[![](https://img.shields.io/github/v/release/SKIPPINGpetticoatconvent/X-Panel.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
+[![](https://img.shields.io/github/actions/workflow/status/SKIPPINGpetticoatconvent/X-Panel/release.yml.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/commits/main)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/SKIPPINGpetticoatconvent/X-Panel.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/SKIPPINGpetticoatconvent/X-Panel/total.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **3X-UI** — لوحة تحكم متقدمة مفتوحة المصدر تعتمد على الويب مصممة لإدارة خادم Xray-core. توفر واجهة سهلة الاستخدام لتكوين ومراقبة بروتوكولات VPN والوكيل المختلفة.
@@ -23,10 +23,10 @@
 ## البدء السريع
 
 ```
-bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
 ```
 
-للحصول على الوثائق الكاملة، يرجى زيارة [ويكي المشروع](https://gitlab.com/EGfrthtu/X-Panel/-/wikis).
+للحصول على الوثائق الكاملة، يرجى زيارة [ويكي المشروع](https://github.com/SKIPPINGpetticoatconvent/X-Panel/wiki).
 
 ## شكر خاص إلى
 
@@ -53,4 +53,4 @@ bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
 
 ## النجوم عبر الزمن
 
-[![Stargazers over time](https://starchart.cc/EGfrthtu/X-Panel.svg?variant=adaptive)](https://starchart.cc/EGfrthtu/X-Panel)
+[![Stargazers over time](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg?variant=adaptive)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
