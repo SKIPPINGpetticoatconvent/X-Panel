@@ -8,15 +8,15 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/release.yml'
-      - '**.js'
-      - '**.css'
-      - '**.html'
-      - '**.sh'
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'x-ui.service'
+      - ".github/workflows/release.yml"
+      - "**.js"
+      - "**.css"
+      - "**.html"
+      - "**.sh"
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "x-ui.service"
 
 jobs:
   # ===============================================================
@@ -58,7 +58,7 @@ jobs:
             arm64) BOOTLIN_ARCH="aarch64" ;;
             armv7) BOOTLIN_ARCH="armv7-eabihf"; export GOARCH=arm GOARM=7 ;;
             armv6) BOOTLIN_ARCH="armv6-eabihf"; export GOARCH=arm GOARM=6 ;;
-            armv5) BOOTLIN_ARCH="armv5-eabi"; export GOARCH=arm GOARM=5 ;;
+            armv5) BOOTLIN_ARCH="armv5-eabi"; export GOARCH=arm GOARM=5; export CGO_ENABLED=0 ;;
             386) BOOTLIN_ARCH="x86-i686" ;;
             s390x) BOOTLIN_ARCH="s390x-z13" ;;
           esac
@@ -75,10 +75,14 @@ jobs:
           export CC=$(realpath "$(find "$TOOLCHAIN_DIR/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
           [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_DIR/bin" >&2; exit 1; }
           cd -
-          go build -ldflags "-w -s -linkmode external -extldflags '-static'" -o xui-release -v main.go
+          if [ "${{ matrix.platform }}" = "armv5" ]; then
+            go build -ldflags "-w -s" -o xui-release -v main.go
+          else
+            go build -ldflags "-w -s -linkmode external -extldflags '-static'" -o xui-release -v main.go
+          fi
           file xui-release
           ldd xui-release || echo "Static binary confirmed"
-          
+
           mkdir x-ui
           cp xui-release x-ui/
           cp x-ui.service x-ui/
@@ -86,7 +90,7 @@ jobs:
           mv x-ui/xui-release x-ui/x-ui
           mkdir x-ui/bin
           cd x-ui/bin
-          
+
           # Download dependencies
           Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v25.10.15/"
           if [ "${{ matrix.platform }}" == "amd64" ]; then
@@ -146,7 +150,7 @@ jobs:
           file: x-ui-linux-${{ matrix.platform }}.tar.gz
           asset_name: x-ui-linux-${{ matrix.platform }}.tar.gz
           # 如果你希望这是预发布版本，可以此行注释
-          prerelease: true  
+          prerelease: true
 
   # ===============================================================
   # 【新增】Windows 平台的构建任务
@@ -188,14 +192,14 @@ jobs:
 
           # 〔中文注释〕: 创建用于打包的文件夹
           mkdir x-ui
-          
+
           # 〔中文注释〕: 移动编译好的主程序到文件夹，并重命名为 x-ui.exe
           Move-Item -Path .\x-ui-release.exe -Destination .\x-ui\x-ui.exe
 
           # 〔中文注释〕: 创建 bin 目录存放依赖文件
           mkdir x-ui\bin
           cd x-ui\bin
-          
+
           # 〔中文注释〕: 下载 Windows 版本的 Xray-core 依赖
           # 注意：这里的 Xray 版本号 (v25.10.15) 我沿用了你 Linux 脚本中的版本，你可以根据需要修改
           $Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v25.10.15/"
@@ -205,7 +209,7 @@ jobs:
           } elseif ("${{ matrix.platform }}" -eq "386") {
             Invoke-WebRequest -Uri "${Xray_URL}Xray-windows-32.zip" -OutFile "xray.zip"
           }
-          
+
           # 〔中文注释〕: 解压 xray.zip
           Expand-Archive -Path .\xray.zip -DestinationPath .
           # 〔中文注释〕: 删除下载的压缩包
@@ -219,13 +223,13 @@ jobs:
           Invoke-WebRequest -Uri "https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat" -OutFile "geosite_IR.dat"
           Invoke-WebRequest -Uri "https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat" -OutFile "geoip_RU.dat"
           Invoke-WebRequest -Uri "https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat" -OutFile "geosite_RU.dat"
-          
+
           # 〔中文注释〕: 将解压出的 xray.exe 重命名，以便区分
           Move-Item -Path .\xray.exe -Destination "xray-windows-${{ matrix.platform }}.exe"
 
           # 〔中文注释〕: 返回到 x-ui 文件夹的根目录
           cd ..
-          
+
           # ===============================================================
           # 【新增部分】从仓库复制辅助文件到待打包的 x-ui 目录中
           # 辅助文件都放在了项目根目录的 windows_files 文件夹下
