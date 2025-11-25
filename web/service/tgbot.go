@@ -16,13 +16,12 @@ import (
 	"strings"
 	"time"
 	"encoding/json"    // 新增：用于 json.Marshal / Unmarshal
-	   "net/http"         // 新增：用于 http.Client / Transport
-	   "crypto/tls"       // 新增：用于 tls.Config
-	   "os/exec"          // 新增：用于 exec.Command（getDomain 等）
-	   "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
+	"net/http"         // 新增：用于 http.Client / Transport
+	"crypto/tls"       // 新增：用于 tls.Config
+	"os/exec"          // 新增：用于 exec.Command（getDomain 等）
+	"path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
 	"io/ioutil" // 〔中文注释〕: 新增，用于读取 HTTP API 响应体。
 	rng "math/rand"    // 用于随机排列
-	"encoding/xml"   // 【新增】: 用于直接解析 RSS XML 响应体
 
 	"x-ui/config"
 	"x-ui/database"
@@ -2232,15 +2231,7 @@ func (t *Tgbot) SendReport() {
 	t.sendRandomImageWithFallback()
 	time.Sleep(1000 * time.Millisecond)
 
-	// --- 第四条消息：新闻资讯简报（最终稳定版：中文 IT/AI/币圈） (顺序 4) ---
-	if news, err := t.getNewsBriefingWithFallback(); err == nil {
-		t.SendMsgToTgbotAdmins(news)
-	} else {
-		// 即使失败，也记录日志，不影响发送流程结束
-		logger.Warningf("获取所有新闻资讯失败: %v", err)
-	}
-	// 〔中文注释〕: 【新增】为下一条消息添加延时
-	time.Sleep(1000 * time.Millisecond)
+	// 〔中文注释〕: 【新闻资讯功能已移除】
 
 	// 〔中文注释〕: 已移除抽奖游戏邀请
 }
@@ -4216,43 +4207,8 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 }
 
 // =========================================================================================
-// 【核心数据结构：XML 解析专用】
+// 【数据结构和辅助函数：已移除新闻相关代码】
 // =========================================================================================
-
-// 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。
-type NewsItem struct {
-	Title       string
-	Description string // 用于链接或 GitHub 描述
-}
-
-// 用于解析 Google News 或通用 RSS 格式
-type RssFeed struct {
-	XMLName xml.Name   `xml:"rss"`
-	Channel RssChannel `xml:"channel"`
-}
-
-type RssChannel struct {
-	Title string    `xml:"title"`
-	Items []RssItem `xml:"item"`
-}
-
-type RssItem struct {
-	Title string `xml:"title"`
-	Link  string `xml:"link"`
-}
-
-// 用于解析 YouTube 官方 Atom Feed 格式
-type AtomFeed struct {
-	XMLName xml.Name    `xml:"feed"`
-	Entries []AtomEntry `xml:"entry"`
-}
-
-type AtomEntry struct {
-	Title string `xml:"title"`
-	Link  struct {
-		Href string `xml:"href,attr"`
-	} `xml:"link"`
-}
 
 // 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
 func safeRandomInt(max int) int {
@@ -4485,202 +4441,14 @@ func (t *Tgbot) fetchImageFromAPI(apiURL string, sourceName string) (string, err
 }
 
 // =========================================================================================
-// 【辅助函数：新闻资讯核心抓取逻辑】 (已重构，逻辑更清晰)
+// 【辅助函数：新闻资讯代码已移除】
 // =========================================================================================
 
-// 【中文注释】: 新闻源的数据结构，增加 Type 字段用于区分解析方式
-type NewsSource struct {
-	Name string
-	API  string
-	Type string // "RSS2JSON" 或 "DirectJSON"
-}
+
+// 〔中文注释〕: fetchNewsFromGlobalAPI 函数已移除
 
 
-// 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报。
-// 此函数现在依赖传入的 source.Type 来决定如何解析数据，不再使用模糊的字符串匹配。
-func fetchNewsFromGlobalAPI(source NewsSource, limit int) (string, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
-	var newsItems []NewsItem
-	var err error
-
-	// --- 步骤 1: 发起网络请求 ---
-	req, reqErr := http.NewRequest("GET", source.API, nil)
-	if reqErr != nil {
-		return "", fmt.Errorf("创建请求失败: %v", reqErr)
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-
-	resp, respErr := client.Do(req)
-	if respErr != nil {
-		return "", fmt.Errorf("请求 %s API 失败: %v", source.Name, respErr)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("请求 %s API 返回非 200 状态码: %d", source.Name, resp.StatusCode)
-	}
-
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return "", fmt.Errorf("读取 %s 响应失败: %v", source.Name, readErr)
-	}
-
-	// --- 步骤 2: 根据来源类型解析响应 ---
-	switch source.Type {
-	case "RSS2JSON":
-		// 【修复】: 专门处理来自 api.rss2json.com 的数据，适用于 YouTube, Google News 和新的币圈新闻源
-		var result struct {
-			Status string `json:"status"`
-			Items  []struct {
-				Title string `json:"title"`
-				Link  string `json:"link"`
-			} `json:"items"`
-		}
-		if jsonErr := json.Unmarshal(body, &result); jsonErr == nil && result.Status == "ok" {
-			for _, item := range result.Items {
-				newsItems = append(newsItems, NewsItem{
-					Title:       item.Title,
-					Description: item.Link,
-				})
-			}
-		} else {
-			err = fmt.Errorf("解析 %s 的 RSS2JSON 响应失败: %v。响应体: %s", source.Name, jsonErr, string(body))
-		}
-
-	case "DirectJSON":
-		// 【保留】: 处理直接返回 JSON 的 API，例如 GitHub Trending
-		if strings.Contains(source.Name, "GitHub") {
-			var result []struct {
-				RepoName string `json:"repo_name"`
-				Desc     string `json:"desc"`
-			}
-			if jsonErr := json.Unmarshal(body, &result); jsonErr == nil {
-				for _, item := range result {
-					newsItems = append(newsItems, NewsItem{
-						Title:       fmt.Sprintf("⭐ %s", item.RepoName),
-						Description: item.Desc,
-					})
-				}
-			} else {
-				err = fmt.Errorf("解析 GitHub Trending JSON 失败: %v", jsonErr)
-			}
-		}
-		// 这里可以为其他 DirectJSON 类型的源添加更多的 else if
-	default:
-		err = fmt.Errorf("未知的源类型: %s", source.Type)
-	}
-
-	if err != nil {
-		return "", err
-	}
-
-	if len(newsItems) == 0 {
-		return "", errors.New(source.Name + " 简报内容为空")
-	}
-
-	// --- 步骤 3: 最终消息构建 ---
-	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("📰 **【%s 简报】**\n", source.Name))
-
-	for i, item := range newsItems {
-		if i >= limit {
-			break
-		}
-		if item.Title != "" {
-			// 移除 RSS 源标题中可能包含的来源信息，让内容更整洁
-			cleanTitle := strings.ReplaceAll(item.Title, " - YouTube", "")
-			// 移除 HTML 标签（RSS/Atom Title中常见）
-			cleanTitle = regexp.MustCompile("<[^>]*>").ReplaceAllString(cleanTitle, "")
-			// 对 Google News 的标题做特殊清理
-			if strings.Contains(source.Name, "Google News") {
-				parts := strings.Split(cleanTitle, " - ")
-				if len(parts) > 1 {
-					cleanTitle = strings.Join(parts[:len(parts)-1], " - ")
-				}
-			}
-
-			// 【排版修复】: 使用 \n%d. %s 开始新的一条新闻
-			builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, cleanTitle))
-
-			// 链接/描述只有在特定源时才显示
-			if item.Description != "" && (source.Type == "RSS2JSON" || strings.Contains(source.Name, "GitHub")) {
-				builder.WriteString(fmt.Sprintf("\n  `%s`", item.Description))
-			}
-
-			// 【排版修复】: 在每条新闻项的末尾添加额外的空行，确保分隔清晰
-			builder.WriteString("\n")
-		}
-	}
-
-	return builder.String(), nil
-}
-
-
-// =========================================================================================
-// 【核心函数：getNewsBriefingWithFallback】 (已重构，确保随机性和来源有效性)
-// =========================================================================================
-
-// 〔中文注释〕: 【最终重构】新闻资讯获取函数：随机排列源并逐个尝试，直到成功或全部失败。
-func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
-
-	// 强制使用动态种子，确保每次调用时随机序列都不同
-	r := rng.New(rng.NewSource(time.Now().UnixNano()))
-
-	// Google News 的 URL 计算
-	rssQueryGoogle := url.QueryEscape("AI 科技 OR 区块链 OR IT OR 国际时事")
-	rssURLGoogle := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQueryGoogle)
-
-	// 【修复】: 定义所有可用的新闻源，并明确指定其 Type
-	newsSources := []NewsSource{
-		{
-			Name: "YouTube 中文热搜 (AI/IT/科技)",
-			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s", url.QueryEscape("https://www.youtube.com/feeds/videos.xml?channel_id=UCaT8sendP_s_U4L_D3q_V-g")), // 使用一个科技频道的Feed作为示例
-			Type: "RSS2JSON",
-		},
-		{
-			Name: "Google News 中文资讯",
-			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s", url.QueryEscape(rssURLGoogle)),
-			Type: "RSS2JSON",
-		},
-		{
-			Name: "币圈头条 (Cointelegraph)",
-			// 【修复】: 替换了失效的 coinmarketcap.cn API，改用更稳定的 Cointelegraph 中文 RSS Feed
-			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s", url.QueryEscape("https://cointelegraph.com/rss/category/china")),
-			Type: "RSS2JSON",
-		},
-	}
-
-	// 解决 rand.Shuffle 兼容性问题：手动实现 Fisher-Yates 洗牌算法
-	sourceCount := len(newsSources)
-
-	// 执行洗牌 (使用前面初始化的 r)
-	for i := sourceCount - 1; i > 0; i-- {
-		// 在 [0, i] 范围内随机选择一个索引
-		j := r.Intn(i + 1)
-		// 交换元素
-		newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
-	}
-
-	// 逐个尝试所有来源，直到成功
-	for i, source := range newsSources {
-		logger.Infof("新闻资讯：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(newsSources), source.Name)
-
-		// 调用核心抓取逻辑
-		newsMsg, err := fetchNewsFromGlobalAPI(source, 5) // 直接传递 source 结构体
-
-		if err == nil && newsMsg != "" {
-			// 成功获取到内容
-			logger.Infof("新闻资讯：来源 [%s] 成功获取内容。", source.Name)
-			return newsMsg, nil
-		}
-
-		// 失败，记录警告，继续尝试下一个
-		logger.Warningf("新闻资讯来源 [%s] 尝试失败: %v", source.Name, err)
-	}
-
-	// 所有来源都失败，返回一个友好的错误信息
-	return "", errors.New("所有新闻来源均获取失败，请检查网络或 API 状态")
-}
+// 〔中文注释〕: getNewsBriefingWithFallback 函数已移除
 
 // 【新增的辅助函数】: 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
 func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message, error) {
