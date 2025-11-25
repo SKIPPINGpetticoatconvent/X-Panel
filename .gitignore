@@ -3,6 +3,7 @@
 .vscode/
 .cache/
 .sync*
+Old-X-Panel/
 
 # Ignore log files
 *.log
