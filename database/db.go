@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"time"
 
 	"x-ui/config"
 	"x-ui/database/model"
@@ -186,3 +185,4 @@ func Checkpoint() error {
 		return err
 	}
 	return nil
+}

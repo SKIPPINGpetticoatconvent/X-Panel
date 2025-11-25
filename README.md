@@ -2,7 +2,7 @@
 
 [![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
 
-基于[EGfrthtu/X-Panel](https://gitlab.com/EGfrthtu/X-Panel) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
+基于[EGfrthtu/X-Panel](https://github.com/SKIPPINGpetticoatconvent/X-Panel) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
 
 ## 🚀 快速开始
 
@@ -118,6 +118,6 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 - 更多...
 
 ## 🙏 致谢
-- [MHSanaei/3x-ui](https://gitlab.com/MHSanaei/3x-ui)
-- [EGfrthtu/X-Panel](https://gitlab.com/EGfrthtu/X-Panel)
-- [FranzKafkaYu/x-ui](https://gitlab.com/FranzKafkaYu/x-ui)
+- [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)
+- [EGfrthtu/X-Panel](https://github.com/SKIPPINGpetticoatconvent/X-Panel)
+- [FranzKafkaYu/x-ui](https://github.com/FranzKafkaYu/x-ui)

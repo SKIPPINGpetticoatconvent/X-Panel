@@ -7,10 +7,10 @@
   </picture>
 </p>
 
-[![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
-[![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/commits/main)
+[![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
+[![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/commits/main)
 [![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/EGfrthtu/X-Panel/total.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
+[![Downloads](https://img.shields.io/github/downloads/EGfrthtu/X-Panel/total.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **3X-UI** — продвинутая панель управления с открытым исходным кодом на основе веб-интерфейса, разработанная для управления сервером Xray-core. Предоставляет удобный интерфейс для настройки и мониторинга различных VPN и прокси-протоколов.
@@ -23,19 +23,19 @@
 ## Быстрый старт
 
 ```
-bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
 ```
 
-Полную документацию смотрите в [вики проекта](https://gitlab.com/EGfrthtu/X-Panel/-/wikis).
+Полную документацию смотрите в [вики проекта](https://github.com/SKIPPINGpetticoatconvent/X-Panel/wiki).
 
 ## Особая благодарность
 
-- [alireza0](https://gitlab.com/alireza0/)
+- [alireza0](https://github.com/alireza0/)
 
 ## Благодарности
 
-- [Iran v2ray rules](https://gitlab.com/chocolate4u/Iran-v2ray-rules) (Лицензия: **GPL-3.0**): _Улучшенные правила маршрутизации для v2ray/xray и v2ray/xray-clients со встроенными иранскими доменами и фокусом на безопасность и блокировку рекламы._
-- [Russia v2ray rules](https://gitlab.com/runetfreedom/russia-v2ray-rules-dat) (Лицензия: **GPL-3.0**): _Этот репозиторий содержит автоматически обновляемые правила маршрутизации V2Ray на основе данных о заблокированных доменах и адресах в России._
+- [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) (Лицензия: **GPL-3.0**): _Улучшенные правила маршрутизации для v2ray/xray и v2ray/xray-clients со встроенными иранскими доменами и фокусом на безопасность и блокировку рекламы._
+- [Russia v2ray rules](https://github.com/runetfreedom/russia-v2ray-rules-dat) (Лицензия: **GPL-3.0**): _Этот репозиторий содержит автоматически обновляемые правила маршрутизации V2Ray на основе данных о заблокированных доменах и адресах в России._
 
 ## Поддержка проекта
 
