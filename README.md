@@ -1,0 +1,123 @@
+# X-Panel 面板
+
+[![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
+
+基于[EGfrthtu/X-Panel](https://gitlab.com/EGfrthtu/X-Panel) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
+
+## 🚀 快速开始
+
+### 系统要求
+- **推荐 OS**: Ubuntu 20.04+, Debian 11+, CentOS 8+
+- **架构**: amd64, arm64, armv7 等 (详见 [支持列表](README.md#支持的架构和设备))
+- **最低配置**: 1核1G内存
+
+### 一键安装/升级
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
+```
+
+- **指定版本**: `VERSION=v25.10.25 bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/$VERSION/install.sh) $VERSION`
+- **Docker 安装**: 详见 [Docker 指南](README.md#通过docker安装)
+
+安装后脚本会显示用户名、密码、端口、路径。**立即记录！**
+
+### 访问面板
+- **无证书**: SSH 转发 `ssh -L 15208:127.0.0.1:端口 root@IP`，浏览器访问 `http://127.0.0.1:15208/路径/panel`
+- **有证书**: `https://域名:端口/路径/panel`
+
+## 🔐 安全警告 ⚠️
+- **必须** 使用 HTTPS 或 SSH 转发，避免 HTTP 明文泄露
+- 修改默认用户名/密码/路径
+- 放行面板端口和入站端口 (脚本选项 22)
+- 推荐安装证书 (脚本选项 18)
+
+## ✨ 核心功能
+| 功能 | 描述 |
+|------|------|
+| 多协议支持 | VMess, VLESS, Trojan, Shadowsocks, WireGuard 等 |
+| XTLS/REALITY | 原生支持 Vision, RPRX-Direct |
+| 流量统计 | 实时/历史流量, 自动重置 |
+| 限速/设备限制 | 独立限速, IP/设备数限制 |
+| 一键配置 | 面板/TG 机器人快速生成节点 |
+| TG 机器人 | 通知, 备份, 管理 |
+| 订阅转换 | Clash/Surge 等格式 |
+| 备份恢复 | 自动/手动数据库备份 |
+| 多语言 | 中文/英文/波斯语 等 11 种 |
+
+## 📱 使用指南
+
+### 1. 面板设置
+- 进入 `面板设置 > 常规`: 修改端口、路径
+- `面板设置 > 安全`: 修改用户/密码
+- `面板设置 > Telegram`: 配置机器人 (详见 [TG 机器人](README.md#telegram-机器人))
+
+### 2. 添加入站
+1. `入站列表 > 添加入站`
+2. 选择协议 (推荐 VLESS + Reality + Vision)
+3. 配置端口, 流控 `xtls-rprx-vision-udp443`
+4. 添加客户端, 设置限速/设备数/TG ID
+5. **放行端口** (脚本 22), 测试连接
+
+![添加入站](media/23.png)
+
+### 3. 一键配置
+- 面板: `添加入站 > 一键配置`
+- TG: 机器人菜单 `一键配置`
+
+### 4. 证书安装
+- 脚本 `x-ui > 18` (ACME/Certbot/Cloudflare)
+- 保存路径到面板设置
+
+### 5. 备份/恢复
+- 开启 TG 自动备份
+- 手动: 下载 `/etc/x-ui/x-ui.db` 和 `/usr/local/x-ui/bin/config.json`
+
+## 🛠️ 高级功能
+
+<details>
+<summary>展开高级功能</summary>
+
+### 设备限制 & 独立限速
+- 添加入站时设置 `设备数量` / `限速 (KB/s)`
+- 日志查看封禁/限速状态
+
+### TG 机器人
+1. [@BotFather](https://t.me/BotFather) 创建 bot 获取 Token
+2. [@userinfobot](https://t.me/userinfobot) 获取 Chat ID
+3. 面板 `面板设置 > Telegram` 配置
+
+功能: 流量报告, 登录通知, CPU 告警, 客户端管理
+
+### IP 限制 (Fail2Ban)
+- 脚本 `x-ui > IP Limit Management`
+
+### WARP 配置
+- 面板 `设置 > WARP` 启用
+
+### API 接口
+详见 [Postman 集合](https://app.getpostman.com/run-collection/16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415)
+
+</details>
+
+## 🔍 故障排除
+| 问题 | 解决方案 |
+|------|-----------|
+| 服务启动失败 (exit-code 2) | 检查日志 `journalctl -u x-ui -e`, 常见 nil 指针已修复 |
+| 无法访问面板 | 检查端口放行, SSH 转发或证书 |
+| 子域名被墙 | 更换子域名, 重新申请证书 |
+| 节点无法上网 | 检查协议/流控, Ping 端口通畅 |
+
+完整日志: `journalctl -u x-ui.service -f`
+
+## 📸 预览
+![概览](media/1.png) ![入站](media/2.png) ![客户端](media/3.png)
+
+## 💝 赞助商
+- [搬瓦工](https://bandwagonhost.com/aff.php?aff=75015)
+- [RackNerd](https://my.racknerd.com/aff.php?aff=15268&pid=912)
+- 更多...
+
+## 🙏 致谢
+- [MHSanaei/3x-ui](https://gitlab.com/MHSanaei/3x-ui)
+- [EGfrthtu/X-Panel](https://gitlab.com/EGfrthtu/X-Panel)
+- [FranzKafkaYu/x-ui](https://gitlab.com/FranzKafkaYu/x-ui)
