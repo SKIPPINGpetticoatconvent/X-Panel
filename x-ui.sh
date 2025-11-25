@@ -38,7 +38,7 @@ echo -e "——————————————————————"
 echo -e "当前服务器的操作系统为:${red} $release${plain}"
 echo ""
 xui_version=$(/usr/local/x-ui/x-ui -v)
-last_version=$(curl -Ls "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+last_version=$(curl -Ls "https://gitlab.com/api/v4/projects/EGfrthtu%2FX-Panel/releases/permalink/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 echo -e "${green}当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
 echo ""
 echo -e "${yellow}〔X-Panel面板〕最新版为---------->>> ${last_version}${plain}"
@@ -143,7 +143,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
+    bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -162,7 +162,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
+    bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
     if [[ $? == 0 ]]; then
         LOGI "更新完成，面板已自动重启"
         exit 0
@@ -180,7 +180,7 @@ update_menu() {
         return 0
     fi
     
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/x-ui.sh
+    wget --no-check-certificate -O /usr/bin/x-ui https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/x-ui.sh
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     
@@ -202,127 +202,13 @@ custom_version() {
         exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/master/install.sh"
+    download_link="https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh"
 
     # Use the entered panel version in the download link
     install_command="bash <(curl -Ls $download_link) v$panel_version"
 
     echo "下载并安装面板版本 $panel_version..."
     eval $install_command
-}
-
-# Function to validate domain NS records for Cloudflare
-validate_domain_ns() {
-    local domain=$1
-    local cf_ns_servers=("ns.cloudflare.com" "ns2.cloudflare.com" "ns3.cloudflare.com" "ns4.cloudflare.com")
-
-    LOGI "正在验证域名 ${domain} 的 NS 记录..."
-
-    # Get NS records for the domain
-    local ns_records=$(dig NS "${domain}" +short 2>/dev/null | tr '[:upper:]' '[:lower:]')
-
-    if [[ -z "$ns_records" ]]; then
-        LOGE "无法获取域名 ${domain} 的 NS 记录，请检查域名配置"
-        return 1
-    fi
-
-    LOGD "域名 ${domain} 的 NS 记录: ${ns_records}"
-
-    # Check if any NS record points to Cloudflare
-    local found_cf_ns=false
-    for ns in $ns_records; do
-        for cf_ns in "${cf_ns_servers[@]}"; do
-            if [[ "$ns" == *"$cf_ns"* ]]; then
-                found_cf_ns=true
-                break 2
-            fi
-        done
-    done
-
-    if [[ "$found_cf_ns" == "true" ]]; then
-        LOGI "域名 ${domain} 已正确托管在 Cloudflare 上"
-        return 0
-    else
-        LOGE "域名 ${domain} 未托管在 Cloudflare 上"
-        LOGE "请确认以下步骤："
-        LOGE "1. 在 Cloudflare 控制台添加域名"
-        LOGE "2. 将域名的 NS 记录更新为 Cloudflare 提供的 NS 服务器"
-        LOGE "3. 等待 DNS 传播完成（可能需要几分钟到几小时）"
-        return 1
-    fi
-}
-
-# Function to test Cloudflare API permissions
-test_cf_api_permissions() {
-    local cf_email=$1
-    local cf_key=$2
-    local domain=$3
-
-    LOGI "正在测试 Cloudflare API 权限..."
-
-    # Test API key by getting zone information
-    local zone_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=${domain}" \
-        -H "X-Auth-Email: ${cf_email}" \
-        -H "X-Auth-Key: ${cf_key}" \
-        -H "Content-Type: application/json")
-
-    # Check if API call was successful
-    if [[ $? -ne 0 ]]; then
-        LOGE "Cloudflare API 调用失败，请检查网络连接"
-        return 1
-    fi
-
-    # Check API response
-    local success=$(echo "$zone_response" | jq -r '.success' 2>/dev/null)
-    if [[ "$success" != "true" ]]; then
-        local errors=$(echo "$zone_response" | jq -r '.errors[].message' 2>/dev/null)
-        LOGE "Cloudflare API 权限验证失败: $errors"
-        LOGE "请确认："
-        LOGE "1. API 密钥正确"
-        LOGE "2. API 密钥具有 DNS 编辑权限"
-        LOGE "3. 域名已在 Cloudflare 中添加"
-        return 1
-    fi
-
-    # Check if zone exists and API key has permissions
-    local zone_count=$(echo "$zone_response" | jq -r '.result | length')
-    if [[ "$zone_count" -eq 0 ]]; then
-        LOGE "在 Cloudflare 账户中未找到域名 ${domain}"
-        LOGE "请确认域名已添加到 Cloudflare 控制台"
-        return 1
-    fi
-
-    # Get zone ID and verify permissions
-    local zone_id=$(echo "$zone_response" | jq -r '.result[0].id')
-    local zone_name=$(echo "$zone_response" | jq -r '.result[0].name')
-
-    LOGI "成功连接到 Cloudflare 区域: ${zone_name} (ID: ${zone_id})"
-
-    # Test DNS record creation permission (create a test TXT record)
-    local test_record_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records" \
-        -H "X-Auth-Email: ${cf_email}" \
-        -H "X-Auth-Key: ${cf_key}" \
-        -H "Content-Type: application/json" \
-        --data "{\"type\":\"TXT\",\"name\":\"_acme-challenge-test.${domain}\",\"content\":\"test-record-for-permissions\",\"ttl\":120}")
-
-    local test_success=$(echo "$test_record_response" | jq -r '.success' 2>/dev/null)
-    if [[ "$test_success" != "true" ]]; then
-        local test_errors=$(echo "$test_record_response" | jq -r '.errors[].message' 2>/dev/null)
-        LOGE "Cloudflare API DNS 权限测试失败: $test_errors"
-        LOGE "请确认 API 密钥具有 DNS 编辑权限"
-        return 1
-    fi
-
-    # Clean up test record
-    local test_record_id=$(echo "$test_record_response" | jq -r '.result.id')
-    if [[ -n "$test_record_id" ]]; then
-        curl -s -X DELETE "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records/${test_record_id}" \
-            -H "X-Auth-Email: ${cf_email}" \
-            -H "X-Auth-Key: ${cf_key}" >/dev/null 2>&1
-    fi
-
-    LOGI "Cloudflare API 权限验证成功"
-    return 0
 }
 
 # Function to handle the deletion of the script file
@@ -350,7 +236,7 @@ uninstall() {
     echo ""
     echo -e "卸载成功\n"
     echo "如果您需要再次安装此面板，可以使用以下命令:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/master/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -430,8 +316,8 @@ check_config() {
     v6=$(curl -s6m8 http://ip.sb -k)
     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
@@ -673,7 +559,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/SKIPPINGpetticoatconvent/X-Panel/raw/main/x-ui.sh
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/x-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
@@ -1014,13 +900,13 @@ ssl_cert_issue_main() {
             echo "$domains" 
             read -rp "请选择要为面板设置路径的域名：" domain 
  
-            if echo "$domains" | grep -qw "$domain"; then
-                local webCertFile="/root/cert/${domain}/fullchain.pem"
-                local webKeyFile="/root/cert/${domain}/privkey.pem"
-
-                if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then
-                    /usr/local/x-ui/x-ui setting -webCert "$webCertFile" -webCertKey "$webKeyFile"
-                    echo "已为域名设置面板路径：$domain"
+            if echo "$domains" | grep -qw "$domain"; then 
+                local webCertFile="/root/cert/${domain}/fullchain.pem" 
+                local webKeyFile="/root/cert/${domain}/privkey.pem" 
+ 
+                if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then 
+                    /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+                    echo "已为域名设置面板路径：$domain" 
                     echo "  - 证书文件：$webCertFile" 
                     echo "  - 私钥文件：$webKeyFile" 
                     restart 
@@ -1178,25 +1064,30 @@ ssl_cert_issue() {
          chmod 755 $certPath/* 
      fi 
  
-     # 自动为面板设置证书路径
-     local webCertFile="/root/cert/${domain}/fullchain.pem"
-     local webKeyFile="/root/cert/${domain}/privkey.pem"
-
-     if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-         /usr/local/x-ui/x-ui setting -webCert "$webCertFile" -webCertKey "$webKeyFile"
-         LOGI "已为域名设置面板路径: $domain"
-         echo ""
-         LOGI "  - 证书文件: $webCertFile"
-         LOGI "  - 私钥文件: $webKeyFile"
-         echo ""
-         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
-         echo ""
-         echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
-         echo ""
-         restart
-     else
-         LOGE "错误：未找到域名的证书或私钥文件: $domain。"
-     fi
+     # 成功安装证书后提示用户设置面板路径
+     read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
+     if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
+         local webCertFile="/root/cert/${domain}/fullchain.pem" 
+         local webKeyFile="/root/cert/${domain}/privkey.pem" 
+ 
+         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
+             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+             LOGI "已为域名设置面板路径: $domain" 
+             echo ""
+             LOGI "  - 证书文件: $webCertFile" 
+             LOGI "  - 私钥文件: $webKeyFile" 
+             echo ""
+             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
+             echo ""
+             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
+             echo ""
+             restart 
+         else 
+             LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
+         fi 
+     else 
+         LOGI "跳过面板路径设置。" 
+     fi 
  } 
 ssl_cert_issue_CF() { 
      local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
@@ -1318,29 +1209,30 @@ ssl_cert_issue_CF() {
              chmod 755 ${certPath}/* 
          fi 
  
-         # 自动为面板设置证书路径
-         local webCertFile="${certPath}/fullchain.pem"
-         local webKeyFile="${certPath}/privkey.pem"
-
-         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-             /usr/local/x-ui/x-ui setting -webCert "$webCertFile" -webCertKey "$webKeyFile"
-             if [[ $? == 0 ]]; then
-                 LOGI "已为域名设置面板路径: $CF_Domain"
+         # 成功安装证书后提示用户设置面板路径
+         read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
+         if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
+             local webCertFile="${certPath}/fullchain.pem" 
+             local webKeyFile="${certPath}/privkey.pem" 
+ 
+             if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
+                 /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+                 LOGI "已为域名设置面板路径: $CF_Domain" 
                  echo ""
-                 LOGI "  - 证书文件: $webCertFile"
-                 LOGI "  - 私钥文件: $webKeyFile"
+                 LOGI "  - 证书文件: $webCertFile" 
+                 LOGI "  - 私钥文件: $webKeyFile" 
                  echo ""
-                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
                  echo ""
                  echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
                  echo ""
-                 restart
-             else
-                 LOGE "设置证书失败，请检查证书文件路径和权限"
-             fi
-         else
-             LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。"
-         fi
+                 restart 
+             else 
+                 LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
+             fi 
+         else 
+             LOGI "跳过面板路径设置。" 
+         fi 
      else 
          show_menu 
      fi 
@@ -1386,8 +1278,8 @@ echo -e "5. 可直观在前端页面配置订阅"
 echo -e "作者：〔X-Panel面板〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
     echo -e "${green}面板已安装证书采用SSL保护${plain}"
@@ -1422,11 +1314,10 @@ fi
 
 # --------- 拷贝X-Panel已有证书到 Nginx ----------
 mkdir -p /etc/nginx/ssl
-cert_path="$existing_cert"
-key_path="$existing_key"
+acme_path="/root/.acme.sh/${domain}_ecc"
 
-cp "$cert_path" "/etc/nginx/ssl/${domain}.cer"
-cp "$key_path" "/etc/nginx/ssl/${domain}.key"
+cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
+cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
 
 
 # --------- 配置 Nginx 反向代理 ----------
@@ -1888,6 +1779,30 @@ show_menu() {
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} 安装订阅转换 
 ——————————————————————
+  ${green}若在使用过程中有任何问题${plain}
+  ${yellow}请加入〔X-Panel面板〕交流群${plain}
+  ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
+  ${green}〔X-Panel面板〕项目地址${plain}
+  ${yellow}https://gitlab.com/EGfrthtu/X-Panel${plain}
+  ${green}详细〔安装配置〕教程${plain}
+  ${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}
+——————————————————————
+
+-------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
+
+${green}1、搬瓦工GIA高端线路：${yellow}https://bandwagonhost.com/aff.php?aff=75015${plain}
+
+${green}2、Dmit高端GIA线路：${yellow}https://www.dmit.io/aff.php?aff=9326${plain}
+
+${green}3、Sharon亚太优化线路机：${yellow}https://gomami.io/aff.php?aff=174${plain}
+
+${green}4、Bagevm优质落地鸡（原生IP全解锁）：${yellow}https://www.bagevm.com/aff.php?aff=754${plain}
+
+${green}5、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}
+
+${green}6、RackNerd极致性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}
+
+----------------------------------------------
 "
     show_status
     echo && read -p "请输入选项 [0-25]: " num

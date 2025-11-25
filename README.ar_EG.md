@@ -7,10 +7,10 @@
   </picture>
 </p>
 
-[![](https://img.shields.io/github/v/release/SKIPPINGpetticoatconvent/X-Panel.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases)
-[![](https://img.shields.io/github/actions/workflow/status/SKIPPINGpetticoatconvent/X-Panel/release.yml.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/SKIPPINGpetticoatconvent/X-Panel.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/SKIPPINGpetticoatconvent/X-Panel/total.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest)
+[![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
+[![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/commits/main)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/EGfrthtu/X-Panel/total.svg?style=for-the-badge)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **3X-UI** — لوحة تحكم متقدمة مفتوحة المصدر تعتمد على الويب مصممة لإدارة خادم Xray-core. توفر واجهة سهلة الاستخدام لتكوين ومراقبة بروتوكولات VPN والوكيل المختلفة.
@@ -23,19 +23,19 @@
 ## البدء السريع
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/master/install.sh)
+bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
 ```
 
-للحصول على الوثائق الكاملة، يرجى زيارة [ويكي المشروع](https://github.com/SKIPPINGpetticoatconvent/X-Panel/wiki).
+للحصول على الوثائق الكاملة، يرجى زيارة [ويكي المشروع](https://gitlab.com/EGfrthtu/X-Panel/-/wikis).
 
 ## شكر خاص إلى
 
-- [alireza0](https://github.com/alireza0/)
+- [alireza0](https://gitlab.com/alireza0/)
 
 ## الاعتراف
 
-- [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) (الترخيص: **GPL-3.0**): _قواعد توجيه v2ray/xray و v2ray/xray-clients المحسنة مع النطاقات الإيرانية المدمجة وتركيز على الأمان وحظر الإعلانات._
-- [Russia v2ray rules](https://github.com/runetfreedom/russia-v2ray-rules-dat) (الترخيص: **GPL-3.0**): _يحتوي هذا المستودع على قواعد توجيه V2Ray محدثة تلقائيًا بناءً على بيانات النطاقات والعناوين المحظورة في روسيا._
+- [Iran v2ray rules](https://gitlab.com/chocolate4u/Iran-v2ray-rules) (الترخيص: **GPL-3.0**): _قواعد توجيه v2ray/xray و v2ray/xray-clients المحسنة مع النطاقات الإيرانية المدمجة وتركيز على الأمان وحظر الإعلانات._
+- [Russia v2ray rules](https://gitlab.com/runetfreedom/russia-v2ray-rules-dat) (الترخيص: **GPL-3.0**): _يحتوي هذا المستودع على قواعد توجيه V2Ray محدثة تلقائيًا بناءً على بيانات النطاقات والعناوين المحظورة في روسيا._
 
 ## دعم المشروع
 
@@ -53,4 +53,4 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 
 ## النجوم عبر الزمن
 
-[![Stargazers over time](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg?variant=adaptive)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel) 
+[![Stargazers over time](https://starchart.cc/EGfrthtu/X-Panel.svg?variant=adaptive)](https://starchart.cc/EGfrthtu/X-Panel)

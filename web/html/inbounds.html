@@ -6,7 +6,7 @@
     border-radius: 1rem;
     overflow-x: hidden;
   }
-  /* 【新增】: 确保表格标题不换行 */
+  // 【新增】: 确保表格标题不换行 
   .ant-table-thead > tr > th {
       white-space: nowrap;
   }
@@ -169,7 +169,7 @@
     <a-layout-content>
       <a-spin :spinning="loadingStates.spinning" :delay="500" tip='{{ i18n "loading"}}'>
         <transition name="list" appear>
-          <a-alert type="error" v-if="app.showAlert && loadingStates.fetched" :style="{ marginBottom: '10px' }"
+          <a-alert type="error" v-if="showAlert && loadingStates.fetched" :style="{ marginBottom: '10px' }"
             message='{{ i18n "secAlertTitle" }}'
             color="red"
             description='{{ i18n "secAlertSsl" }}'
@@ -842,11 +842,12 @@
         width: 40,
         scopedSlots: { customRender: 'clients' },
     }, {
-       // 【中文注释】: 这是修改后的"设备限制"列定义
+       // 【中文注释】: 这是修改后的“设备限制”列定义
         title: '{{ i18n "pages.inbounds.deviceLimit" }}',
         dataIndex: "deviceLimit",
         align: "center",
         width: 40,
+       // 【中文注释】: 将错误的 customRender 改为 scopedSlots
         scopedSlots: { customRender: 'deviceLimit' },
     }, {
         title: '{{ i18n "pages.inbounds.traffic" }}',
@@ -891,14 +892,14 @@
         { title: '{{ i18n "pages.inbounds.traffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'traffic' } },
         { title: '{{ i18n "pages.inbounds.allTimeTraffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'allTime' } },
 
-		// 中文注释: 在子表格中新增"限速"列
-		      {
-		          title: '{{ i18n "pages.inbounds.speedLimit" }}',
-		          customRender: (text) => (text > 0 ? `${text} KB/s` : `{{ i18n "pages.inbounds.unlimited" }}`),
-		          width: 80,
-		          align: 'center',
-		          dataIndex: 'speedLimit',
-		      },
+		// 中文注释: 在子表格中新增“限速”列
+        {
+            title: '{{ i18n "pages.inbounds.speedLimit" }}',
+            width: 80,
+            align: 'center',
+            dataIndex: 'speedLimit',
+            customRender: (text) => (text > 0 ? `${text} KB/s` : {{ i18n "pages.inbounds.unlimited" }}),
+        },
 
         { title: '{{ i18n "pages.inbounds.expireDate" }}', width: 80, align: 'center', scopedSlots: { customRender: 'expiryTime' } },
     ];
@@ -983,6 +984,16 @@
                 'icloud.com:443',
                 'lovelive-anime.jp:443',
                 'meta.com:443',
+                'google.com:443',
+                'youtube.com:443',
+                'microsoft.com:443',
+                'cloudflare.com:443',
+                'facebook.com:443',
+                'instagram.com:443',
+                'netflix.com:443',
+                'spotify.com:443',
+                'adobe.com:443',
+                'dropbox.com:443',
             ],
         },
 		
@@ -1005,304 +1016,27 @@
             
             // 【核心修改】: 从后端加载历史记录，而不是从 localStorage
             this.loadHistoryFromServer();
-            
-            // 【新增】: 启动Session监控和自动续期
-            this.startSessionMonitoring();
         },
+		
         methods: {
             loading(spinning = true) {
                 this.loadingStates.spinning = spinning;
             },
-    
-            // 【新增】: Session监控和自动续期功能
-            startSessionMonitoring() {
-                // 每5分钟检查一次session状态
-                this.sessionCheckInterval = setInterval(() => {
-                    this.checkSessionHealth();
-                }, 5 * 60 * 1000);
-                
-                // 页面失焦时也检查一次
-                window.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'visible') {
-                        this.checkSessionHealth();
-                    }
-                });
-                
-                // 定时自动续期（每25分钟进行一次）
-                this.sessionRefreshInterval = setInterval(() => {
-                    this.attemptSessionRefresh();
-                }, 25 * 60 * 1000);
-            },
-            
-            async checkSessionHealth() {
-                try {
-                    const isValid = await HttpUtil.checkAuthStatus();
-                    if (!isValid) {
-                        console.log('Session状态异常，已触发自动处理');
-                    }
-                } catch (error) {
-                    console.warn('Session健康检查失败:', error);
-                }
-            },
-            
-            async attemptSessionRefresh() {
-                try {
-                    const refreshed = await HttpUtil.refreshSession();
-                    if (refreshed) {
-                        console.log('自动Session续期成功');
-                        // 更新下次检查时间
-                        localStorage.setItem('last_session_refresh', Date.now().toString());
-                    }
-                } catch (error) {
-                    console.warn('自动Session续期失败:', error);
-                }
-            },
-
-            // 【增强】: 带超时控制、指数退避重试机制的getDBInbounds方法
             async getDBInbounds() {
                 this.refreshing = true;
-                console.log('开始获取入站列表数据...');
-                this.loadingStates.spinning = true;
-                
-                // 【新增】: 指数退避重试机制配置
-                const maxRetries = 3;
-                const baseDelay = 1000; // 1秒基础延迟
-                let retryCount = 0;
-                
-                // 【新增】: 带超时控制的API调用函数
-                const fetchWithTimeout = async (url, timeout = 30000) => {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), timeout);
-                    
-                    try {
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            signal: controller.signal,
-                            credentials: 'same-origin'
-                        });
-                        clearTimeout(timeoutId);
-                        return await response.json();
-                    } catch (error) {
-                        clearTimeout(timeoutId);
-                        throw error;
-                    }
-                };
-                
-                // 【新增】: 重试函数（带指数退避）
-                const retryWithBackoff = async (operation, maxRetries, baseDelay) => {
-                    let lastError;
-                    
-                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                        try {
-                            return await operation();
-                        } catch (error) {
-                            lastError = error;
-                            
-                            console.warn(`第 ${attempt + 1} 次尝试失败:`, error.message);
-                            
-                            // 如果是最后一次尝试，不再重试
-                            if (attempt === maxRetries) {
-                                break;
-                            }
-                            
-                            // 【新增】: 计算指数退避延迟时间
-                            const delay = baseDelay * Math.pow(2, attempt);
-                            console.log(`等待 ${delay}ms 后进行第 ${attempt + 2} 次重试...`);
-                            
-                            // 显示重试提示（用户友好）
-                            if (attempt === 0) {
-                                this.$message.warning(`连接失败，${Math.round(delay/1000)}秒后自动重试...`, 2);
-                            }
-                            
-                            // 使用Promise.race实现延迟
-                            await new Promise(resolve => setTimeout(resolve, delay));
-                        }
-                    }
-                    
-                    throw lastError;
-                };
-                
-                // 【新增】: 错误类型判断函数
-                const getErrorMessage = (error) => {
-                    if (error.name === 'AbortError') {
-                        return '请求超时（30秒），请检查网络连接或后端服务状态';
-                    }
-                    if (error.message.includes('fetch')) {
-                        return '网络连接失败，请检查网络设置';
-                    }
-                    if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
-                        return '网络请求失败，请确认后端服务正常运行';
-                    }
-                    return `网络请求异常: ${error.message}`;
-                };
-                
-                try {
-                    // 【核心修改】: 使用重试机制包装API调用
-                    const msg = await retryWithBackoff(
-                        () => fetchWithTimeout('/panel/api/inbounds/list'),
-                        maxRetries,
-                        baseDelay
-                    );
-                    
-                    console.log('API 响应:', msg);
-                    
-                    // 优先确保 fetched 状态被设置，防止无限加载
-                    this.loadingStates.fetched = true;
-                    
-                    if (!msg || !msg.hasOwnProperty('success')) {
-                        console.error('API 响应格式异常:', msg);
-                        this.$message.error({
-                            content: '⚠️ API响应格式错误，请检查后端服务状态',
-                            duration: 5
-                        });
-                        this.setInbounds([]);
-                        return;
-                    }
-
-                    if (!msg.success) {
-                        console.error('获取入站列表失败:', msg.msg || '未知错误');
-                        
-                        // 【增强】显示更用户友好的错误消息
-                        let errorContent = '🔴 获取入站列表失败';
-                        if (msg.msg) {
-                            errorContent += `: ${msg.msg}`;
-                        }
-                        errorContent += '。系统将显示空列表，您可以稍后重试。';
-                        
-                        this.$message.error({
-                            content: errorContent,
-                            duration: 6
-                        });
-                        
-                        this.setInbounds([]);
-                        return;
-                    }
-
-                    // 【增强】显示成功提示（如果之前有重试）
-                    if (retryCount > 0) {
-                        this.$message.success(`✅ 经过 ${retryCount + 1} 次尝试后成功加载数据`, 3);
-                    }
-
-                    // 确保响应数据存在
-                    const inboundsData = msg.obj;
-                    console.log('获取到的入站数据:', inboundsData);
-                    
-                    if (!inboundsData) {
-                        console.warn('后端返回的数据为 null 或 undefined');
-                        this.$message.warning({
-                            content: '⚠️ 后端返回数据为空，请检查服务器配置',
-                            duration: 4
-                        });
-                        this.setInbounds([]);
-                        return;
-                    }
-                    
-                    // 确保数据是数组格式
-                    if (!Array.isArray(inboundsData)) {
-                        console.warn('后端返回的数据不是数组格式:', typeof inboundsData);
-                        this.$message.warning({
-                            content: '⚠️ 数据格式异常，显示空列表。请联系管理员检查后端配置。',
-                            duration: 4
-                        });
-                        this.setInbounds([]);
-                        return;
-                    }
-                    
-                    // 【增强】: 优化附加数据获取逻辑，添加部分失败处理
-                    const additionalDataPromises = [
-                        { name: '在线用户', operation: () => this.getOnlineUsers() },
-                        { name: '最后在线', operation: () => this.getLastOnlineMap() }
-                    ];
-                    
-                    try {
-                        const results = await Promise.allSettled(
-                            additionalDataPromises.map(({ operation }) => operation())
-                        );
-                        
-                        // 统计成功和失败的操作
-                        let successCount = 0;
-                        let failureCount = 0;
-                        
-                        results.forEach((result, index) => {
-                            if (result.status === 'fulfilled') {
-                                successCount++;
-                            } else {
-                                failureCount++;
-                                console.warn(`获取${additionalDataPromises[index].name}失败:`, result.reason);
-                            }
-                        });
-                        
-                        if (successCount > 0 && failureCount > 0) {
-                            console.log(`附加数据获取部分成功: ${successCount}成功, ${failureCount}失败`);
-                            // 不显示错误提示，避免干扰用户，但记录日志
-                        } else if (failureCount > 0) {
-                            console.warn('所有附加数据获取失败，但不影响主数据显示');
-                        } else {
-                            console.log('附加数据全部获取完成');
-                        }
-                    } catch (error) {
-                        console.warn('获取附加数据时出错，但不影响主数据显示:', error);
-                        // 静默处理，不显示错误提示
-                    }
-
-                    // 设置入站数据
-                    this.setInbounds(inboundsData);
-                    
-                    if (inboundsData.length === 0) {
-                        console.log('没有入站配置数据');
-                        this.$message.info({
-                            content: '📝 暂无入站配置，请点击"添加入站"创建您的第一个配置',
-                            duration: 4
-                        });
-                    } else {
-                        console.log(`✅ 成功加载 ${inboundsData.length} 个入站配置`);
-                    }
-                    
-                } catch (error) {
-                    console.error('网络请求异常:', error);
-                    // 确保即使发生错误也设置 fetched 状态
-                    this.loadingStates.fetched = true;
-                    
-                    // 【增强】错误消息处理
-                    const errorMessage = getErrorMessage(error);
-                    const displayMessage = `🔴 ${errorMessage}。请检查网络连接或联系管理员。`;
-                    
-                    this.$message.error({
-                        content: displayMessage,
-                        duration: 8
-                    });
-                    
-                    this.setInbounds([]);
-                    
-                    // 【新增】: 错误统计和监控
-                    this.logErrorStats(error);
-                    
-                } finally {
+                const msg = await HttpUtil.get('/panel/api/inbounds/list');
+                if (!msg.success) {
                     this.refreshing = false;
-                    this.loadingStates.spinning = false;
-                    console.log('数据加载流程完成');
+                    return;
                 }
-            },
-            
-            // 【新增】: 错误统计和监控函数
-            logErrorStats(error) {
-                // 记录错误统计信息，便于后续分析和优化
-                const errorInfo = {
-                    timestamp: new Date().toISOString(),
-                    type: error.name || 'UnknownError',
-                    message: error.message,
-                    userAgent: navigator.userAgent,
-                    url: window.location.href
-                };
-                
-                console.warn('错误统计信息:', errorInfo);
-                
-                // 可以在这里添加错误上报逻辑（如发送到监控服务）
-                // 例如: this.reportError(errorInfo);
+
+                await this.getLastOnlineMap();
+                await this.getOnlineUsers();
+
+                this.setInbounds(msg.obj);
+                setTimeout(() => {
+                    this.refreshing = false;
+                }, 500);
             },
             async getOnlineUsers() {
                 const msg = await HttpUtil.post('panel/api/inbounds/onlines');
@@ -1340,129 +1074,41 @@
                 }
             },
             setInbounds(dbInbounds) {
-                // 【修复】: 增强的数据安全检查和处理
-                console.log('setInbounds 开始处理数据:', dbInbounds);
-                
-                // 防止输入为 null 或 undefined
-                if (!dbInbounds) {
-                    console.warn('setInbounds: 输入数据为 null 或 undefined，设置为空数组');
-                    dbInbounds = [];
-                }
-                
-                // 确保输入是数组
-                if (!Array.isArray(dbInbounds)) {
-                    console.warn('setInbounds: 输入数据不是数组，已重置为空数组');
-                    dbInbounds = [];
-                }
-                
-                console.log('处理后的入站数据数量:', dbInbounds.length);
-                
-                // 清空现有数据
                 this.inbounds.splice(0);
                 this.dbInbounds.splice(0);
                 this.clientCount.splice(0);
-                
-                // 如果没有数据，显示空状态
-                if (dbInbounds.length === 0) {
-                    console.log('没有入站数据，设置空状态');
-                    this.searchedInbounds = [];
-                    this.loadingStates.fetched = true;
-                    return;
-                }
-                
-                try {
-                    let processedCount = 0;
-                    for (const inbound of dbInbounds) {
-                        // 跳过无效的入站数据
-                        if (!inbound) {
-                            console.warn('跳过无效的入站数据:', inbound);
+                for (const inbound of dbInbounds) {
+                    const dbInbound = new DBInbound(inbound);
+                    to_inbound = dbInbound.toInbound()
+                    this.inbounds.push(to_inbound);
+                    this.dbInbounds.push(dbInbound);
+                    if ([Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
+                        if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
                             continue;
                         }
-                        
-                        try {
-                            const dbInbound = new DBInbound(inbound);
-                            if (!dbInbound) {
-                                console.warn('无法创建 DBInbound 实例，跳过:', inbound);
-                                continue;
-                            }
-                            
-                            const to_inbound = dbInbound.toInbound();
-                            if (!to_inbound) {
-                                console.warn('无法转换入站配置，跳过:', inbound);
-                                continue;
-                            }
-                            
-                            this.inbounds.push(to_inbound);
-                            this.dbInbounds.push(dbInbound);
-                            processedCount++;
-                            
-                            // 处理客户端计数
-                            if (inbound.protocol && [Protocols.VMESS, Protocols.VLESS, Protocols.TROJAN, Protocols.SHADOWSOCKS].includes(inbound.protocol)) {
-                                if (dbInbound.isSS && (!to_inbound.isSSMultiUser)) {
-                                    continue;
-                                }
-                                try {
-                                    this.clientCount[inbound.id] = this.getClientCounts(inbound, to_inbound);
-                                } catch (error) {
-                                    console.warn('计算客户端统计时出错:', error);
-                                    this.clientCount[inbound.id] = {
-                                        clients: 0,
-                                        active: [],
-                                        deactive: [],
-                                        depleted: [],
-                                        expiring: [],
-                                        online: [],
-                                        comments: new Map()
-                                    };
-                                }
-                            }
-                        } catch (inboundError) {
-                            console.error('处理单个入站数据时出错:', inboundError, inbound);
-                            continue;
-                        }
+                        this.clientCount[inbound.id] = this.getClientCounts(inbound, to_inbound);
                     }
-                    
-                    console.log('成功处理的入站数据数量:', processedCount);
-                    
-                } catch (error) {
-                    console.error('处理入站数据时发生严重错误:', error);
-                    // 发生错误时，清空数据以防止白屏
-                    this.inbounds.splice(0);
-                    this.dbInbounds.splice(0);
-                    this.clientCount.splice(0);
                 }
-                
-                // 确保总是设置 fetched 状态，防止无限加载
-                this.loadingStates.fetched = true;
-                
-                // 安全地执行过滤和搜索
-                try {
-                    if(this.enableFilter){
-                        this.filterInbounds();
-                    } else {
-                        this.searchInbounds(this.searchKey);
-                    }
-                } catch (error) {
-                    console.warn('执行搜索/过滤时出错:', error);
-                    // 发生错误时，直接显示所有数据
-                    this.searchedInbounds = this.dbInbounds.slice();
+                if (!this.loadingStates.fetched) {
+                    this.loadingStates.fetched = true
                 }
-                
-                console.log('setInbounds 完成，dbInbounds 数量:', this.dbInbounds.length);
-                console.log('setInbounds 完成，searchedInbounds 数量:', this.searchedInbounds.length);
+                if(this.enableFilter){
+                    this.filterInbounds();
+                } else {
+                    this.searchInbounds(this.searchKey);
+                }
             },
             getClientCounts(dbInbound, inbound) {
                 let clientCount = 0, active = [], deactive = [], depleted = [], expiring = [], online = [], comments = new Map();
-                const clients = inbound.clients;
-                const clientStats = dbInbound.clientStats || [];
-                const now = new Date().getTime();
-                
+                clients = inbound.clients;
+                clientStats = dbInbound.clientStats
+                now = new Date().getTime()
                 if (clients) {
                     clientCount = clients.length;
                     if (dbInbound.enable) {
                         clients.forEach(client => {
                             if (client.comment) {
-                              comments.set(client.email, client.comment);
+                              comments.set(client.email, client.comment)
                             }
                             if (client.enable) {
                                 active.push(client.email);
@@ -1476,9 +1122,7 @@
                                 depleted.push(client.email);
                             } else {
                                 if ((client.expiryTime > 0 && (client.expiryTime - now < this.expireDiff)) ||
-                                    (client.total > 0 && (client.total - (client.up + client.down) < this.trafficDiff))) {
-                                    expiring.push(client.email);
-                                }
+                                    (client.total > 0 && (client.total - (client.up + client.down) < this.trafficDiff))) expiring.push(client.email);
                             }
                         });
                     } else {
@@ -1499,74 +1143,26 @@
             },
 
             searchInbounds(key) {
-                // 〔中文注释〕: 安全检查，防止 dbInbounds 为 null 或 undefined
-                if (!this.dbInbounds || !Array.isArray(this.dbInbounds)) {
-                    console.warn('searchInbounds: dbInbounds 数据无效，设置空数组');
-                    this.searchedInbounds = [];
-                    return;
-                }
-                
                 if (ObjectUtil.isEmpty(key)) {
                     this.searchedInbounds = this.dbInbounds.slice();
                 } else {
                     this.searchedInbounds.splice(0, this.searchedInbounds.length);
-                    
-                    // 〔中文注释〕: 添加 try-catch 包装整个搜索过程
-                    try {
-                        this.dbInbounds.forEach(inbound => {
-                            // 〔中文注释〕: 跳过无效的入站数据
-                            if (!inbound) {
-                                console.warn('跳过无效的入站数据:', inbound);
-                                return;
+                    this.dbInbounds.forEach(inbound => {
+                        if (ObjectUtil.deepSearch(inbound, key)) {
+                            const newInbound = new DBInbound(inbound);
+                            const inboundSettings = JSON.parse(inbound.settings);
+                            if (inboundSettings.hasOwnProperty('clients')) {
+                                const searchedSettings = { "clients": [] };
+                                inboundSettings.clients.forEach(client => {
+                                    if (ObjectUtil.deepSearch(client, key)) {
+                                        searchedSettings.clients.push(client);
+                                    }
+                                });
+                                newInbound.settings = Inbound.Settings.fromJson(inbound.protocol, searchedSettings);
                             }
-                            
-                            if (ObjectUtil.deepSearch(inbound, key)) {
-                                const newInbound = new DBInbound(inbound);
-                                if (!newInbound) {
-                                    console.warn('无法创建 DBInbound 实例:', inbound);
-                                    return;
-                                }
-                                
-                                // 〔中文注释〕: 安全地解析 settings
-                                let inboundSettings = null;
-                                try {
-                                    if (inbound.settings && typeof inbound.settings === 'string') {
-                                        inboundSettings = JSON.parse(inbound.settings);
-                                    } else if (inbound.settings && typeof inbound.settings === 'object') {
-                                        inboundSettings = inbound.settings;
-                                    }
-                                } catch (parseError) {
-                                    console.warn('解析入站设置失败:', parseError);
-                                    return;
-                                }
-                                
-                                if (inboundSettings && inboundSettings.hasOwnProperty('clients')) {
-                                    const searchedSettings = { "clients": [] };
-                                    
-                                    // 〔中文注释〕: 安全地遍历客户端
-                                    if (Array.isArray(inboundSettings.clients)) {
-                                        inboundSettings.clients.forEach(client => {
-                                            if (client && ObjectUtil.deepSearch(client, key)) {
-                                                searchedSettings.clients.push(client);
-                                            }
-                                        });
-                                    }
-                                    
-                                    try {
-                                        newInbound.settings = Inbound.Settings.fromJson(inbound.protocol, searchedSettings);
-                                    } catch (settingsError) {
-                                        console.warn('创建设置对象失败:', settingsError);
-                                        // 〔中文注释〕: 如果设置创建失败，仍然使用原始数据
-                                    }
-                                }
-                                this.searchedInbounds.push(newInbound);
-                            }
-                        });
-                    } catch (error) {
-                        console.error('搜索入站时发生严重错误:', error);
-                        // 〔中文注释〕: 发生错误时，显示所有数据而不是空白
-                        this.searchedInbounds = this.dbInbounds.slice();
-                    }
+                            this.searchedInbounds.push(newInbound);
+                        }
+                    });
                 }
             },
             filterInbounds() {
@@ -1745,9 +1341,10 @@ async openPort(port) {
 
                     const { privateKey, publicKey } = keyPairMsg.obj;
                     const { uuid } = uuidMsg.obj;
-                    const remark = Array.from({length:8}, () =>
+                    const remark = Array.from({length:8}, () => 
                         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-                    [Math.floor(Math.random() * 62)]).join("");
+                        [Math.floor(Math.random() * 62)]
+                    ).join("");
 
                     // 随机生成 10000-55535 之间的端口
                     const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
@@ -2165,7 +1762,7 @@ async openPort(port) {
             },
 
 
-            // 〔中文注释〕: 处理"订阅转换"按钮的点击事件 (已更新为完整逻辑)
+            // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
             handleSubscriptionConversion() {
                 // 【第一步】: 检查当前协议是否为 HTTPS
                 if (window.location.protocol !== "https:") {
@@ -2176,33 +1773,6 @@ async openPort(port) {
                     });
                     return; // 如果是 http，则终止后续所有操作
                 }
-
-                // 【新增】: 在尝试访问订阅转换前，先验证证书文件
-                this.verifyCertFilesBeforeConversion();
-            },
-
-            // 【新增方法】: 验证证书文件后继续订阅转换流程
-            async verifyCertFilesBeforeConversion() {
-                try {
-                    const certMsg = await HttpUtil.get('/panel/api/server/validateCertFiles');
-                    if (!certMsg.success) {
-                        this.$error({
-                            title: '证书验证失败',
-                            content: '无法验证证书文件状态，请检查后端服务。',
-                            class: themeSwitcher.currentTheme,
-                        });
-                        return;
-                    }
-
-                    const certData = certMsg.obj;
-                    if (!certData.valid) {
-                        this.$warning({
-                            title: '证书文件问题',
-                            content: `订阅转换需要有效的证书文件，但当前状态：${certData.message}`,
-                            class: themeSwitcher.currentTheme,
-                        });
-                        return;
-                    }
 
                 // 【第二步】：弹出确认框，询问用户是否继续
                 this.$confirm({
@@ -2246,43 +1816,10 @@ async openPort(port) {
                                 cancelText: '稍后再说',
                                 class: themeSwitcher.currentTheme,
                                 onOk: async () => {
-                                    this.installSubconverterWithCertCheck();
-                                },
-                                onCancel: () => {
-                                    this.$message.info('安装已取消。');
-                                }
-                            });
-                        });
-                    },
-                    onCancel: () => {
-                        this.$message.info('操作已取消。');
-                    }
-                });
-            },
-
-            // 【新增方法】: 带证书检查的订阅转换安装流程
-            async installSubconverterWithCertCheck() {
-                // 【新增】: 再次验证证书文件，确保安装前证书有效
-                try {
-                    const certMsg = await HttpUtil.get('/panel/api/server/validateCertFiles');
-                    if (!certMsg.success) {
-                        this.$message.error('无法验证证书文件状态，安装已取消。');
-                        return;
-                    }
-
-                    const certData = certMsg.obj;
-                    if (!certData.valid) {
-                        this.$message.warning(`证书文件验证失败：${certData.message}，但将继续安装流程。`);
-                        // 不中断安装流程，只给出警告
-                    }
-                } catch (certErr) {
-                    console.warn('证书验证请求失败，但继续安装：', certErr);
-                }
-
-                // 〔中文注释〕：从这里开始是原有的安装逻辑
-    // 确保 loginUrl 被定义，用于成功提示
-                                const subConverterUrl = `https://${window.location.hostname}:15268`;
-                                const loginUrl = subConverterUrl;
+                                    // 〔中文注释〕：从这里开始是全新的轮询检测逻辑
+									// 确保 loginUrl 被定义，用于成功提示
+                                    const subConverterUrl = `https://${window.location.hostname}:15268`;
+                                    const loginUrl = subConverterUrl; 
 									
 									const portsToOpen = [8000, 15268];
                                     let openPortFailed = false; // 用于标记是否有端口放行失败
@@ -2342,54 +1879,54 @@ async openPort(port) {
                                     // 2. 指令发送成功后，创建并显示一个用于等待服务启动的模态框
                                     const h = this.$createElement;
                                     const modal = this.$info({
-                                        title: '⏳ 正在安装并启动服务...',
-                                        content: '安装指令已发送，后台正在执行安装和启动。请耐心等待，预计40秒内自动给出安装成功提示。',
-                                        class: themeSwitcher.currentTheme,
-                                        okText: '后台运行',
-                                        okButtonProps: {
-                                            props: {
-                                                loading: true // 让按钮一直处于加载状态
-                                            }
-                                        },
-                                    });
+                                    title: '⏳ 正在安装并启动服务...',
+                                    content: '安装指令已发送，后台正在执行安装和启动。请耐心等待，预计40秒内自动给出安装成功提示。',
+                                    class: themeSwitcher.currentTheme,
+                                    okText: '后台运行',
+                                    okButtonProps: {
+                                         props: {
+                                            loading: true // 让按钮一直处于加载状态
+                                         }
+                                       },
+                                     });
 
                                     // 3. 核心妥协：使用固定延时代替不可靠的前端轮询
                                     const SERVICE_STARTUP_WAIT_TIME = 40000; // 等待 40 秒钟
 
                                     setTimeout(() => {
-                                        // 延时结束后，强制更新模态框为成功状态
-                                        modal.update({
-                                            title: '✅ 安装成功！',
-                                            // 使用 VNode 来创建指定的提示内容
-                                            content: h('div', { style: 'white-space: pre-wrap; text-align: left;' }, [
-                                                h('p', { style: 'font-weight: bold; font-size: 16px; margin-bottom: 10px;'}, '🎉 恭喜！【订阅转换】模块已成功安装！'),
-                                                h('p', '您现在可以使用以下地址访问 Web 界面：'),
-                                                h('p', [
-                                                    h('strong', '🔗 登录地址: '),
-                                                    h('a', {
-                                                        attrs: {
-                                                            href: loginUrl,
-                                                            target: '_blank'
-                                                        },
-                                                        style: 'font-family: monospace; font-weight: bold;'
-                                                    }, loginUrl)
-                                                ]),
-                                                // 突出显示用户名和密码
-                                                h('p', [ '默认用户名: ', h('strong', 'admin') ]),
-                                                h('p', [ '默认 密码: ', h('strong', '123456') ]),
-                                                h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, '可登录订阅转换后台修改您的密码！'),
-                                                h('p', { style: 'margin-top: 10px; font-style: italic; color: #ff4d4f;' }, '---------------------------------------'), // 使用红色分隔线
-                                                h('p', { style: 'font-style: italic; color: #ff4d4f;' }, '【重要提示】：若您无法访问上述地址，请进入 VPS 中手动放行 8000 和 15268 端口。') // 红色字体
-                                            ]),
-                                            okText: '完成',
-                                            okButtonProps: {
-                                                props: {
-                                                    loading: false
-                                                }
+                                    // 延时结束后，强制更新模态框为成功状态
+                                       modal.update({
+                                         title: '✅ 安装成功！',
+                                         // 使用 VNode 来创建指定的提示内容
+                                         content: h('div', { style: 'white-space: pre-wrap; text-align: left;' }, [
+                                         h('p', { style: 'font-weight: bold; font-size: 16px; margin-bottom: 10px;'}, '🎉 恭喜！【订阅转换】模块已成功安装！'),
+                                         h('p', '您现在可以使用以下地址访问 Web 界面：'),
+                                         h('p', [
+                                         h('strong', '🔗 登录地址: '),
+                                         h('a', {
+                                           attrs: {
+                                              href: loginUrl,
+                                              target: '_blank'
                                             },
-                                        });
+                                         style: 'font-family: monospace; font-weight: bold;'
+                                         }, loginUrl)
+                                        ]),
+                                        // 突出显示用户名和密码
+                                        h('p', [ '默认用户名: ', h('strong', 'admin') ]),
+                                        h('p', [ '默认 密码: ', h('strong', '123456') ]),
+                                        h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, '可登录订阅转换后台修改您的密码！'),
+                                        h('p', { style: 'margin-top: 10px; font-style: italic; color: #ff4d4f;' }, '---------------------------------------'), // 使用红色分隔线
+                                        h('p', { style: 'font-style: italic; color: #ff4d4f;' }, '【重要提示】：若您无法访问上述地址，请进入 VPS 中手动放行 8000 和 15268 端口。') // 红色字体
+                                        ]),
+                                       okText: '完成',
+                                       okButtonProps: {
+                                            props: {
+                                               loading: false
+                                            }
+                                          },
+                                       });
                                     }, SERVICE_STARTUP_WAIT_TIME);
-                                },
+                                 },
                             });
                         });
                     },
@@ -2506,7 +2043,7 @@ async openPort(port) {
                 });
             },
             openEditInbound(dbInboundId) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 const inbound = dbInbound.toInbound();
                 inModal.show({
                     title: '{{ i18n "pages.inbounds.modifyInbound"}}',
@@ -2572,7 +2109,7 @@ async openPort(port) {
                 await this.submit(`/panel/api/inbounds/update/${dbInbound.id}`, data, inModal);
             },
             openAddClient(dbInboundId) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 clientModal.show({
                     title: '{{ i18n "pages.client.add"}}',
                     okText: '{{ i18n "pages.client.submitAdd"}}',
@@ -2584,7 +2121,7 @@ async openPort(port) {
                 });
             },
             openAddBulkClient(dbInboundId) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 clientsBulkModal.show({
                     title: '{{ i18n "pages.client.bulk"}} ' + dbInbound.remark,
                     okText: '{{ i18n "pages.client.bulk"}}',
@@ -2595,9 +2132,9 @@ async openPort(port) {
                 });
             },
             openEditClient(dbInboundId, client) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                const clients = this.getInboundClients(dbInbound);
-                const index = this.findIndexOfClient(dbInbound.protocol, clients, client);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                clients = this.getInboundClients(dbInbound);
+                index = this.findIndexOfClient(dbInbound.protocol, clients, client);
                 clientModal.show({
                     title: '{{ i18n "pages.client.edit"}}',
                     okText: '{{ i18n "pages.client.submitEdit"}}',
@@ -2634,7 +2171,7 @@ async openPort(port) {
                 await this.submit(`/panel/api/inbounds/updateClient/${clientId}`, data, clientModal);
             },
             resetTraffic(dbInboundId) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 this.$confirm({
                     title: '{{ i18n "pages.inbounds.resetTraffic"}}' + ' #' + dbInboundId,
                     content: '{{ i18n "pages.inbounds.resetTrafficContent"}}',
@@ -2659,10 +2196,10 @@ async openPort(port) {
                     onOk: () => this.submit('/panel/api/inbounds/del/' + dbInboundId),
                 });
             },
-            delClient(dbInboundId, client, confirmation = true) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                const clientId = this.getClientId(dbInbound.protocol, client);
-                if (confirmation) {
+            delClient(dbInboundId, client,confirmation = true) {
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                clientId = this.getClientId(dbInbound.protocol, client);
+                if (confirmation){
                     this.$confirm({
                         title: '{{ i18n "pages.inbounds.deleteClient"}}' + ' ' + client.email,
                         content: '{{ i18n "pages.inbounds.deleteClientContent"}}',
@@ -2713,9 +2250,9 @@ async openPort(port) {
                 }
             },
             checkFallback(dbInbound) {
-                const newDbInbound = new DBInbound(dbInbound);
+                newDbInbound = new DBInbound(dbInbound);
                 if (dbInbound.listen.startsWith("@")){
-                    const rootInbound = this.inbounds.find((i) =>
+                    rootInbound = this.inbounds.find((i) =>
                         i.isTcp &&
                         ['trojan','vless'].includes(i.protocol) &&
                         i.settings.fallbacks.find(f => f.dest === dbInbound.listen)
@@ -2723,7 +2260,7 @@ async openPort(port) {
                     if (rootInbound) {
                         newDbInbound.listen = rootInbound.listen;
                         newDbInbound.port = rootInbound.port;
-                        const newInbound = newDbInbound.toInbound();
+                        newInbound = newDbInbound.toInbound();
                         newInbound.stream.security = rootInbound.stream.security;
                         newInbound.stream.tls = rootInbound.stream.tls;
                         newInbound.stream.externalProxy = rootInbound.stream.externalProxy;
@@ -2733,34 +2270,34 @@ async openPort(port) {
                 return newDbInbound;
             },
             showQrcode(dbInboundId, client) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                const newDbInbound = this.checkFallback(dbInbound);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                newDbInbound = this.checkFallback(dbInbound);
                 qrModal.show('{{ i18n "qrCode"}}', newDbInbound, client);
             },
             showInfo(dbInboundId, client) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                let index = 0;
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                index=0;
                 if (dbInbound.isMultiUser()){
-                    const inbound = dbInbound.toInbound();
-                    const clients = inbound.clients;
+                    inbound = dbInbound.toInbound();
+                    clients = inbound.clients;
                     index = this.findIndexOfClient(dbInbound.protocol, clients, client);
                 }
-                const newDbInbound = this.checkFallback(dbInbound);
+                newDbInbound = this.checkFallback(dbInbound);
                 infoModal.show(newDbInbound, index);
             },
-            switchEnable(dbInboundId, state) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                dbInbound.enable = state;
-                this.submit(`/panel/api/inbounds/update/${dbInboundId}`, dbInbound);
+            switchEnable(dbInboundId,state) {
+              dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+              dbInbound.enable = state;
+              this.submit(`/panel/api/inbounds/update/${dbInboundId}`, dbInbound);
             },
             async switchEnableClient(dbInboundId, client) {
-                this.loading();
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                const inbound = dbInbound.toInbound();
-                const clients = inbound.clients;
-                const index = this.findIndexOfClient(dbInbound.protocol, clients, client);
+                this.loading()
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                inbound = dbInbound.toInbound();
+                clients = inbound.clients;
+                index = this.findIndexOfClient(dbInbound.protocol, clients, client);
                 clients[index].enable = !clients[index].enable;
-                const clientId = this.getClientId(dbInbound.protocol, clients[index]);
+                clientId = this.getClientId(dbInbound.protocol, clients[index]);
                 await this.updateClient(clients[index], dbInboundId, clientId);
                 this.loading(false);
             },
@@ -2817,71 +2354,71 @@ async openPort(port) {
                     okText: '{{ i18n "delete"}}',
                     cancelText: '{{ i18n "cancel"}}',
                     onOk: () => this.submit('/panel/api/inbounds/delDepletedClients/' + dbInboundId),
-                });
+                })
             },
             isExpiry(dbInbound, index) {
                 return dbInbound.toInbound().isExpiry(index);
             },
             getUpStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 return clientStats ? clientStats.up : 0;
             },
             getDownStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 return clientStats ? clientStats.down : 0;
             },
             getSumStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 return clientStats ? clientStats.up + clientStats.down : 0;
             },
             getAllTimeClient(dbInbound, email) {
                 if (email.length == 0) return 0;
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
                 return clientStats.allTime || (clientStats.up + clientStats.down);
             },
             getRemStats(dbInbound, email) {
                 if (email.length == 0) return 0;
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
-                const remained = clientStats.total - (clientStats.up + clientStats.down);
-                return remained > 0 ? remained : 0;
+                remained = clientStats.total - (clientStats.up + clientStats.down);
+                return remained>0 ? remained : 0;
             },
             clientStatsColor(dbInbound, email) {
                 if (email.length == 0) return ColorUtils.clientUsageColor();
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
-                return ColorUtils.clientUsageColor(clientStats, app.trafficDiff);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                return ColorUtils.clientUsageColor(clientStats, app.trafficDiff)
             },
             statsProgress(dbInbound, email) {
                 if (email.length == 0) return 100;
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return 0;
                 if (clientStats.total == 0) return 100;
-                return 100 * (clientStats.down + clientStats.up) / clientStats.total;
+                return 100*(clientStats.down + clientStats.up)/clientStats.total;
             },
             expireProgress(expTime, reset) {
-                const now = new Date().getTime();
-                const remainedSeconds = expTime < 0 ? -expTime / 1000 : (expTime - now) / 1000;
-                const resetSeconds = reset * 86400;
+                now = new Date().getTime();
+                remainedSeconds = expTime < 0 ? -expTime/1000 : (expTime-now)/1000;
+                resetSeconds = reset * 86400;
                 if (remainedSeconds >= resetSeconds) return 0;
-                return 100 * (1 - (remainedSeconds / resetSeconds));
+                return 100*(1-(remainedSeconds/resetSeconds));
             },
-            remainedDays(expTime) {
+            remainedDays(expTime){
                 if (expTime == 0) return null;
-                if (expTime < 0) return TimeFormatter.formatSecond(expTime / -1000);
-                const now = new Date().getTime();
+                if (expTime < 0) return TimeFormatter.formatSecond(expTime/-1000);
+                now = new Date().getTime();
                 if (expTime < now) return '{{ i18n "depleted" }}';
-                return TimeFormatter.formatSecond((expTime - now) / 1000);
+                return TimeFormatter.formatSecond((expTime-now)/1000);
             },
-            statsExpColor(dbInbound, email) {
+            statsExpColor(dbInbound, email){
                 if (email.length == 0) return '#7a316f';
-                const clientStats = dbInbound.clientStats.find(stats => stats.email === email);
+                clientStats = dbInbound.clientStats.find(stats => stats.email === email);
                 if (!clientStats) return '#7a316f';
-                const statsColor = ColorUtils.usageColor(clientStats.down + clientStats.up, this.trafficDiff, clientStats.total);
-                const expColor = ColorUtils.usageColor(new Date().getTime(), this.expireDiff, clientStats.expiryTime);
+                statsColor = ColorUtils.usageColor(clientStats.down + clientStats.up, this.trafficDiff, clientStats.total);
+                expColor = ColorUtils.usageColor(new Date().getTime(), this.expireDiff, clientStats.expiryTime);
                 switch (true) {
                     case statsColor == "red" || expColor == "red":
                         return "#cf3c3c"; // Red
@@ -2894,7 +2431,7 @@ async openPort(port) {
                 }
             },
             isClientEnabled(dbInbound, email) {
-                const clientStats = dbInbound.clientStats ? dbInbound.clientStats.find(stats => stats.email === email) : null;
+                clientStats = dbInbound.clientStats ? dbInbound.clientStats.find(stats => stats.email === email) : null;
                 return clientStats ? clientStats['enable'] : true;
             },
             isClientOnline(email) {
@@ -2906,7 +2443,7 @@ async openPort(port) {
             formatLastOnline(email) {
                 const ts = this.getLastOnline(email)
                 if (!ts) return '-'
-                if (app.datepicker === 'gregorian') {
+                if (this.datepicker === 'gregorian') {
                     return DateUtil.formatMillis(ts)
                 }
                 return DateUtil.convertToJalalian(moment(ts))
@@ -2915,20 +2452,20 @@ async openPort(port) {
                 return this.getInboundClients(this.dbInbounds.find(row => row.id === dbInboundId)).length > 1;
             },
             inboundLinks(dbInboundId) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                const newDbInbound = this.checkFallback(dbInbound);
+                dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+                newDbInbound = this.checkFallback(dbInbound);
                 txtModal.show('{{ i18n "pages.inbounds.export"}}', newDbInbound.genInboundLinks(this.remarkModel), newDbInbound.remark);
             },
             exportSubs(dbInboundId) {
                 const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
                 const clients = this.getInboundClients(dbInbound);
-                let subLinks = [];
-                if (clients != null) {
+                let subLinks = []
+                if (clients != null){
                     clients.forEach(c => {
-                        if (c.subId && c.subId.length > 0) {
-                            subLinks.push(this.subSettings.subURI + c.subId);
+                        if (c.subId && c.subId.length>0){
+                            subLinks.push(this.subSettings.subURI + c.subId)
                         }
-                    });
+                    })
                 }
                 txtModal.show(
                     '{{ i18n "pages.inbounds.export"}} - {{ i18n "pages.settings.subSettings" }}',
@@ -2947,15 +2484,15 @@ async openPort(port) {
                 });
             },
             exportAllSubs() {
-                let subLinks = [];
+                let subLinks = []
                 for (const dbInbound of this.dbInbounds) {
                     const clients = this.getInboundClients(dbInbound);
-                    if (clients != null) {
+                    if (clients != null){
                         clients.forEach(c => {
-                            if (c.subId && c.subId.length > 0) {
-                                subLinks.push(this.subSettings.subURI + c.subId);
+                            if (c.subId && c.subId.length>0){
+                                subLinks.push(this.subSettings.subURI + c.subId)
                             }
-                        });
+                        })
                     }
                 }
                 txtModal.show(
@@ -2971,8 +2508,8 @@ async openPort(port) {
                 txtModal.show('{{ i18n "pages.inbounds.export"}}', copyText.join('\r\n'), 'All-Inbounds');
             },
             copy(dbInboundId) {
-                const dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
-                txtModal.show('{{ i18n "pages.inbounds.inboundData" }}', JSON.stringify(dbInbound, null, 2));
+              dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);
+              txtModal.show('{{ i18n "pages.inbounds.inboundData" }}', JSON.stringify(dbInbound, null, 2));
             },
             async startDataRefreshLoop() {
                 while (this.isRefreshEnabled) {
@@ -2993,7 +2530,6 @@ async openPort(port) {
             changeRefreshInterval() {
                 localStorage.setItem("refreshInterval", this.refreshInterval);
             },
-
             async manualRefresh() {
                 if (!this.refreshing) {
                     this.loadingStates.spinning = true;
@@ -3004,14 +2540,14 @@ async openPort(port) {
             pagination(obj){
                 if (this.pageSize > 0 && obj.length>this.pageSize) {
                     // Set page options based on object size
-                    const sizeOptions = [];
-                    for (let i = this.pageSize; i <= obj.length; i = i + this.pageSize) {
+                    sizeOptions = [];
+                    for (i=this.pageSize;i<=obj.length;i=i+this.pageSize) {
                         sizeOptions.push(i.toString());
                     }
                     // Add option to see all in one page
-                    sizeOptions.push((Math.ceil(obj.length / this.pageSize) * this.pageSize).toString());
+                    sizeOptions.push(i.toString());
 
-                    const p = {
+                    p = {
                         showSizeChanger: true,
                         size: 'small',
                         position: 'bottom',
@@ -3020,13 +2556,13 @@ async openPort(port) {
                     };
                     return p;
                 }
-                return false;
-            },
+                return false
+            }
         },
         watch: {
             searchKey: Utils.debounce(function (newVal) {
                 this.searchInbounds(newVal);
-            }, 500),
+            }, 500)
         },
         computed: {
             total() {
@@ -3052,7 +2588,7 @@ async openPort(port) {
                     depleted: depleted,
                     expiring: expiring,
                 };
-            },
+            }
         },
     });
 </script>

@@ -116,8 +116,8 @@ type Server struct {
 	panel  *controller.XUIController
 	api    *controller.APIController
 
-	xrayService    *service.XrayService
-	settingService *service.SettingService
+	xrayService    service.XrayService
+	settingService service.SettingService
 	tgbotService    service.TelegramService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService  service.ServerService
@@ -132,11 +132,6 @@ type Server struct {
 // 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来
 func (s *Server) SetTelegramService(tgService service.TelegramService) {
     s.tgbotService = tgService
-}
-
-// 【新增方法】：用于 main.go 将创建好的 xrayService 注入进来，修复 nil 指针问题
-func (s *Server) SetXrayService(xrayService *service.XrayService) {
-    s.xrayService = xrayService
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
@@ -249,7 +244,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	})
 
 	// init i18n
-	err = locale.InitLocalizer(i18nFS, s.settingService)
+	err = locale.InitLocalizer(i18nFS, &s.settingService)
 	if err != nil {
 		return nil, err
 	}
@@ -330,15 +325,11 @@ func (s *Server) startTask() {
 	if (err == nil) && (isTgbotenabled) {
 		runtime, err := s.settingService.GetTgbotRuntime()
 		if err != nil || runtime == "" {
-			logger.Errorf("Add NewStatsNotifyJob error[%s], Runtime[%s] invalid, will run default", err, runtime)
+			logger.Infof("Telegram bot enabled, but runtime setting invalid: %s, will run default", runtime)
 			runtime = "@daily"
 		}
 		logger.Infof("Tg notify enabled,run at %s", runtime)
-		_, err = s.cron.AddJob(runtime, job.NewStatsNotifyJob(s.xrayService, s.tgbotService))
-		if err != nil {
-			logger.Warning("Add NewStatsNotifyJob error", err)
-			return
-		}
+		// Note: Daily report functionality has been removed
 
 		// check for Telegram bot callback query hash storage reset
 		s.cron.AddJob("@every 2m", job.NewCheckHashStorageJob())

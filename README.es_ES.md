@@ -4,10 +4,10 @@
 
 **Un Panel Web Avanzado • Construido sobre Xray Core**
 
-[![](https://img.shields.io/github/v/release/SKIPPINGpetticoatconvent/X-Panel.svg)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases)
-[![](https://img.shields.io/github/actions/workflow/status/SKIPPINGpetticoatconvent/X-Panel/release.yml.svg)](#)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/SKIPPINGpetticoatconvent/X-Panel.svg)](#)
-[![Downloads](https://img.shields.io/github/downloads/SKIPPINGpetticoatconvent/X-Panel/total.svg)](#)
+[![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg)](https://gitlab.com/EGfrthtu/X-Panel/-/tags)
+[![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg)](#)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg)](#)
+[![Downloads](https://img.shields.io/github/downloads/EGfrthtu/X-Panel/total.svg)](#)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 > **Descargo de responsabilidad:** Este proyecto es solo para aprendizaje personal y comunicación, por favor no lo uses con fines ilegales, por favor no lo uses en un entorno de producción
@@ -29,7 +29,7 @@
 ## Instalar y Actualizar
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/master/install.sh)
+bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh)
 ```
 
 ## Instalar una Versión Personalizada
@@ -37,7 +37,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 Para instalar la versión deseada, agrega la versión al final del comando de instalación. Por ejemplo, ver `v2.4.1`:
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/master/install.sh) v2.4.1
+bash <(curl -Ls https://gitlab.com/EGfrthtu/X-Panel/-/raw/main/install.sh) v2.4.1
 ```
 
 ## Certificado SSL
@@ -89,7 +89,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
+wget https://gitlab.com/EGfrthtu/X-Panel/-/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. Una vez que se haya descargado el paquete comprimido, ejecuta los siguientes comandos para instalar o actualizar x-ui:
@@ -136,8 +136,8 @@ systemctl restart x-ui
 2. Clona el Repositorio del Proyecto:
 
    ```sh
-   git clone https://github.com/SKIPPINGpetticoatconvent/X-Panel.git
-   cd 3x-ui
+   git clone https://gitlab.com/EGfrthtu/X-Panel.git
+   cd X-Panel
    ```
 
 3. Inicia el Servicio
@@ -156,7 +156,7 @@ systemctl restart x-ui
       --network=host \
       --restart=unless-stopped \
       --name 3x-ui \
-      ghcr.io/SKIPPINGpetticoatconvent/X-Panel:latest
+      ghcr.io/xeefei/x-panel:latest
    ```
 
 actualizar a la última versión
@@ -488,15 +488,15 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 
 ## Un agradecimiento especial a
 
-- [alireza0](https://github.com/alireza0/)
+- [alireza0](https://gitlab.com/alireza0/)
 
 ## Reconocimientos
 
 赞助地址（USDT/TRC20）：TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ
 
-- [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) (Licencia: **GPL-3.0**): _Reglas de enrutamiento mejoradas de v2ray/xray y v2ray/xray-clients con dominios iraníes integrados y un enfoque en seguridad y bloqueo de anuncios._
-- [Vietnam Adblock rules](https://github.com/vuong2023/vn-v2ray-rules) (License: **GPL-3.0**): _Un dominio alojado en Vietnam y una lista de bloqueo con la máxima eficiencia para vietnamitas._
+- [Iran v2ray rules](https://gitlab.com/chocolate4u/Iran-v2ray-rules) (Licencia: **GPL-3.0**): _Reglas de enrutamiento mejoradas de v2ray/xray y v2ray/xray-clients con dominios iraníes integrados y un enfoque en seguridad y bloqueo de anuncios._
+- [Vietnam Adblock rules](https://gitlab.com/vuong2023/vn-v2ray-rules) (License: **GPL-3.0**): _Un dominio alojado en Vietnam y una lista de bloqueo con la máxima eficiencia para vietnamitas._
 
 ## Estrellas a lo largo del tiempo
 
-[![Stargazers over time](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
+[![Stargazers over time](https://starchart.cc/EGfrthtu/X-Panel.svg)](https://starchart.cc/EGfrthtu/X-Panel)
