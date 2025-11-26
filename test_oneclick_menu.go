@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -49,7 +48,6 @@ func testOneClickMenuLogic() {
 		"oneclick_switch_vision":  "🌀 Switch + Vision Seed (开发中)",
 	}
 	
-	allCovered := true
 	for callback, expected := range configTypes {
 		if strings.Contains(expected, "(开发中)") {
 			fmt.Printf("   ✅ %s -> %s (正确标记为开发中)\n", callback, expected)
@@ -102,8 +100,10 @@ func verifyFunctionStructure() {
 	}
 }
 
-// 主测试函数
-func main() {
+// 一键配置菜单测试套件的完整运行函数
+func RunOneClickMenuTest() {
+	fmt.Println("🚀 Telegram Bot 一键配置分层菜单重构验证测试")
+	fmt.Println(strings.Repeat("=", 50))
 	testOneClickMenuLogic()
 	verifyFunctionStructure()
 	
@@ -111,4 +111,9 @@ func main() {
 	fmt.Println("🚀 Telegram Bot 一键配置分层菜单重构验证完成")
 	fmt.Println("📱 用户现在可以通过更直观的分类选择配置类型")
 	fmt.Println("🎯 重构目标已全部达成！")
+}
+
+// 作为独立程序运行时的入口点
+func init() {
+	fmt.Println("一键配置菜单测试包已加载")
 }
