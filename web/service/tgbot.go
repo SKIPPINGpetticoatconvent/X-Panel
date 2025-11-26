@@ -1757,35 +1757,46 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		}
 
 
-	 // 【新增代码】: 在这里处理新按钮的回调
+	 // 【重构后】: 处理分层菜单的回调
 	 case "oneclick_options":
-		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "请选择配置类型...")
-		 t.sendOneClickOptions(chatId)
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "请选择配置类型...")
+	  t.sendOneClickOptions(chatId)
+
+	 // 【新增】: 处理主分类菜单的回调
+	 case "oneclick_category_direct":
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在进入直连类别...")
+	  t.sendDirectConnectionOptions(chatId)
+
+	 case "oneclick_category_relay":
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在进入中转类别...")
+	  t.sendRelayOptions(chatId)
 
 	 case "oneclick_reality":
-		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在创建 Vless + TCP + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建  ------->>>>\n\n【Vless + TCP + Reality】节点，请稍候......")
-		 t.remoteCreateOneClickInbound("reality", chatId)
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在创建 Vless + TCP + Reality 节点...")
+	  t.SendMsgToTgbot(chatId, "🚀 正在远程创建  ------->>>>\n\n【Vless + TCP + Reality】节点，请稍候......")
+	  t.remoteCreateOneClickInbound("reality", chatId)
 
 	 case "oneclick_xhttp_reality":
-		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在创建 Vless + XHTTP + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "⚡ 正在远程创建  ------->>>>\n\n【Vless + XHTTP + Reality】节点，请稍候......")
-		 t.remoteCreateOneClickInbound("xhttp_reality", chatId)	
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在创建 Vless + XHTTP + Reality 节点...")
+	  t.SendMsgToTgbot(chatId, "⚡ 正在远程创建  ------->>>>\n\n【Vless + XHTTP + Reality】节点，请稍候......")
+	  t.remoteCreateOneClickInbound("xhttp_reality", chatId)
 
 	 case "oneclick_tls":
-		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless Encryption + XHTTP + TLS 节点...")
-		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建  ------->>>>\n\n【Vless Encryption + XHTTP + TLS】节点，请稍候......")
-		 t.remoteCreateOneClickInbound("tls", chatId)
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless Encryption + XHTTP + TLS 节点...")
+	  t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建  ------->>>>\n\n【Vless Encryption + XHTTP + TLS】节点，请稍候......")
+	  t.remoteCreateOneClickInbound("tls", chatId)
 
 	 case "oneclick_switch_vision":
-		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ...........")
-		 t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
-		 t.remoteCreateOneClickInbound("switch_vision", chatId)	
+	  t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	  t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ...........")
+	  t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
+	  t.remoteCreateOneClickInbound("switch_vision", chatId)
 
 	 case "subconverter_install":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -3253,8 +3264,22 @@ func (t *Tgbot) SendMessage(msg string) error {
 }
 
 // 【新增函数】: 发送【一键配置】的选项按钮给用户
+// 【重构后的函数】: 显示主分类菜单
 func (t *Tgbot) sendOneClickOptions(chatId int64) {
-	optionsKeyboard := tu.InlineKeyboard(
+	categoryKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🔗 Direct Connection (直连)").WithCallbackData(t.encodeQuery("oneclick_category_direct")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🔄 Relay (中转)").WithCallbackData(t.encodeQuery("oneclick_category_relay")),
+		),
+	)
+	t.SendMsgToTgbot(chatId, "请选择【一键配置】类型：", categoryKeyboard)
+}
+
+// 【新增函数】: 显示直连类别的具体配置选项
+func (t *Tgbot) sendDirectConnectionOptions(chatId int64) {
+	directKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🚀 Vless + TCP + Reality + Vision").WithCallbackData(t.encodeQuery("oneclick_reality")),
 		),
@@ -3262,14 +3287,26 @@ func (t *Tgbot) sendOneClickOptions(chatId int64) {
 			tu.InlineKeyboardButton("⚡ Vless + XHTTP + Reality").WithCallbackData(t.encodeQuery("oneclick_xhttp_reality")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
+		),
+	)
+	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🔗 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置", directKeyboard)
+}
+
+// 【新增函数】: 显示中转类别的具体配置选项
+func (t *Tgbot) sendRelayOptions(chatId int64) {
+	relayKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🛡️ Vless Encryption + XHTTP + TLS").WithCallbackData(t.encodeQuery("oneclick_tls")),
 		),
-		// 【新增占位按钮】: 为未来的 Switch + Vision Seed 预留位置
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🌀 Switch + Vision Seed (开发中)").WithCallbackData(t.encodeQuery("oneclick_switch_vision")),
 		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
+		),
 	)
-	t.SendMsgToTgbot(chatId, "请选择您要创建的【一键配置】类型：\n（以下最前面两种适合优化线路去直连）", optionsKeyboard)
+	t.SendMsgToTgbot(chatId, "【中转】类别 - 适合需要中转的场景：\n\n🛡️ Vless Encryption + XHTTP + TLS: 加密传输，可配合CDN\n🌀 Switch + Vision Seed: 特殊配置（开发中）", relayKeyboard)
 }
 
 // 【新增函数】: 检查并安装【订阅转换】
@@ -4048,16 +4085,37 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 
         var creationMessage string
         switch configType {
+        case "options":
+            // 返回主菜单
+            t.SendMsgToTgbot(chatIDInt64, "请选择【一键配置】类型：")
+            t.sendOneClickOptions(chatIDInt64)
+            _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("主菜单已显示"))
+            return nil
+            
+        case "category_direct":
+            // 进入直连类别
+            t.SendMsgToTgbot(chatIDInt64, "正在进入直连类别...")
+            t.sendDirectConnectionOptions(chatIDInt64)
+            _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("直连类别已显示"))
+            return nil
+            
+        case "category_relay":
+            // 进入中转类别
+            t.SendMsgToTgbot(chatIDInt64, "正在进入中转类别...")
+            t.sendRelayOptions(chatIDInt64)
+            _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("中转类别已显示"))
+            return nil
+            
         case "reality":
             creationMessage = "🚀 Vless + TCP + Reality + Vision"
         case "xhttp_reality":
             creationMessage = "⚡ Vless + XHTTP + Reality"
         case "tls":
             creationMessage = "🛡️ Vless Encryption + XHTTP + TLS"
-		case "switch_vision": // 【新增】: 为占位按钮提供单独的提示
-			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
-			return nil
+  case "switch_vision": // 【新增】: 为占位按钮提供单独的提示
+   t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
+   _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
+   return nil
         default:
             creationMessage = strings.ToUpper(configType)
         }
