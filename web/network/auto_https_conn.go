@@ -37,8 +37,8 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 		return false
 	}
 
-	// 设置读取超时，避免阻塞
-	c.Conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	// 设置读取超时，避免阻塞 - 增加超时时间以提高兼容性
+	c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	defer c.Conn.SetReadDeadline(time.Time{})
 
 	// 尝试读取少量数据来判断协议
@@ -119,8 +119,8 @@ func (c *AutoHttpsConn) sendRedirect(request *http.Request) {
 		logger.Warning("Failed to send redirect response:", err)
 	}
 	
-	// 延迟关闭连接，给客户端时间接收响应
-	time.Sleep(100 * time.Millisecond)
+	// 延迟关闭连接，给客户端时间接收响应 - 增加延迟时间
+	time.Sleep(500 * time.Millisecond)
 	c.Close()
 	logger.Info("HTTP request redirected to HTTPS")
 }
@@ -148,8 +148,8 @@ func (c *AutoHttpsConn) Read(buf []byte) (int, error) {
 	}
 
 	// 缓冲区数据已全部读取，从底层连接读取
-	// 设置超时避免阻塞
-	c.Conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	// 设置超时避免阻塞 - 与协议检测超时保持一致
+	c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	n, err := c.Conn.Read(buf)
 	c.Conn.SetReadDeadline(time.Time{})
 	
@@ -169,8 +169,8 @@ func (c *AutoHttpsConn) Write(buf []byte) (int, error) {
 		return 0, io.EOF
 	}
 	
-	// 设置写超时
-	c.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	// 设置写超时 - 增加超时时间提高兼容性
+	c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	defer c.Conn.SetWriteDeadline(time.Time{})
 	
 	return c.Conn.Write(buf)

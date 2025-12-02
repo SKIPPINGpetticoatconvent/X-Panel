@@ -432,6 +432,19 @@ func (s *Server) Start() (err error) {
 		cert, _ := tls.LoadX509KeyPair(certFile, keyFile) // 这里我们忽略错误，因为上面已经检查过了
 		c := &tls.Config{
 			Certificates: []tls.Certificate{cert},
+			// 设置最低 TLS 版本为 1.2，提高兼容性
+			MinVersion: tls.VersionTLS12,
+			// 明确指定密码套件，避免协商失败
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+			},
+			// 启用服务器端的密码套件选择偏好
+			PreferServerCipherSuites: true,
+			// 设置会话缓存以提高性能
+			SessionTicketsDisabled: false,
 		}
 		listener = network.NewAutoHttpsListener(listener)
 		listener = tls.NewListener(listener, c)
