@@ -402,6 +402,29 @@ func (s *ServerService) RestartXrayService() error {
 	return nil
 }
 
+// detectSystemArchitecture 检测系统实际架构
+func detectSystemArchitecture() string {
+	// 尝试使用 uname -m 检测系统架构
+	cmd := exec.Command("uname", "-m")
+	output, err := cmd.Output()
+	if err == nil {
+		systemArch := strings.TrimSpace(string(output))
+		// 如果检测到 x86_64 或 amd64，说明系统支持64位
+		if systemArch == "x86_64" || systemArch == "amd64" {
+			return "64"
+		}
+		// 如果检测到 aarch64，说明系统支持64位 ARM
+		if systemArch == "aarch64" {
+			return "arm64-v8a"
+		}
+		// 其他情况返回系统报告的架构
+		return systemArch
+	}
+	
+	// 如果 uname 命令失败，回退到 runtime.GOARCH 检测
+	return runtime.GOARCH
+}
+
 func (s *ServerService) downloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
@@ -412,6 +435,9 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	case "windows":
 		osName = "windows"
 	}
+
+	// 获取系统实际架构
+	systemArch := detectSystemArchitecture()
 
 	switch arch {
 	case "amd64":
@@ -425,9 +451,22 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	case "armv5":
 		arch = "arm32-v5"
 	case "386":
-		arch = "32"
+		// 关键修复：如果 Go 程序运行在 386 模式下，但实际系统是 64 位，
+		// 则下载 64 位版本，避免 "exit code 8" 错误
+		if systemArch == "64" {
+			arch = "64"
+			logger.Info("检测到 32 位面板运行在 64 位系统上，使用 64 位 Xray")
+		} else {
+			arch = "32"
+		}
 	case "s390x":
 		arch = "s390x"
+	default:
+		// 对于未知架构，尝试使用系统检测结果
+		if systemArch != runtime.GOARCH {
+			arch = systemArch
+			logger.Infof("使用系统检测到的架构: %s", arch)
+		}
 	}
 
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
