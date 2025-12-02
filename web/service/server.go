@@ -801,11 +801,28 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 	}
 
 	downloadFile := func(url, destPath string) error {
-		resp, err := http.Get(url)
+		// 创建带超时的HTTP客户端
+		client := &http.Client{
+			Timeout: 60 * time.Second, // 60秒超时
+		}
+		
+		// 创建请求并添加User-Agent头部
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return common.NewErrorf("创建下载请求失败: %v", err)
+		}
+		req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
+		
+		resp, err := client.Do(req)
 		if err != nil {
 			return common.NewErrorf("Failed to download Geofile from %s: %v", url, err)
 		}
 		defer resp.Body.Close()
+
+		// 检查HTTP状态码
+		if resp.StatusCode != http.StatusOK {
+			return common.NewErrorf("下载失败，服务器返回状态码: %d", resp.StatusCode)
+		}
 
 		file, err := os.Create(destPath)
 		if err != nil {
