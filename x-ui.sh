@@ -919,8 +919,6 @@ update_xray() {
     before_show_menu
 }
 
-}
-
 install_acme() { 
     # 检查是否已安装 acme.sh
     if command -v ~/.acme.sh/acme.sh &>/dev/null; then 
