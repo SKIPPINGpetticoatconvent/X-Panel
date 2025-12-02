@@ -511,69 +511,80 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 }
 
 func (s *ServerService) UpdateXray(version string) error {
-	// 1. Stop xray before doing anything
-	if err := s.StopXrayService(); err != nil {
-		logger.Warning("failed to stop xray before update:", err)
-	}
+	// 启动异步任务进行Xray版本更新，避免阻塞HTTP请求
+	go func() {
+		logger.Infof("开始异步更新Xray到版本: %s", version)
+		
+		// 1. Stop xray before doing anything
+		if err := s.StopXrayService(); err != nil {
+			logger.Warning("failed to stop xray before update:", err)
+		}
 
-	// 2. Download the zip
-	zipFileName, err := s.downloadXRay(version)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(zipFileName)
-
-	zipFile, err := os.Open(zipFileName)
-	if err != nil {
-		return err
-	}
-	defer zipFile.Close()
-
-	stat, err := zipFile.Stat()
-	if err != nil {
-		return err
-	}
-	reader, err := zip.NewReader(zipFile, stat.Size())
-	if err != nil {
-		return err
-	}
-
-	// 3. Helper to extract files
-
-	copyZipFile := func(zipName string, fileName string) error {
-		zipFile, err := reader.Open(zipName)
+		// 2. Download the zip
+		zipFileName, err := s.downloadXRay(version)
 		if err != nil {
-			return err
+			logger.Error("下载Xray失败:", err)
+			return
+		}
+		defer os.Remove(zipFileName)
+
+		zipFile, err := os.Open(zipFileName)
+		if err != nil {
+			logger.Error("打开zip文件失败:", err)
+			return
 		}
 		defer zipFile.Close()
-		os.MkdirAll(filepath.Dir(fileName), 0755)
-		os.Remove(fileName)
-		file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
+
+		stat, err := zipFile.Stat()
 		if err != nil {
+			logger.Error("获取zip文件信息失败:", err)
+			return
+		}
+		reader, err := zip.NewReader(zipFile, stat.Size())
+		if err != nil {
+			logger.Error("创建zip reader失败:", err)
+			return
+		}
+
+		// 3. Helper to extract files
+		copyZipFile := func(zipName string, fileName string) error {
+			zipFile, err := reader.Open(zipName)
+			if err != nil {
+				return err
+			}
+			defer zipFile.Close()
+			os.MkdirAll(filepath.Dir(fileName), 0755)
+			os.Remove(fileName)
+			file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = io.Copy(file, zipFile)
 			return err
 		}
-		defer file.Close()
-		_, err = io.Copy(file, zipFile)
-		return err
-	}
 
-	// 4. Extract correct binary
-	if runtime.GOOS == "windows" {
-		targetBinary := filepath.Join("bin", "xray-windows-amd64.exe")
-		err = copyZipFile("xray.exe", targetBinary)
-	} else {
-		err = copyZipFile("xray", xray.GetBinaryPath())
-	}
-	if err != nil {
-		return err
-	}
+		// 4. Extract correct binary
+		if runtime.GOOS == "windows" {
+			targetBinary := filepath.Join("bin", "xray-windows-amd64.exe")
+			err = copyZipFile("xray.exe", targetBinary)
+		} else {
+			err = copyZipFile("xray", xray.GetBinaryPath())
+		}
+		if err != nil {
+			logger.Error("解压Xray文件失败:", err)
+			return
+		}
 
-	// 5. Restart xray
-	if err := s.xrayService.RestartXray(true); err != nil {
-		logger.Error("start xray failed:", err)
-		return err
-	}
+		// 5. Restart xray
+		if err := s.xrayService.RestartXray(true); err != nil {
+			logger.Error("重启Xray失败:", err)
+			return
+		}
 
+		logger.Infof("Xray版本更新成功: %s", version)
+	}()
+	
 	return nil
 }
 

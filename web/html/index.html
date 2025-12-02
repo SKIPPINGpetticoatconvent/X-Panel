@@ -1088,9 +1088,55 @@ ${dateTime}
                     cancelText: '{{ i18n "cancel"}}',
                     onOk: async () => {
                         versionModal.hide();
-                        this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
-                        await HttpUtil.post(`/panel/api/server/installXray/${version}`);
-                        this.loading(false);
+                        this.loading(true, '正在下载和安装Xray ' + version + '，请耐心等待...');
+                        
+                        try {
+                            const msg = await HttpUtil.post(`/panel/api/server/installXray/${version}`);
+                            this.loading(false);
+                            
+                            if (msg.success) {
+                                // 显示成功消息
+                                this.$notification.success({
+                                    message: 'Xray版本更新',
+                                    description: `Xray ${version} 正在后台安装中，请稍等片刻...`,
+                                    duration: 5,
+                                });
+                                
+                                // 2秒后刷新状态显示
+                                setTimeout(() => {
+                                    this.getStatus();
+                                }, 2000);
+                            } else {
+                                this.$notification.error({
+                                    message: 'Xray版本更新失败',
+                                    description: msg.obj || '未知错误',
+                                    duration: 5,
+                                });
+                            }
+                        } catch (error) {
+                            this.loading(false);
+                            console.error('Xray版本更新请求失败:', error);
+                            
+                            // 处理网络错误或服务器重启导致的连接中断
+                            if (error.message.includes('Network Error') || error.code === 'ECONNABORTED') {
+                                this.$notification.warning({
+                                    message: 'Xray版本更新已开始',
+                                    description: '服务器正在后台更新Xray，请稍等片刻后手动刷新页面查看更新结果。',
+                                    duration: 10,
+                                });
+                                
+                                // 3秒后尝试刷新状态
+                                setTimeout(() => {
+                                    this.getStatus();
+                                }, 3000);
+                            } else {
+                                this.$notification.error({
+                                    message: 'Xray版本更新失败',
+                                    description: error.message || '网络错误，请检查网络连接后重试',
+                                    duration: 5,
+                                });
+                            }
+                        }
                     },
                 });
             },
