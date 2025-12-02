@@ -797,6 +797,126 @@ update_geo() {
     systemctl start x-ui
     echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binfolder}' 中已经更新成功 !${plain}"
     before_show_menu
+update_xray() {
+    echo -e "${green}正在获取 Xray 最新版本信息...${plain}"
+    
+    # 获取最新版本信息
+    local latest_version=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+    if [[ -z "$latest_version" ]]; then
+        LOGE "无法获取 Xray 最新版本信息"
+        before_show_menu
+        return 1
+    fi
+    
+    LOGI "检测到 Xray 最新版本: $latest_version"
+    
+    # 检测系统架构
+    local arch=$(uname -m)
+    local xray_arch=""
+    case "${arch}" in
+        x86_64|amd64)
+            xray_arch="amd64"
+            ;;
+        aarch64|arm64)
+            xray_arch="arm64"
+            ;;
+        armv7l)
+            xray_arch="arm"
+            ;;
+        armv6l)
+            xray_arch="armv6"
+            ;;
+        i386|i686)
+            xray_arch="386"
+            ;;
+        *)
+            LOGE "不支持的架构: $arch"
+            before_show_menu
+            return 1
+            ;;
+    esac
+    
+    # 构建下载链接
+    local download_url="https://github.com/XTLS/Xray-core/releases/download/${latest_version}/Xray-linux-${xray_arch}.zip"
+    
+    echo -e "${yellow}当前架构: ${arch} -> ${xray_arch}${plain}"
+    echo -e "${yellow}下载链接: ${download_url}${plain}"
+    
+    # 确认更新
+    confirm "确认要更新 Xray 到版本 $latest_version 吗？" "y"
+    if [[ $? != 0 ]]; then
+        LOGE "已取消"
+        before_show_menu
+        return 0
+    fi
+    
+    # 停止 x-ui 服务
+    echo -e "${green}正在停止 X-Panel 服务...${plain}"
+    systemctl stop x-ui
+    
+    # 创建临时目录
+    local temp_dir=$(mktemp -d)
+    cd "$temp_dir"
+    
+    # 下载最新版本
+    echo -e "${green}正在下载 Xray ${latest_version}...${plain}"
+    if ! wget -O xray.zip "${download_url}"; then
+        LOGE "下载 Xray 失败"
+        systemctl start x-ui
+        rm -rf "$temp_dir"
+        before_show_menu
+        return 1
+    fi
+    
+    # 解压
+    echo -e "${green}正在解压 Xray...${plain}"
+    if ! unzip -o xray.zip; then
+        LOGE "解压 Xray 失败"
+        systemctl start x-ui
+        rm -rf "$temp_dir"
+        before_show_menu
+        return 1
+    fi
+    
+    # 备份旧的 Xray 文件
+    local bin_folder="/usr/local/x-ui/bin"
+    if [[ -d "$bin_folder" ]]; then
+        echo -e "${green}正在备份旧的 Xray 文件...${plain}"
+        cp "$bin_folder"/xray-* "$bin_folder"/xray-*".backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+    fi
+    
+    # 安装新版本
+    echo -e "${green}正在安装 Xray ${latest_version}...${plain}"
+    chmod +x xray
+    if [[ ! -d "$bin_folder" ]]; then
+        mkdir -p "$bin_folder"
+    fi
+    cp xray "$bin_folder/xray-linux-${xray_arch}"
+    chmod +x "$bin_folder/xray-linux-${xray_arch}"
+    
+    # 清理
+    cd /
+    rm -rf "$temp_dir"
+    
+    # 启动 x-ui 服务
+    echo -e "${green}正在启动 X-Panel 服务...${plain}"
+    systemctl start x-ui
+    
+    # 检查服务状态
+    sleep 2
+    if systemctl is-active --quiet x-ui; then
+        LOGI "Xray 更新成功！版本: $latest_version"
+        echo -e "${green}Xray Core 已成功更新到版本 ${latest_version}${plain}"
+        echo -e "${green}服务已自动重启${plain}"
+    else
+        LOGE "Xray 更新完成，但服务启动失败，请检查日志"
+        before_show_menu
+        return 1
+    fi
+    
+    before_show_menu
+}
+
 }
 
 install_acme() { 
@@ -1777,13 +1897,14 @@ show_menu() {
   ${green}22.${plain} 启用 BBR 
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
-  ${green}25.${plain} 安装订阅转换 
+  ${green}25.${plain} 安装订阅转换
+  ${green}26.${plain} 更新 Xray (默认最新版本)
 ——————————————————————
 
 
 "
     show_status
-    echo && read -p "请输入选项 [0-25]: " num
+    echo && read -p "请输入选项 [0-26]: " num
 
     case "${num}" in
     0)
@@ -1864,8 +1985,11 @@ show_menu() {
     25)
         subconverter
         ;;
+    26)
+        check_install && update_xray
+        ;;
     *)
-        LOGE "请输入正确的数字选项 [0-25]"
+        LOGE "请输入正确的数字选项 [0-26]"
         ;;
     esac
 }
