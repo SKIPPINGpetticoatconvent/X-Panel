@@ -797,6 +797,8 @@ update_geo() {
     systemctl start x-ui
     echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binfolder}' 中已经更新成功 !${plain}"
     before_show_menu
+}
+
 update_xray() {
     echo -e "${green}正在获取 Xray 最新版本信息...${plain}"
     
