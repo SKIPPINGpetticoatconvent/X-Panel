@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -377,7 +377,7 @@ func (s *ServerService) RestartXrayService() error {
 	return nil
 }
 
-func (s *ServerService) downloadXRay(version string) (string, error) {
+func (s *ServerService) DownloadXRay(version string) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
 
@@ -428,20 +428,8 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	return fileName, nil
 }
 
-func (s *ServerService) UpdateXray(version string) error {
-	// 1. Stop xray before doing anything
-	if err := s.StopXrayService(); err != nil {
-		logger.Warning("failed to stop xray before update:", err)
-	}
-
-	// 2. Download the zip
-	zipFileName, err := s.downloadXRay(version)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(zipFileName)
-
-	zipFile, err := os.Open(zipFileName)
+func (s *ServerService) InstallXrayBin(fileName string) error {
+	zipFile, err := os.Open(fileName)
 	if err != nil {
 		return err
 	}
@@ -455,8 +443,6 @@ func (s *ServerService) UpdateXray(version string) error {
 	if err != nil {
 		return err
 	}
-
-	// 3. Helper to extract files
 
 	copyZipFile := func(zipName string, fileName string) error {
 		zipFile, err := reader.Open(zipName)
@@ -475,14 +461,40 @@ func (s *ServerService) UpdateXray(version string) error {
 		return err
 	}
 
-	// 4. Extract correct binary
 	if runtime.GOOS == "windows" {
 		targetBinary := filepath.Join("bin", "xray-windows-amd64.exe")
 		err = copyZipFile("xray.exe", targetBinary)
 	} else {
 		err = copyZipFile("xray", xray.GetBinaryPath())
 	}
+	return err
+}
+
+func (s *ServerService) UpdateXray(version string) error {
+	if version == "latest" {
+		versions, err := s.GetXrayVersions()
+		if err != nil {
+			return err
+		}
+		if len(versions) == 0 {
+			return fmt.Errorf("no valid version found")
+		}
+		version = versions[0]
+	}
+
+	// 1. Stop xray before doing anything
+	if err := s.StopXrayService(); err != nil {
+		logger.Warning("failed to stop xray before update:", err)
+	}
+
+	// 2. Download the zip
+	zipFileName, err := s.DownloadXRay(version)
 	if err != nil {
+		return err
+	}
+	defer os.Remove(zipFileName)
+
+	if err := s.InstallXrayBin(zipFileName); err != nil {
 		return err
 	}
 
@@ -840,7 +852,7 @@ func (s *ServerService) GetNewX25519Cert() (any, error) {
 
 	keyPair := map[string]any{
 		"privateKey": privateKey,
-		"publicKey": publicKey, // 修复：U+00A0 替换为标准空格
+		"publicKey":  publicKey, // 修复：U+00A0 替换为标准空格
 	}
 
 	return keyPair, nil
@@ -1004,20 +1016,20 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 func (s *ServerService) InstallSubconverter() error {
 	// 〔中文注释〕: 使用一个新的 goroutine 来执行耗时的安装任务，这样 API 可以立即返回
 	go func() {
-        
-        // 【新增功能】：执行端口放行操作
-        var ufwWarning string
-        if ufwErr := s.openSubconverterPorts(); ufwErr != nil {
-            // 不中断流程，只生成警告消息
-            logger.Warningf("自动放行 Subconverter 端口失败: %v", ufwErr)
-            ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
-        }
+
+		// 【新增功能】：执行端口放行操作
+		var ufwWarning string
+		if ufwErr := s.openSubconverterPorts(); ufwErr != nil {
+			// 不中断流程，只生成警告消息
+			logger.Warningf("自动放行 Subconverter 端口失败: %v", ufwErr)
+			ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
+		}
 
 		// 〔中文注释〕: 检查全局的 TgBot 实例是否存在并且正在运行
 		if s.tgService == nil || !s.tgService.IsRunning() {
 			logger.Warning("TgBot 未运行，无法发送【订阅转换】状态通知。")
 			// 即使机器人未运行，安装流程也应继续，只是不发通知
-            ufwWarning = "" // 如果机器人不在线，不发送任何警告/消息
+			ufwWarning = "" // 如果机器人不在线，不发送任何警告/消息
 		}
 
 		// 脚本路径为 /usr/bin/x-ui
@@ -1052,11 +1064,11 @@ func (s *ServerService) InstallSubconverter() error {
 			logger.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
 			return
 		} else {
-            
-            // 【新增逻辑】：如果之前端口放行失败，先发送警告消息
-            if ufwWarning != "" {
-                s.tgService.SendMessage(ufwWarning)
-            }
+
+			// 【新增逻辑】：如果之前端口放行失败，先发送警告消息
+			if ufwWarning != "" {
+				s.tgService.SendMessage(ufwWarning)
+			}
 
 			// 安装成功后，发送通知到 TG 机器人
 			if s.tgService != nil && s.tgService.IsRunning() {
@@ -1098,7 +1110,7 @@ func (s *ServerService) openSubconverterPorts() error {
 	PORTS_TO_OPEN="8000 15268"
 	# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
 	DEFAULT_PORTS="22 80 443 13688 8443"
-	
+
 	echo "脚本启动：正在为订阅转换服务配置防火墙..."
 
 	# 1. 检查/安装 ufw
@@ -1143,27 +1155,26 @@ func (s *ServerService) openSubconverterPorts() error {
 		ufw --force enable
 		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
 	fi
-    
+
     echo "✅ 所有端口 ($DEFAULT_PORTS $PORTS_TO_OPEN) 已成功放行/检查。"
     exit 0
 	`
 
-    // 使用 /bin/bash -c 执行命令，并捕获输出
+	// 使用 /bin/bash -c 执行命令，并捕获输出
 	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
 	output, err := cmd.CombinedOutput()
 	logOutput := string(output)
-	
+
 	// 记录日志，无论成功与否
 	logger.Infof("执行 Subconverter 端口放行命令结果:\n%s", logOutput)
 
 	if err != nil {
-        // 如果 Shell 命令返回非零退出码，则返回错误
+		// 如果 Shell 命令返回非零退出码，则返回错误
 		return fmt.Errorf("ufw 端口放行失败: %v. 脚本输出: %s", err, logOutput)
 	}
 
 	return nil
 }
-
 
 // 【新增方法实现】: 后台前端开放指定端口
 // OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
@@ -1186,7 +1197,7 @@ func (s *ServerService) OpenPort(port string) {
 		PORT_TO_OPEN=%d
 		# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
 		DEFAULT_PORTS="22 80 443 13688 8443"
-		
+
 		echo "正在为入站配置自动检查并放行端口..."
 
 		# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
@@ -1265,7 +1276,7 @@ func (s *ServerService) RestartPanel() error {
 		logger.Error(errMsg)
 		return fmt.Errorf(errMsg)
 	}
-	
+
 	// 〔中文注释〕: 定义要执行的命令和参数。
 	cmd := exec.Command(scriptPath, "restart")
 
