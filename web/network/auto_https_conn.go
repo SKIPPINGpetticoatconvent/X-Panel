@@ -31,7 +31,7 @@ func NewAutoHttpsConn(conn net.Conn) net.Conn {
 
 func (c *AutoHttpsConn) detectProtocol() bool {
 	// 尝试读取初始数据来判断是HTTP还是HTTPS
-	c.firstBuf = make([]byte, 512) // 减小缓冲区大小
+	c.firstBuf = make([]byte, 1024) // 增加缓冲区大小以确保能读取完整的TLS握手
 	n, err := c.Conn.Read(c.firstBuf)
 	
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 	
 	// 检查是否是HTTPS (TLS handshake starts with 0x16 for TLS 1.0-1.2, 0x17 for TLS 1.3)
 	if n >= 1 && (c.firstBuf[0] == 0x16 || c.firstBuf[0] == 0x17) {
-		// 看起来像TLS握手，这是HTTPS连接
+		// 这确实是TLS握手，这是HTTPS连接
 		c.isHttps = true
 		logger.Debug("Detected HTTPS connection via TLS handshake")
 		return true
@@ -55,28 +55,39 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 	request, err := http.ReadRequest(bufReader)
 	
 	if err != nil {
-		// 无法解析为HTTP，可能是HTTPS或者协议不匹配
-		// 如果数据以TLS开头，则认为是HTTPS
+		// 无法解析为HTTP请求
+		// 检查是否是TLS握手（可能有额外数据）
 		if n >= 3 && c.firstBuf[0] == 0x16 {
 			c.isHttps = true
-			logger.Debug("Detected HTTPS connection (TLS protocol mismatch)")
+			logger.Debug("Detected HTTPS connection (TLS protocol)")
 			return true
 		}
 		
-		// 无法确定协议，记录警告但不关闭连接
-		logger.Warning("Unable to determine connection protocol, treating as HTTPS")
+		// 无法确定协议，默认为HTTPS避免连接关闭
+		logger.Warning("Unable to determine connection protocol, treating as HTTPS to prevent connection closure")
 		c.isHttps = true
 		return true
 	}
 	
-	// 成功解析HTTP请求，发送重定向
+	// 成功解析HTTP请求，发送重定向但不关闭连接
 	resp := http.Response{
-		Header: http.Header{},
+		Header: make(http.Header),
 	}
 	resp.StatusCode = http.StatusTemporaryRedirect
 	location := fmt.Sprintf("https://%v%v", request.Host, request.RequestURI)
 	resp.Header.Set("Location", location)
-	resp.Write(c.Conn)
+	
+	// 设置响应头
+	resp.Header.Set("Connection", "close")
+	resp.Header.Set("Content-Length", "0")
+	
+	// 发送重定向响应
+	if err := resp.Write(c.Conn); err != nil {
+		logger.Warning("Failed to send redirect response:", err)
+	}
+	
+	// 延迟关闭连接，给客户端时间接收响应
+	time.Sleep(100 * time.Millisecond)
 	c.Close()
 	logger.Info("HTTP request redirected to HTTPS")
 	return true

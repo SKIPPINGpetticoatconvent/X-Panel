@@ -14,33 +14,44 @@ func DomainValidatorMiddleware(domain string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		host := c.Request.Host
 		
-		// 尝试分离主机名和端口
-		if colonIndex := strings.LastIndex(host, ":"); colonIndex != -1 {
-			var err error
-			host, _, err = net.SplitHostPort(c.Request.Host)
-			if err != nil {
-				// 如果分离失败，可能是IPv6地址或者格式问题
-				// 尝试查找最后一个冒号并处理IPv6地址
-				if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-					// IPv6地址格式 [::1]:port
-					host = host[1:len(host)-1]
+		// 清理和标准化主机名处理
+		cleanHost := host
+		
+		// 首先尝试使用标准的net.SplitHostPort来分离主机和端口
+		if strings.Contains(host, ":") {
+			// 检查是否是IPv6地址格式 [::1]:port 或 IPv4:port
+			if strings.HasPrefix(host, "[") && strings.Contains(host, "]:") {
+				// IPv6地址格式 [::1]:port
+				// 提取括号内的IPv6地址
+				if endBracket := strings.Index(host, "]"); endBracket != -1 {
+					cleanHost = host[1:endBracket] // 去掉方括号
 				}
-				// 如果仍然有端口，移除它
-				if colonIndex := strings.LastIndex(host, ":"); colonIndex != -1 {
-					host = host[:colonIndex]
+			} else {
+				// IPv4:port 或域名:port 格式
+				var err error
+				cleanHost, _, err = net.SplitHostPort(host)
+				if err != nil {
+					// 如果SplitHostPort失败，直接使用原始host
+					// 这可能是没有端口的情况或者是其他格式
+					cleanHost = host
 				}
 			}
 		}
+		
+		// 对于IPv6地址，确保它是标准格式
+		if strings.Contains(cleanHost, ":") && !strings.HasPrefix(cleanHost, "[") {
+			cleanHost = "[" + cleanHost + "]"
+		}
 
 		// 比较域名（忽略大小写）
-		if !strings.EqualFold(host, domain) {
+		if !strings.EqualFold(cleanHost, domain) {
 			logger.Warningf("Domain validation failed: expected %s, got %s from %s",
-				domain, host, c.ClientIP())
+				domain, cleanHost, c.ClientIP())
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
 
-		logger.Debugf("Domain validation passed for %s", host)
+		logger.Debugf("Domain validation passed for %s", cleanHost)
 		c.Next()
 	}
 }
