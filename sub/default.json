@@ -2,7 +2,7 @@
   "remarks": "",
   "dns": {
     "tag": "dns_out",
-    "queryStrategy": "UseIP",
+    "queryStrategy": "UseIPv4",
     "servers": [
       {
         "address": "8.8.8.8",
@@ -20,12 +20,7 @@
         "userLevel": 8
       },
       "sniffing": {
-        "destOverride": [
-          "http",
-          "tls",
-          "quic",
-          "fakedns"
-        ],
+        "destOverride": ["http", "tls", "quic", "fakedns"],
         "enabled": true
       },
       "tag": "socks"
