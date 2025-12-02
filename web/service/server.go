@@ -1373,7 +1373,7 @@ func (s *ServerService) RestartPanel() error {
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 		errMsg := fmt.Sprintf("关键脚本文件 `%s` 未找到，无法执行重启。", scriptPath)
 		logger.Error(errMsg)
-		return fmt.Errorf(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 	
 	// 〔中文注释〕: 定义要执行的命令和参数。

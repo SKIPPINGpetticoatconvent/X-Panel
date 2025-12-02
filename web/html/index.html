@@ -1097,15 +1097,14 @@ ${dateTime}
                             if (msg.success) {
                                 // 显示成功消息
                                 this.$notification.success({
-                                    message: 'Xray版本更新',
+                                    message: 'Xray版本更新开始',
                                     description: `Xray ${version} 正在后台安装中，请稍等片刻...`,
                                     duration: 5,
                                 });
                                 
-                                // 2秒后刷新状态显示
-                                setTimeout(() => {
-                                    this.getStatus();
-                                }, 2000);
+                                // 启动轮询机制检测更新完成
+                                this.startXrayUpdatePolling(version);
+                                
                             } else {
                                 this.$notification.error({
                                     message: 'Xray版本更新失败',
@@ -1121,14 +1120,12 @@ ${dateTime}
                             if (error.message.includes('Network Error') || error.code === 'ECONNABORTED') {
                                 this.$notification.warning({
                                     message: 'Xray版本更新已开始',
-                                    description: '服务器正在后台更新Xray，请稍等片刻后手动刷新页面查看更新结果。',
+                                    description: '服务器正在后台更新Xray，将自动检测更新完成...',
                                     duration: 10,
                                 });
                                 
-                                // 3秒后尝试刷新状态
-                                setTimeout(() => {
-                                    this.getStatus();
-                                }, 3000);
+                                // 启动轮询机制，即使网络错误也继续尝试
+                                this.startXrayUpdatePolling(version);
                             } else {
                                 this.$notification.error({
                                     message: 'Xray版本更新失败',
@@ -1139,6 +1136,83 @@ ${dateTime}
                         }
                     },
                 });
+            },
+            
+            // 【新增】启动Xray版本更新轮询检测
+            startXrayUpdatePolling(targetVersion) {
+                const currentVersion = this.status.xray.version;
+                const targetVersionFull = targetVersion.startsWith('v') ? targetVersion : `v${targetVersion}`;
+                
+                // 检查是否已经是目标版本
+                if (currentVersion === targetVersionFull || currentVersion === targetVersion) {
+                    this.$notification.success({
+                        message: 'Xray版本更新成功',
+                        description: `Xray已更新为${targetVersionFull}`,
+                        duration: 5,
+                    });
+                    return;
+                }
+                
+                let pollCount = 0;
+                const maxPollCount = 60; // 最多轮询60次（2分钟）
+                const pollInterval = 2000; // 每2秒轮询一次
+                
+                const pollTimer = setInterval(async () => {
+                    pollCount++;
+                    
+                    try {
+                        const statusMsg = await HttpUtil.get('/panel/api/server/status');
+                        if (statusMsg.success && statusMsg.obj && statusMsg.obj.xray) {
+                            const newVersion = statusMsg.obj.xray.version;
+                            
+                            // 检查版本是否已经更新为目标版本
+                            if (newVersion === targetVersionFull || newVersion === targetVersion) {
+                                clearInterval(pollTimer);
+                                
+                                // 显示最终成功消息
+                                this.$notification.success({
+                                    message: '✅ Xray版本更新成功',
+                                    description: `Xray已成功更新为${targetVersionFull}！`,
+                                    duration: 8,
+                                });
+                                
+                                // 刷新状态显示
+                                await this.getStatus();
+                                return;
+                            }
+                        }
+                        
+                        // 如果轮询次数达到上限，停止轮询并显示超时消息
+                        if (pollCount >= maxPollCount) {
+                            clearInterval(pollTimer);
+                            
+                            this.$notification.warning({
+                                message: '⚠️ 更新检测超时',
+                                description: `Xray版本更新可能需要更长时间。请手动刷新页面检查更新结果，或查看服务器日志。`,
+                                duration: 10,
+                            });
+                            
+                            // 最后尝试刷新一次状态
+                            setTimeout(() => {
+                                this.getStatus();
+                            }, 2000);
+                        }
+                        
+                    } catch (error) {
+                        console.warn(`轮询检测Xray版本更新状态失败 (第${pollCount}次):`, error);
+                        
+                        // 如果是网络错误，在达到最大轮询次数前继续尝试
+                        if (pollCount >= maxPollCount) {
+                            clearInterval(pollTimer);
+                            
+                            this.$notification.warning({
+                                message: '⚠️ 更新检测失败',
+                                description: '网络连接问题，请稍后手动刷新页面检查Xray版本更新结果。',
+                                duration: 10,
+                            });
+                        }
+                    }
+                }, pollInterval);
             },
             updateGeofile(fileName) {
                 const isSingleFile = !!fileName;
