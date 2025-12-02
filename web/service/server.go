@@ -320,21 +320,39 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 		bufferSize = 8192
 	)
 
-	resp, err := http.Get(XrayURL)
+	// 使用带超时的HTTP客户端
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	
+	// 添加User-Agent头部以避免被GitHub拒绝
+	req, err := http.NewRequest("GET", XrayURL, nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Warning("Failed to fetch Xray versions from GitHub:", err)
+		return nil, fmt.Errorf("无法获取Xray版本信息，请检查网络连接: %v", err)
+	}
 	defer resp.Body.Close()
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GitHub API返回错误状态码: %d", resp.StatusCode)
+	}
 
 	buffer := bytes.NewBuffer(make([]byte, bufferSize))
 	buffer.Reset()
 	if _, err := buffer.ReadFrom(resp.Body); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取响应数据失败: %v", err)
 	}
 
 	var releases []Release
 	if err := json.Unmarshal(buffer.Bytes(), &releases); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("解析JSON响应失败: %v", err)
 	}
 
 	var versions []string
@@ -356,6 +374,13 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 			versions = append(versions, release.TagName)
 		}
 	}
+	
+	// 如果没有找到版本，返回友好的错误信息
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("未找到符合条件的Xray版本")
+	}
+	
+	logger.Infof("成功获取到 %d 个Xray版本", len(versions))
 	return versions, nil
 }
 
@@ -407,22 +432,40 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
 	url := fmt.Sprintf("https://github.com/XTLS/Xray-core/releases/download/%s/%s", version, fileName)
-	resp, err := http.Get(url)
+	
+	// 使用带超时的HTTP客户端
+	client := &http.Client{
+		Timeout: 120 * time.Second, // 下载需要更长时间
+	}
+	
+	// 创建请求并添加User-Agent
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("创建下载请求失败: %v", err)
+	}
+	req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("下载Xray失败: %v", err)
 	}
 	defer resp.Body.Close()
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("下载失败，GitHub返回状态码: %d", resp.StatusCode)
+	}
 
 	os.Remove(fileName)
 	file, err := os.Create(fileName)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("创建文件失败: %v", err)
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("写入文件失败: %v", err)
 	}
 
 	return fileName, nil
