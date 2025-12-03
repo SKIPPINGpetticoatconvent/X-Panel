@@ -395,11 +395,7 @@ func (t *Tgbot) OnReceive() {
 		return nil
 	}, th.AnyCommand())
 
-	botHandler.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
-		delete(userStates, query.Message.GetChat().ID)
-		t.answerCallback(&query, checkAdmin(query.From.ID))
-		return nil
-	}, th.AnyCallbackQueryWithMessage())
+	botHandler.HandleCallbackQuery(t.handleCallbackQuery, th.AnyCallbackQueryWithMessage())
 
 	botHandler.HandleMessage(func(ctx *th.Context, message telego.Message) error {
 		if userState, exists := userStates[message.Chat.ID]; exists {
