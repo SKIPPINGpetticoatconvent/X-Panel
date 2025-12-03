@@ -4,6 +4,8 @@ go 1.25.3
 
 replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20250503011706-39ed1f5ac29c
 
+replace github.com/sagernet/sing-shadowsocks => github.com/sagernet/sing-shadowsocks v0.2.8
+
 require (
 	github.com/gin-contrib/gzip v1.2.4
 	github.com/gin-contrib/sessions v1.0.4

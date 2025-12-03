@@ -4657,34 +4657,6 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 			t.remoteCreateOneClickInbound("xhttp_reality", chatIDInt64)
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
 			return nil
-		case "tls":
-			creationMessage = "🛡️ Vless Encryption + XHTTP + TLS"
-			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", creationMessage))
-			t.remoteCreateOneClickInbound("tls", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
-			return nil
-		case "switch_vision": // 【新增】: 为占位按钮提供单独的提示
-			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
-			return nil
-		case "batch_reality": // 【新增】: 处理批量创建Reality
-			creationMessage = "🚀 批量创建 5 个 Vless + TCP + Reality + Vision"
-			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程批量创建 %s 配置，请稍候...", creationMessage))
-			t.remoteCreateBatchInbounds("batch_reality", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("批量配置已创建，请查收管理员私信。"))
-			return nil
-		case "batch_xhttp_reality": // 【新增】: 处理批量创建XHTTP Reality
-			creationMessage = "⚡ 批量创建 5 个 Vless + XHTTP + Reality"
-			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程批量创建 %s 配置，请稍候...", creationMessage))
-			t.remoteCreateBatchInbounds("batch_xhttp_reality", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("批量配置已创建，请查收管理员私信。"))
-			return nil
-		case "oneclick_batch_reality": // 【新增】: 处理 One-Click 批量创建所有 SNI Reality 节点
-			creationMessage = "📦 One-Click 批量创建所有 SNI Reality 节点"
-			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
-			t.remoteBatchCreateRealityInbounds("reality_vision", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("One-Click 批量创建已开始，请查收管理员私信。"))
-			return nil
 		default:
 			creationMessage = strings.ToUpper(configType)
 		}
