@@ -3611,16 +3611,13 @@ func (t *Tgbot) remoteCreateBatchInbounds(configType string, chatId int64) {
 // 【重构版本】: One-Click 批量懒创建 - 支持多种协议类型的批量创建
 // 优化特性：并发创建、聚合通知、改进错误处理、支持 TCP+Vision 和 XHTTP 两种协议
 func (t *Tgbot) remoteBatchCreateRealityInbounds(configType string, chatId int64) {
-	var protocolTitle string
 	var creationMessage string
 	
 	// 根据配置类型确定协议标题和创建消息
 	switch configType {
 	case "reality_vision":
-		protocolTitle = "Vless + TCP + Reality + Vision"
 		creationMessage = "🚀 **开始并发批量创建所有 TCP+Vision Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 TCP+Vision Reality 入站配置。"
 	case "reality_xhttp":
-		protocolTitle = "Vless + XHTTP + Reality"
 		creationMessage = "⚡ **开始并发批量创建所有 XHTTP Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 XHTTP Reality 入站配置。"
 	default:
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 不支持的配置类型: %s", configType))
