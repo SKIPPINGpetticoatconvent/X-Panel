@@ -71,8 +71,6 @@ var defaultValueMap = map[string]string{
 	"subJsonRules":                "",
 	"datepicker":                  "gregorian",
 	"warp":                        "",
-	"externalTrafficInformEnable": "false",
-	"externalTrafficInformURI":    "",
 }
 
 type SettingService struct{}
@@ -615,22 +613,6 @@ func (s *SettingService) GetWarp() (string, error) {
 
 func (s *SettingService) SetWarp(data string) error {
 	return s.setString("warp", data)
-}
-
-func (s *SettingService) GetExternalTrafficInformEnable() (bool, error) {
-	return s.getBool("externalTrafficInformEnable")
-}
-
-func (s *SettingService) SetExternalTrafficInformEnable(value bool) error {
-	return s.setBool("externalTrafficInformEnable", value)
-}
-
-func (s *SettingService) GetExternalTrafficInformURI() (string, error) {
-	return s.getString("externalTrafficInformURI")
-}
-
-func (s *SettingService) SetExternalTrafficInformURI(InformURI string) error {
-	return s.setString("externalTrafficInformURI", InformURI)
 }
 
 func (s *SettingService) GetIpLimitEnable() (bool, error) {
