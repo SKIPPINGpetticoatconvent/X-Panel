@@ -448,6 +448,13 @@ func (s *Server) Start() (err error) {
 			PreferServerCipherSuites: true,
 			// 设置会话缓存以提高性能
 			SessionTicketsDisabled: false,
+			// 【关键修复】: 设置 GetCertificate 回调，确保无论客户端发送什么 SNI（包括 IP 地址或空 SNI），
+			// 都返回配置的证书，而不是拒绝连接。这解决了通过 IP 访问时 ERR_CONNECTION_CLOSED 的问题。
+			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				// 无论 SNI 是什么，都返回配置的证书
+				// 这允许通过 IP 地址访问面板（虽然浏览器会显示证书警告）
+				return &cert, nil
+			},
 		}
 		listener = network.NewAutoHttpsListener(listener)
 		listener = tls.NewListener(listener, c)
