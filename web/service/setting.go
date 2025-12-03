@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -258,6 +259,31 @@ func (s *SettingService) GetTgBotToken() (string, error) {
 	return s.getString("tgBotToken")
 }
 
+// ValidateTgBotToken validates Telegram bot token format
+func (s *SettingService) ValidateTgBotToken(token string) error {
+	if token == "" {
+		return fmt.Errorf("Telegram bot token cannot be empty")
+	}
+	
+	parts := strings.Split(token, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid token format. Expected format: 'bot_id:bot_token'")
+	}
+	
+	if len(parts[0]) == 0 || len(parts[1]) == 0 {
+		return fmt.Errorf("both bot ID and token parts must be non-empty")
+	}
+	
+	// Validate bot ID is numeric
+	for _, char := range parts[0] {
+		if char < '0' || char > '9' {
+			return fmt.Errorf("bot ID must contain only digits, found: %s", parts[0])
+		}
+	}
+	
+	return nil
+}
+
 func (s *SettingService) SetTgBotToken(token string) error {
 	return s.setString("tgBotToken", token)
 }
@@ -280,6 +306,86 @@ func (s *SettingService) SetTgBotAPIServer(token string) error {
 
 func (s *SettingService) GetTgBotChatId() (string, error) {
 	return s.getString("tgBotChatId")
+}
+
+// ValidateTgBotChatId validates Telegram bot chat ID format
+func (s *SettingService) ValidateTgBotChatId(chatId string) error {
+	if chatId == "" {
+		return fmt.Errorf("Telegram bot chat ID cannot be empty")
+	}
+	
+	trimmed := strings.TrimSpace(chatId)
+	if trimmed == "" {
+		return fmt.Errorf("Telegram bot chat ID cannot be empty or whitespace")
+	}
+	
+	// Check each chat ID in comma-separated list
+	for i, id := range strings.Split(trimmed, ",") {
+		cleanedID := strings.TrimSpace(id)
+		if cleanedID == "" {
+			return fmt.Errorf("empty chat ID found at position %d", i+1)
+		}
+		
+		// Validate chat ID is numeric
+		for j, char := range cleanedID {
+			if char < '0' || char > '9' {
+				return fmt.Errorf("invalid chat ID '%s' at position %d: must contain only digits, found '%c' at position %d",
+					cleanedID, i+1, char, j+1)
+			}
+		}
+		
+		// Basic range validation (Telegram user IDs are typically positive)
+		if numID, err := strconv.Atoi(cleanedID); err == nil && numID <= 0 {
+			return fmt.Errorf("invalid chat ID '%s': must be a positive number", cleanedID)
+		}
+	}
+	
+	return nil
+}
+
+// ValidateTgBotSettings validates all Telegram bot settings
+func (s *SettingService) ValidateTgBotSettings(token, chatId, proxyURL, apiServerURL string) []error {
+	var errors []error
+	
+	// Validate token
+	if token != "" {
+		if err := s.ValidateTgBotToken(token); err != nil {
+			errors = append(errors, fmt.Errorf("token validation failed: %v", err))
+		}
+	}
+	
+	// Validate chat ID
+	if chatId != "" {
+		if err := s.ValidateTgBotChatId(chatId); err != nil {
+			errors = append(errors, fmt.Errorf("chat ID validation failed: %v", err))
+		}
+	}
+	
+	// Validate proxy URL
+	if proxyURL != "" {
+		if !strings.HasPrefix(proxyURL, "socks5://") {
+			errors = append(errors, fmt.Errorf("proxy URL must start with 'socks5://'"))
+		} else {
+			// Basic URL parsing validation
+			if _, err := url.Parse(proxyURL); err != nil {
+				errors = append(errors, fmt.Errorf("invalid proxy URL format: %v", err))
+			}
+		}
+	}
+	
+	// Validate API server URL
+	if apiServerURL != "" {
+		if !strings.HasPrefix(apiServerURL, "http") {
+			errors = append(errors, fmt.Errorf("API server URL must start with 'http' or 'https'"))
+		} else {
+			// Basic URL parsing validation
+			if _, err := url.Parse(apiServerURL); err != nil {
+				errors = append(errors, fmt.Errorf("invalid API server URL format: %v", err))
+			}
+		}
+	}
+	
+	return errors
 }
 
 func (s *SettingService) SetTgBotChatId(chatIds string) error {
@@ -538,6 +644,40 @@ func (s *SettingService) GetIpLimitEnable() (bool, error) {
 func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 	if err := allSetting.CheckValid(); err != nil {
 		return err
+	}
+
+	// Enhanced Telegram bot settings validation
+	if allSetting.TgBotEnable {
+		token, _ := s.GetTgBotToken()
+		chatId, _ := s.GetTgBotChatId()
+		proxy, _ := s.GetTgBotProxy()
+		apiServer, _ := s.GetTgBotAPIServer()
+		
+		// Use new validation method if token/chatId are provided in current update
+		if allSetting.TgBotToken != "" {
+			token = allSetting.TgBotToken
+		}
+		if allSetting.TgBotChatId != "" {
+			chatId = allSetting.TgBotChatId
+		}
+		if allSetting.TgBotProxy != "" {
+			proxy = allSetting.TgBotProxy
+		}
+		if allSetting.TgBotAPIServer != "" {
+			apiServer = allSetting.TgBotAPIServer
+		}
+		
+		// Validate Telegram bot configuration
+		tgErrors := s.ValidateTgBotSettings(token, chatId, proxy, apiServer)
+		if len(tgErrors) > 0 {
+			var errorMsgs []string
+			for _, err := range tgErrors {
+				errorMsgs = append(errorMsgs, err.Error())
+			}
+			return fmt.Errorf("Telegram bot configuration validation failed: %s", strings.Join(errorMsgs, "; "))
+		}
+		
+		logger.Infof("Telegram bot configuration validated successfully")
 	}
 
 	v := reflect.ValueOf(allSetting).Elem()

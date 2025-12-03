@@ -168,26 +168,59 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	tgBotToken, err := t.settingService.GetTgBotToken()
 	if err != nil || tgBotToken == "" {
 		logger.Warning("Failed to get Telegram bot token:", err)
-		return err
+		return fmt.Errorf("Telegram bot token is missing or invalid: %v", err)
+	}
+	
+	// Validate bot token format
+	if len(tgBotToken) < 10 || !strings.Contains(tgBotToken, ":") {
+		logger.Warning("Invalid Telegram bot token format:", tgBotToken)
+		return fmt.Errorf("invalid Telegram bot token format. Token should be in format '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'")
 	}
 
 	// Get Telegram bot chat ID(s)
 	tgBotID, err := t.settingService.GetTgBotChatId()
 	if err != nil {
 		logger.Warning("Failed to get Telegram bot chat ID:", err)
-		return err
+		return fmt.Errorf("failed to get Telegram bot chat ID: %v", err)
 	}
 
-	// Parse admin IDs from comma-separated string
+	// Parse admin IDs from comma-separated string with enhanced validation
 	if tgBotID != "" {
-		for _, adminID := range strings.Split(tgBotID, ",") {
-			id, err := strconv.Atoi(adminID)
-			if err != nil {
-				logger.Warning("Failed to parse admin ID from Telegram bot chat ID:", err)
-				return err
-			}
-			adminIds = append(adminIds, int64(id))
+		trimmedID := strings.TrimSpace(tgBotID)
+		if trimmedID == "" {
+			logger.Warning("Telegram bot chat ID is empty after trimming")
+			return fmt.Errorf("Telegram bot chat ID cannot be empty")
 		}
+		
+		for _, adminID := range strings.Split(trimmedID, ",") {
+			cleanedID := strings.TrimSpace(adminID)
+			if cleanedID == "" {
+				logger.Warning("Empty admin ID found in chat ID list, skipping")
+				continue
+			}
+			
+			id, err := strconv.Atoi(cleanedID)
+			if err != nil {
+				logger.Warning("Failed to parse admin ID '%s' from Telegram bot chat ID: %v", cleanedID, err)
+				return fmt.Errorf("invalid admin ID format '%s': %v. Chat IDs should be numeric (e.g., '123456789')", cleanedID, err)
+			}
+			
+			if id <= 0 {
+				logger.Warning("Invalid admin ID '%d': Chat ID must be positive", id)
+				return fmt.Errorf("invalid admin ID '%d': Chat ID must be a positive number", id)
+			}
+			
+			adminIds = append(adminIds, int64(id))
+			logger.Infof("Added admin ID: %d", id)
+		}
+		
+		if len(adminIds) == 0 {
+			logger.Warning("No valid admin IDs were parsed from chat ID string: %s", tgBotID)
+			return fmt.Errorf("no valid admin IDs found in chat ID configuration")
+		}
+	} else {
+		logger.Warning("Telegram bot chat ID is not configured")
+		return fmt.Errorf("Telegram bot chat ID must be configured")
 	}
 
 	// Get Telegram bot proxy URL
@@ -202,12 +235,24 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 		logger.Warning("Failed to get Telegram bot API server URL:", err)
 	}
 
-	// Create new Telegram bot instance
+	// Create new Telegram bot instance with enhanced validation
 	bot, err = t.NewBot(tgBotToken, tgBotProxy, tgBotAPIServer)
 	if err != nil {
 		logger.Error("Failed to initialize Telegram bot API:", err)
-		return err
+		return fmt.Errorf("failed to initialize Telegram bot: %v. Please check your bot token and network settings", err)
 	}
+	
+	// Test bot connectivity by getting bot info
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	botInfo, err := bot.GetMe(ctx)
+	if err != nil {
+		logger.Error("Failed to get bot information:", err)
+		return fmt.Errorf("failed to verify bot token with Telegram API: %v. Please ensure the token is valid and has not been revoked", err)
+	}
+	
+	logger.Infof("Successfully connected to Telegram bot: @%s (ID: %d)", botInfo.Username, botInfo.ID)
 
 	// After bot initialization, set up bot commands with localized descriptions
 	err = bot.SetMyCommands(context.Background(), &telego.SetMyCommandsParams{
