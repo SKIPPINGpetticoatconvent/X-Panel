@@ -3676,7 +3676,8 @@ func (t *Tgbot) remoteBatchCreateRealityInbounds(chatId int64) {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("📋 **正在发送 %d 个节点的链接和二维码...**", successCount))
 
 		for i, inbound := range createdInbounds {
-			sni := strings.Split(inbound.Remark, "-")[-1] // 从备注中提取 SNI
+			parts := strings.Split(inbound.Remark, "-")
+			sni := parts[len(parts)-1] // 从备注中提取 SNI
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("🔗 **节点 %d：%s (SNI: %s, 端口 %d)**", i+1, inbound.Remark, sni, inbound.Port))
 
 			err := t.SendOneClickConfig(inbound, false, chatId)
