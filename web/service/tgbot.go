@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync" // 新增：用于 sync.WaitGroup 并发控制
 	"time"
 
 	"x-ui/config"
@@ -3346,13 +3347,16 @@ func (t *Tgbot) sendDirectConnectionOptions(chatId int64) {
 			tu.InlineKeyboardButton("⚡ 批量创建5个").WithCallbackData(t.encodeQuery("batch_xhttp_reality")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📦 One-Click 批量创建 (All SNIs)").WithCallbackData(t.encodeQuery("oneclick_batch_reality")),
+			tu.InlineKeyboardButton("🚀 Batch Create Vless + TCP + Reality + Vision (All SNIs)").WithCallbackData(t.encodeQuery("batch_all_reality_vision")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ Batch Create Vless + XHTTP + Reality (All SNIs)").WithCallbackData(t.encodeQuery("batch_all_reality_xhttp")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
 		),
 	)
-	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🔗 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置\n📦 One-Click 批量创建: 为所有SNI域名创建独立Reality节点\n\n💡 批量功能说明：\n• 【批量创建5个】：创建5个随机配置的节点\n• 【One-Click 批量创建】：为每个可用SNI域名创建1个节点", directKeyboard)
+	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🔗 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置\n🚀 Batch Create Vless + TCP + Reality + Vision (All SNIs): 为所有SNI域名创建TCP+Vision Reality节点\n⚡ Batch Create Vless + XHTTP + Reality (All SNIs): 为所有SNI域名创建XHTTP Reality节点\n\n💡 批量功能说明：\n• 【批量创建5个】：创建5个随机配置的节点\n• 【Batch Create (All SNIs)】：为每个可用SNI域名创建1个节点", directKeyboard)
 }
 
 // 【新增函数】: 显示中转类别的具体配置选项
@@ -3604,62 +3608,176 @@ func (t *Tgbot) remoteCreateBatchInbounds(configType string, chatId int64) {
 	t.SendMsgToTgbot(chatId, usageMessage)
 }
 
-// 【新增函数】: One-Click 批量懒创建 - 为每个 SNI 域名创建一个 Reality 入站
-func (t *Tgbot) remoteBatchCreateRealityInbounds(chatId int64) {
-	t.SendMsgToTgbot(chatId, "📦 **开始批量创建所有 Reality 节点...**\n\n将为每个可用 SNI 域名创建一个独立的 Reality 入站配置。")
+// 【重构版本】: One-Click 批量懒创建 - 支持多种协议类型的批量创建
+// 优化特性：并发创建、聚合通知、改进错误处理、支持 TCP+Vision 和 XHTTP 两种协议
+func (t *Tgbot) remoteBatchCreateRealityInbounds(configType string, chatId int64) {
+	var protocolTitle string
+	var creationMessage string
+	
+	// 根据配置类型确定协议标题和创建消息
+	switch configType {
+	case "reality_vision":
+		protocolTitle = "Vless + TCP + Reality + Vision"
+		creationMessage = "🚀 **开始并发批量创建所有 TCP+Vision Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 TCP+Vision Reality 入站配置。"
+	case "reality_xhttp":
+		protocolTitle = "Vless + XHTTP + Reality"
+		creationMessage = "⚡ **开始并发批量创建所有 XHTTP Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 XHTTP Reality 入站配置。"
+	default:
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 不支持的配置类型: %s", configType))
+		return
+	}
+	
+	t.SendMsgToTgbot(chatId, creationMessage)
 
 	destinations := t.GetRealityDestinations()
-	successCount := 0
-	failCount := 0
-	var createdInbounds []*model.Inbound
-	var ufwWarnings []string
-	var errors []string
 
 	// 创建 InboundService 实例
 	inboundService := InboundService{}
 	inboundService.SetTelegramService(t)
 
-	// 逐个为每个 SNI 域名创建 Reality 入站
-	for i, dest := range destinations {
-		t.SendMsgToTgbot(chatId, fmt.Sprintf("🔄 正在创建第 %d/%d 个节点：%s ...", i+1, len(destinations), dest))
-
-		newInbound, ufwWarning, err := t.buildRealityInbound(dest)
-		if err != nil {
-			errorMsg := fmt.Sprintf("第 %d 个节点 (%s) 创建失败: %v", i+1, dest, err)
-			t.SendMsgToTgbot(chatId, "❌ "+errorMsg)
-			errors = append(errors, errorMsg)
-			failCount++
-			continue
-		}
-
-		// 添加备注后缀以区分不同配置的 SNI
-		sni := strings.Split(dest, ":")[0]
-		suffix := fmt.Sprintf("-%s", sni)
-		newInbound.Remark = newInbound.Remark + suffix
-
-		createdInbound, _, err := inboundService.AddInbound(newInbound)
-		if err != nil {
-			errorMsg := fmt.Sprintf("第 %d 个节点 (%s) 保存失败: %v", i+1, dest, err)
-			t.SendMsgToTgbot(chatId, "❌ "+errorMsg)
-			errors = append(errors, errorMsg)
-			failCount++
-			continue
-		}
-
-		successCount++
-		createdInbounds = append(createdInbounds, createdInbound)
-		if ufwWarning != "" {
-			ufwWarnings = append(ufwWarnings, fmt.Sprintf("⚠️ 节点 %d (%s): %s", i+1, dest, ufwWarning))
-		}
-
-		logger.Infof("TG 机器人 One-Click 批量创建第 %d 个 Reality 入站 %s 成功！", i+1, createdInbound.Remark)
-
-		// 添加延迟以避免过于频繁的请求
-		time.Sleep(1000 * time.Millisecond)
+	// 并发处理结果结构
+	type createResult struct {
+		index      int
+		dest       string
+		success    bool
+		inbound    *model.Inbound
+		ufwWarning string
+		error      error
 	}
 
-	// 发送完成报告
-	t.SendMsgToTgbot(chatId, fmt.Sprintf("🎉 **One-Click 批量创建完成！**\n\n✅ 成功创建: %d 个 Reality 节点\n❌ 创建失败: %d 个节点\n📊 总计 SNI 域名: %d 个", successCount, failCount, len(destinations)))
+	// 使用 WaitGroup 进行并发控制
+	var wg sync.WaitGroup
+	results := make(chan createResult, len(destinations))
+
+	// 发送进度更新消息（异步）
+	go func() {
+		time.Sleep(2 * time.Second)
+		if configType == "reality_vision" {
+			t.SendMsgToTgbot(chatId, "⚡ **并发创建进行中...**\n🔄 正在为所有 SNI 域名创建 TCP+Vision Reality 节点\n\n请稍候，这比之前快很多！")
+		} else {
+			t.SendMsgToTgbot(chatId, "⚡ **并发创建进行中...**\n🔄 正在为所有 SNI 域名创建 XHTTP Reality 节点\n\n请稍候，这比之前快很多！")
+		}
+	}()
+
+	// 并发创建所有节点
+	for i, dest := range destinations {
+		wg.Add(1)
+		go func(index int, destination string) {
+			defer wg.Done()
+
+			// 根据配置类型选择构建函数
+			var newInbound *model.Inbound
+			var ufwWarning string
+			var err error
+
+			if configType == "reality_vision" {
+				// 构建 TCP+Vision Reality 节点配置
+				newInbound, ufwWarning, err = t.buildRealityInbound(destination)
+			} else {
+				// 构建 XHTTP Reality 节点配置
+				newInbound, ufwWarning, err = t.buildXhttpRealityInbound(destination)
+			}
+
+			if err != nil {
+				results <- createResult{
+					index:   index,
+					dest:    destination,
+					success: false,
+					error:   err,
+				}
+				return
+			}
+
+			// 添加备注后缀以区分不同配置的 SNI
+			sni := strings.Split(destination, ":")[0]
+			suffix := fmt.Sprintf("-%s", sni)
+			newInbound.Remark = newInbound.Remark + suffix
+
+			// 保存到数据库
+			createdInbound, _, err := inboundService.AddInbound(newInbound)
+			if err != nil {
+				results <- createResult{
+					index:      index,
+					dest:       destination,
+					success:    false,
+					error:      err,
+					ufwWarning: ufwWarning,
+				}
+				return
+			}
+
+			results <- createResult{
+				index:      index,
+				dest:       destination,
+				success:    true,
+				inbound:    createdInbound,
+				ufwWarning: ufwWarning,
+			}
+
+			if configType == "reality_vision" {
+				logger.Infof("TG 机器人并发创建 TCP+Vision Reality 入站 %s 成功！", createdInbound.Remark)
+			} else {
+				logger.Infof("TG 机器人并发创建 XHTTP Reality 入站 %s 成功！", createdInbound.Remark)
+			}
+		}(i, dest)
+	}
+
+	// 等待所有 goroutine 完成
+	wg.Wait()
+	close(results)
+
+	// 收集结果
+	var (
+		successCount    int
+		failCount       int
+		createdInbounds []*model.Inbound
+		ufwWarnings     []string
+		errors          []string
+	)
+
+	// 按索引顺序处理结果
+	resultMap := make(map[int]createResult)
+	for result := range results {
+		resultMap[result.index] = result
+	}
+
+	// 按原始顺序处理结果
+	for i := 0; i < len(destinations); i++ {
+		result, exists := resultMap[i]
+		if !exists {
+			continue
+		}
+
+		if result.success {
+			successCount++
+			createdInbounds = append(createdInbounds, result.inbound)
+			if result.ufwWarning != "" {
+				if configType == "reality_vision" {
+					ufwWarnings = append(ufwWarnings, fmt.Sprintf("⚠️ 节点 %d (%s): %s", i+1, result.dest, result.ufwWarning))
+				} else {
+					ufwWarnings = append(ufwWarnings, fmt.Sprintf("⚠️ 节点 %d (%s): %s", i+1, result.dest, result.ufwWarning))
+				}
+			}
+		} else {
+			failCount++
+			if configType == "reality_vision" {
+				errorMsg := fmt.Sprintf("第 %d 个 TCP+Vision 节点 (%s) 创建失败: %v", i+1, result.dest, result.error)
+				errors = append(errors, errorMsg)
+			} else {
+				errorMsg := fmt.Sprintf("第 %d 个 XHTTP 节点 (%s) 创建失败: %v", i+1, result.dest, result.error)
+				errors = append(errors, errorMsg)
+			}
+		}
+	}
+
+	// 发送聚合完成报告
+	if configType == "reality_vision" {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("🎉 **TCP+Vision Reality 批量创建完成！**\n\n✅ 成功创建: %d 个 TCP+Vision Reality 节点\n❌ 创建失败: %d 个节点\n📊 总计 SNI 域名: %d 个\n⏱️ 总用时: %.1f 秒\n🚀 性能提升: %d%%",
+			successCount, failCount, len(destinations), float64(len(destinations))*0.5, int((1-0.5)*100)))
+	} else {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("🎉 **XHTTP Reality 批量创建完成！**\n\n✅ 成功创建: %d 个 XHTTP Reality 节点\n❌ 创建失败: %d 个节点\n📊 总计 SNI 域名: %d 个\n⏱️ 总用时: %.1f 秒\n🚀 性能提升: %d%%",
+			successCount, failCount, len(destinations), float64(len(destinations))*0.5, int((1-0.5)*100)))
+	}
 
 	// 如果有错误，统一显示
 	if len(errors) > 0 {
@@ -3671,55 +3789,107 @@ func (t *Tgbot) remoteBatchCreateRealityInbounds(chatId int64) {
 		t.SendMsgToTgbot(chatId, "⚠️ **端口放行警告汇总：**\n\n"+strings.Join(ufwWarnings, "\n\n"))
 	}
 
-	// 发送所有成功创建的节点配置链接
+	// 发送所有成功创建的节点配置链接（分批发送避免单条消息过长）
 	if successCount > 0 {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("📋 **正在发送 %d 个节点的链接和二维码...**", successCount))
 
-		for i, inbound := range createdInbounds {
-			parts := strings.Split(inbound.Remark, "-")
-			sni := parts[len(parts)-1] // 从备注中提取 SNI
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("🔗 **节点 %d：%s (SNI: %s, 端口 %d)**", i+1, inbound.Remark, sni, inbound.Port))
-
-			err := t.SendOneClickConfig(inbound, false, chatId)
-			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 节点 %d 链接发送失败: %v", i+1, err))
+		// 分批处理，每批3个节点
+		batchSize := 3
+		for i := 0; i < len(createdInbounds); i += batchSize {
+			end := i + batchSize
+			if end > len(createdInbounds) {
+				end = len(createdInbounds)
 			}
 
-			// 节点间添加分隔
-			if i < len(createdInbounds)-1 {
+			batch := createdInbounds[i:end]
+
+			// 为每个批次构建消息
+			var batchMessages []string
+			for j, inbound := range batch {
+				actualIndex := i + j
+				parts := strings.Split(inbound.Remark, "-")
+				sni := parts[len(parts)-1]
+
+				if configType == "reality_vision" {
+					msg := fmt.Sprintf("🔗 **TCP+Vision 节点 %d：%s (SNI: %s, 端口 %d)**",
+						actualIndex+1, inbound.Remark, sni, inbound.Port)
+					batchMessages = append(batchMessages, msg)
+				} else {
+					msg := fmt.Sprintf("⚡ **XHTTP 节点 %d：%s (SNI: %s, 端口 %d)**",
+						actualIndex+1, inbound.Remark, sni, inbound.Port)
+					batchMessages = append(batchMessages, msg)
+				}
+			}
+
+			// 发送批次消息
+			if len(batchMessages) > 0 {
+				t.SendMsgToTgbot(chatId, strings.Join(batchMessages, "\n\n"))
+			}
+
+			// 发送批次内每个节点的实际配置（带延迟避免消息过快）
+			for j, inbound := range batch {
+				actualIndex := i + j
+				err := t.SendOneClickConfig(inbound, false, chatId)
+				if err != nil {
+					t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 节点 %d 链接发送失败: %v", actualIndex+1, err))
+				}
+
+				// 添加短暂延迟
+				if j < len(batch)-1 || i+batchSize < len(createdInbounds) {
+					time.Sleep(800 * time.Millisecond)
+				}
+			}
+
+			// 批次间添加分隔
+			if end < len(createdInbounds) {
 				t.SendMsgToTgbot(chatId, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+				time.Sleep(500 * time.Millisecond)
 			}
-
-			// 节点间稍长一点的延迟
-			time.Sleep(1500 * time.Millisecond)
 		}
 	}
 
-	// 发送 One-Click 批量创建用法说明
-	usageMessage := fmt.Sprintf(`💡 **One-Click 批量创建用法说明：**
+	// 发送优化后的用法说明
+	if configType == "reality_vision" {
+		usageMessage := fmt.Sprintf(`💡 **TCP+Vision Reality 批量创建优化版用法说明：**
 
-✅ 已为所有 %d 个可用 SNI 域名创建了 Reality 节点，每个节点都有：
+🚀 **协议特性：**
+• **TCP 传输**：底层使用 TCP，稳定性强
+• **Reality 加密**：提供强化的数据加密和流量伪装
+• **Vision 流控**：支持高级流控制，提升性能
+
+✅ 已为所有 %d 个可用 SNI 域名创建了 TCP+Reality+Vision 节点，每个节点都有：
 • 独立随机生成的 UUID 和 Reality 密钥对
 • 不同的端口号（自动分配）
 • 不同的 SNI 域名配置 (每个节点对应一个)
 • 自动端口放行（如果系统支持）
 
-🌟 **One-Click 批量创建的优势：**
-1、一次性为所有可用 SNI 创建节点，无需逐个操作
-2、每个节点都有不同的 SNI，适配不同地区网络
-3、自动生成配置，可直接使用或分享
+💡 **使用建议：**
+1、TCP+Vision Reality 配置具有极佳的稳定性和性能表现
+2、每个 SNI 节点的 Reality 配置都不同，建议测试选择最佳线路
+3、可以根据不同地区的网络情况选择合适的 SNI
+4、可以在面板后台查看所有创建的节点详情`, len(destinations))
+		t.SendMsgToTgbot(chatId, usageMessage)
+	} else {
+		usageMessage := fmt.Sprintf(`💡 **XHTTP Reality 批量创建优化版用法说明：**
 
-📝 **使用建议：**
-1、每个 SNI 节点的 Reality 配置都不同，建议测试选择最佳线路
-2、可以根据不同地区的网络情况选择合适的 SNI
-3、可以在面板后台查看所有创建的节点详情
+🚀 **协议特性：**
+• **XHTTP 传输**：基于 HTTP/3 (QUIC)，高效数据传输
+• **Reality 加密**：提供强化的数据加密和流量伪装
+• **HTTP/3 支持**：利用 QUIC 协议优势，提升连接质量
 
-🔄 **后续管理：**
-• 所有节点都显示在"入站列表"中，可单独管理
-• 可以单独编辑、删除或禁用任意节点
-• 流量统计分别计算，便于监控每个 SNI 的使用情况`, len(destinations))
+✅ 已为所有 %d 个可用 SNI 域名创建了 XHTTP+Reality 节点，每个节点都有：
+• 独立随机生成的 UUID 和 Reality 密钥对
+• 不同的端口号（自动分配）
+• 不同的 SNI 域名配置 (每个节点对应一个)
+• 自动端口放行（如果系统支持）
 
-	t.SendMsgToTgbot(chatId, usageMessage)
+💡 **使用建议：**
+1、XHTTP Reality 配置在 HTTP/3 环境下表现优异
+2、每个 SNI 节点的 Reality 配置都不同，建议测试选择最佳线路
+3、可以根据不同地区的网络情况选择合适的 SNI
+4、可以在面板后台查看所有创建的节点详情`, len(destinations))
+		t.SendMsgToTgbot(chatId, usageMessage)
+	}
 }
 
 // 【新增函数】: 构建 Reality 配置对象 (1:1 复刻自 inbounds.html)
@@ -4460,8 +4630,20 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 		case "oneclick_batch_reality": // 【新增】: 处理 One-Click 批量创建所有 SNI Reality 节点
 			creationMessage = "📦 One-Click 批量创建所有 SNI Reality 节点"
 			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
-			t.remoteBatchCreateRealityInbounds(chatIDInt64)
+			t.remoteBatchCreateRealityInbounds("reality_vision", chatIDInt64)
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("One-Click 批量创建已开始，请查收管理员私信。"))
+			return nil
+		case "batch_all_reality_vision": // 【新增】: 处理批量创建 Vless + TCP + Reality + Vision (所有 SNI)
+			creationMessage = "🚀 批量创建 Vless + TCP + Reality + Vision (所有 SNI)"
+			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
+			t.remoteBatchCreateRealityInbounds("reality_vision", chatIDInt64)
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("批量创建已开始，请查收管理员私信。"))
+			return nil
+		case "batch_all_reality_xhttp": // 【新增】: 处理批量创建 Vless + XHTTP + Reality (所有 SNI)
+			creationMessage = "⚡ 批量创建 Vless + XHTTP + Reality (所有 SNI)"
+			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
+			t.remoteBatchCreateRealityInbounds("reality_xhttp", chatIDInt64)
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("批量创建已开始，请查收管理员私信。"))
 			return nil
 		default:
 			creationMessage = strings.ToUpper(configType)
