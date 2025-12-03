@@ -1833,14 +1833,11 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbot(chatId, "🚀 正在远程创建  ------->>>>\n\n【Vless + TCP + Reality】节点，请稍候......")
 		t.remoteCreateOneClickInbound("reality", chatId)
 
-	case "batch_reality": // 已移除：批量按钮处理逻辑迁移到 handleCallbackQuery
 	case "oneclick_xhttp_reality":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在创建 Vless + XHTTP + Reality 节点...")
 		t.SendMsgToTgbot(chatId, "⚡ 正在远程创建  ------->>>>\n\n【Vless + XHTTP + Reality】节点，请稍候......")
 		t.remoteCreateOneClickInbound("xhttp_reality", chatId)
-
-	case "batch_xhttp_reality": // 已移除：批量按钮处理逻辑迁移到 handleCallbackQuery
 
 	case "oneclick_tls":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -4634,16 +4631,46 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("One-Click 批量创建已开始，请查收管理员私信。"))
 			return nil
 		case "batch_all_reality_vision": // 【新增】: 处理批量创建 Vless + TCP + Reality + Vision (所有 SNI)
+			logger.Infof("TG Bot: 开始处理批量创建 TCP+Vision Reality 节点，用户: %d", chatIDInt64)
 			creationMessage = "🚀 批量创建 Vless + TCP + Reality + Vision (所有 SNI)"
 			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
-			t.remoteBatchCreateRealityInbounds("reality_vision", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("批量创建已开始，请查收管理员私信。"))
+			
+			// 添加错误处理和详细日志
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Errorf("TG Bot: 批量创建 TCP+Vision Reality 节点时发生 panic: %v", r)
+						t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("❌ 创建过程中发生错误: %v", r))
+					}
+				}()
+				
+				logger.Infof("TG Bot: 开始调用 remoteBatchCreateRealityInbounds 函数，类型: reality_vision")
+				t.remoteBatchCreateRealityInbounds("reality_vision", chatIDInt64)
+				logger.Infof("TG Bot: remoteBatchCreateRealityInbounds 函数执行完成")
+			}()
+			
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("🚀 TCP+Vision 批量创建已开始，请查收管理员私信。"))
 			return nil
 		case "batch_all_reality_xhttp": // 【新增】: 处理批量创建 Vless + XHTTP + Reality (所有 SNI)
+			logger.Infof("TG Bot: 开始处理批量创建 XHTTP Reality 节点，用户: %d", chatIDInt64)
 			creationMessage = "⚡ 批量创建 Vless + XHTTP + Reality (所有 SNI)"
 			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
-			t.remoteBatchCreateRealityInbounds("reality_xhttp", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("批量创建已开始，请查收管理员私信。"))
+			
+			// 添加错误处理和详细日志
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Errorf("TG Bot: 批量创建 XHTTP Reality 节点时发生 panic: %v", r)
+						t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("❌ 创建过程中发生错误: %v", r))
+					}
+				}()
+				
+				logger.Infof("TG Bot: 开始调用 remoteBatchCreateRealityInbounds 函数，类型: reality_xhttp")
+				t.remoteBatchCreateRealityInbounds("reality_xhttp", chatIDInt64)
+				logger.Infof("TG Bot: remoteBatchCreateRealityInbounds 函数执行完成")
+			}()
+			
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("⚡ XHTTP Reality 批量创建已开始，请查收管理员私信。"))
 			return nil
 		case "reality_vision":
 			creationMessage = "🚀 Vless + TCP + Reality + Vision"
