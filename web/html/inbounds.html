@@ -1307,12 +1307,12 @@ async openPort(port) {
                 } else if (presetType === 'vless_tls_encryption') {
                     await this.createVlessTlsEncryptionInbound();
 				} else if (presetType === 'vless_xhttp_reality') { // 【新增】: 响应新按钮的点击
-                    await this.createVlessXhttpRealityInbound();	
-                } else if (presetType === 'switch') {
-                    this.$message.info('Switch 模式配置尚未实现');
-                } else {
-                    this.$message.error('未知的预设配置！');
-                }
+				                await this.createVlessXhttpRealityInbound();
+				            } else if (presetType === 'switch_vision_seed') {
+				                this.$message.info('Switch 模式配置尚未实现');
+				            } else {
+				                this.$message.error('未知的预设配置！');
+				            }
 
                // 【中文注释】: 无论如何，最后都关闭加载状态
                 this.loadingStates.spinning = false;
