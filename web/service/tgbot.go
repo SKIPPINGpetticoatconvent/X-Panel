@@ -3340,23 +3340,19 @@ func (t *Tgbot) sendDirectConnectionOptions(chatId int64) {
 	directKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🚀 Vless + TCP + Reality + Vision").WithCallbackData(t.encodeQuery("oneclick_reality")),
-			tu.InlineKeyboardButton("🚀 批量创建5个").WithCallbackData(t.encodeQuery("batch_reality")),
-		),
-		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⚡ Vless + XHTTP + Reality").WithCallbackData(t.encodeQuery("oneclick_xhttp_reality")),
-			tu.InlineKeyboardButton("⚡ 批量创建5个").WithCallbackData(t.encodeQuery("batch_xhttp_reality")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🚀 Batch Create Vless + TCP + Reality + Vision (All SNIs)").WithCallbackData(t.encodeQuery("batch_all_reality_vision")),
+			tu.InlineKeyboardButton("🚀 创建所有SNI-TCP+Vision节点").WithCallbackData(t.encodeQuery("batch_all_reality_vision")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚡ Batch Create Vless + XHTTP + Reality (All SNIs)").WithCallbackData(t.encodeQuery("batch_all_reality_xhttp")),
+			tu.InlineKeyboardButton("⚡ 创建所有SNI-XHTTP节点").WithCallbackData(t.encodeQuery("batch_all_reality_xhttp")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
 		),
 	)
-	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🔗 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置\n🚀 Batch Create Vless + TCP + Reality + Vision (All SNIs): 为所有SNI域名创建TCP+Vision Reality节点\n⚡ Batch Create Vless + XHTTP + Reality (All SNIs): 为所有SNI域名创建XHTTP Reality节点\n\n💡 批量功能说明：\n• 【批量创建5个】：创建5个随机配置的节点\n• 【Batch Create (All SNIs)】：为每个可用SNI域名创建1个节点", directKeyboard)
+	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🚀 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置\n🚀 创建所有SNI-TCP+Vision节点: 为每个可用SNI域名创建一个TCP+Vision Reality节点\n⚡ 创建所有SNI-XHTTP节点: 为每个可用SNI域名创建一个XHTTP Reality节点\n\n💡 批量创建功能说明：\n• 将根据GetRealityDestinations()中的SNI列表为每个域名创建一个独立节点\n• 每个节点都有独立的UUID、端口和Reality密钥\n• 采用并发优化，同时限制并发数量保护VPS性能", directKeyboard)
 }
 
 // 【新增函数】: 显示中转类别的具体配置选项
@@ -3609,21 +3605,21 @@ func (t *Tgbot) remoteCreateBatchInbounds(configType string, chatId int64) {
 }
 
 // 【重构版本】: One-Click 批量懒创建 - 支持多种协议类型的批量创建
-// 优化特性：并发创建、聚合通知、改进错误处理、支持 TCP+Vision 和 XHTTP 两种协议
+// 优化特性：并发创建、并发限制、聚合通知、改进错误处理、支持 TCP+Vision 和 XHTTP 两种协议
 func (t *Tgbot) remoteBatchCreateRealityInbounds(configType string, chatId int64) {
 	var creationMessage string
-	
+
 	// 根据配置类型确定协议标题和创建消息
 	switch configType {
 	case "reality_vision":
-		creationMessage = "🚀 **开始并发批量创建所有 TCP+Vision Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 TCP+Vision Reality 入站配置。"
+		creationMessage = "🚀 **开始并发批量创建所有 TCP+Vision Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 并发限制保护VPS性能\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 TCP+Vision Reality 入站配置。"
 	case "reality_xhttp":
-		creationMessage = "⚡ **开始并发批量创建所有 XHTTP Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 XHTTP Reality 入站配置。"
+		creationMessage = "⚡ **开始并发批量创建所有 XHTTP Reality 节点...**\n\n✅ 使用并发优化，速度更快\n✅ 并发限制保护VPS性能\n✅ 聚合通知，减少消息数量\n\n将为每个可用 SNI 域名创建一个独立的 XHTTP Reality 入站配置。"
 	default:
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 不支持的配置类型: %s", configType))
 		return
 	}
-	
+
 	t.SendMsgToTgbot(chatId, creationMessage)
 
 	destinations := t.GetRealityDestinations()
@@ -3641,6 +3637,10 @@ func (t *Tgbot) remoteBatchCreateRealityInbounds(configType string, chatId int64
 		ufwWarning string
 		error      error
 	}
+
+	// 使用信号量限制并发数量，保护低配置VPS
+	maxConcurrency := 3 // 限制最大并发数为3
+	semaphore := make(chan struct{}, maxConcurrency)
 
 	// 使用 WaitGroup 进行并发控制
 	var wg sync.WaitGroup
@@ -3661,6 +3661,13 @@ func (t *Tgbot) remoteBatchCreateRealityInbounds(configType string, chatId int64
 		wg.Add(1)
 		go func(index int, destination string) {
 			defer wg.Done()
+
+			// 获取信号量（限制并发）
+			semaphore <- struct{}{}
+			defer func() {
+				// 释放信号量
+				<-semaphore
+			}()
 
 			// 根据配置类型选择构建函数
 			var newInbound *model.Inbound
