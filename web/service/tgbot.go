@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync" // 新增：用于 sync.WaitGroup 并发控制
 	"time"
 
 	"x-ui/config"
@@ -4315,9 +4314,17 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
 			return nil
-			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程 %s，请稍候...", creationMessage))
-			t.remoteBatchCreateRealityInbounds("reality_vision", chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("One-Click 批量创建已开始，请查收管理员私信。"))
+		case "reality_vision":
+			creationMessage = "🚀 Vless + TCP + Reality + Vision"
+			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", creationMessage))
+			t.remoteCreateOneClickInbound("reality", chatIDInt64)
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
+			return nil
+		case "reality_xhttp":
+			creationMessage = "⚡ Vless + XHTTP + Reality"
+			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", creationMessage))
+			t.remoteCreateOneClickInbound("xhttp_reality", chatIDInt64)
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
 			return nil
 		case "reality_vision":
 			creationMessage = "🚀 Vless + TCP + Reality + Vision"
