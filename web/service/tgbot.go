@@ -3473,6 +3473,7 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	keyPair := keyPairMsg.(map[string]any)
 	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
 	uuid := uuidMsg["uuid"]
+	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	
 	port := 10000 + common.RandomInt(55535-10000+1)
 	path := "/" + t.randomString(8, "abcdefghijklmnopqrstuvwxyz")
