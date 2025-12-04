@@ -82,86 +82,6 @@ func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (
 	return count > 0, nil
 }
 
-// HasDuplicateSNI 检查数据库中是否已存在相同的 SNI 域名
-func (s *InboundService) HasDuplicateSNI(sni string, ignoreId int) (bool, error) {
-	db := database.GetDB()
-	var inbounds []*model.Inbound
-	err := db.Model(model.Inbound{}).Find(&inbounds).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return false, err
-	}
-
-	for _, inbound := range inbounds {
-		if ignoreId > 0 && inbound.Id == ignoreId {
-			continue // 跳过当前更新的记录
-		}
-
-		// 解析 StreamSettings 来获取 SNI
-		streamSettings := map[string]any{}
-		if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
-			continue // 跳过解析失败的配置
-		}
-
-		// 检查 TLS 设置中的 SNI
-		if tlsSettings, ok := streamSettings["tlsSettings"].(map[string]any); ok {
-			if settings, ok := tlsSettings["settings"].(map[string]any); ok {
-				if serverName, ok := settings["serverName"].(string); ok && serverName == sni {
-					return true, nil
-				}
-			}
-		}
-
-		// 检查 Reality 设置中的 SNI
-		if realitySettings, ok := streamSettings["realitySettings"].(map[string]any); ok {
-			if serverNames, ok := realitySettings["serverNames"].(string); ok {
-				// Reality 的 serverNames 可能包含多个域名，用逗号分隔
-				serverNameList := strings.Split(serverNames, ",")
-				for _, name := range serverNameList {
-					name = strings.TrimSpace(name)
-					if name == sni {
-						return true, nil
-					}
-				}
-			}
-		}
-	}
-
-	return false, nil
-}
-
-// extractSNIFromInbound 从 inbound 对象中提取 SNI 域名
-func (s *InboundService) extractSNIFromInbound(inbound *model.Inbound) (string, error) {
-	if inbound.StreamSettings == "" {
-		return "", nil // 没有 stream settings
-	}
-
-	streamSettings := map[string]any{}
-	if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
-		return "", err
-	}
-
-	// 检查 TLS 设置中的 SNI
-	if tlsSettings, ok := streamSettings["tlsSettings"].(map[string]any); ok {
-		if settings, ok := tlsSettings["settings"].(map[string]any); ok {
-			if serverName, ok := settings["serverName"].(string); ok {
-				return serverName, nil
-			}
-		}
-	}
-
-	// 检查 Reality 设置中的 SNI (取第一个域名)
-	if realitySettings, ok := streamSettings["realitySettings"].(map[string]any); ok {
-		if serverNames, ok := realitySettings["serverNames"].(string); ok {
-			serverNameList := strings.Split(serverNames, ",")
-			if len(serverNameList) > 0 {
-				return strings.TrimSpace(serverNameList[0]), nil
-			}
-		}
-	}
-
-	return "", nil // 没有找到 SNI
-}
-
 func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, error) {
 	settings := map[string][]model.Client{}
 	json.Unmarshal([]byte(inbound.Settings), &settings)
@@ -262,21 +182,6 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	}
 	if existEmail != "" {
 		return inbound, false, common.NewError("Duplicate email:", existEmail)
-	}
-
-	// 中文注释：检查 SNI 域名是否重复
-	sni, err := s.extractSNIFromInbound(inbound)
-	if err != nil {
-		return inbound, false, err
-	}
-	if sni != "" {
-		existSNI, err := s.HasDuplicateSNI(sni, 0)
-		if err != nil {
-			return inbound, false, err
-		}
-		if existSNI {
-			return inbound, false, common.NewError("Duplicate SNI:", sni)
-		}
 	}
 
 	// 中文注释：获取入站规则中的客户端信息
@@ -483,21 +388,6 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 	if exist {
 		return inbound, false, common.NewError("Port already exists:", inbound.Port)
-	}
-
-	// 中文注释：检查 SNI 域名是否重复（更新时）
-	sni, err := s.extractSNIFromInbound(inbound)
-	if err != nil {
-		return inbound, false, err
-	}
-	if sni != "" {
-		existSNI, err := s.HasDuplicateSNI(sni, inbound.Id)
-		if err != nil {
-			return inbound, false, err
-		}
-		if existSNI {
-			return inbound, false, common.NewError("Duplicate SNI:", sni)
-		}
 	}
 
 	oldInbound, err := s.GetInbound(inbound.Id)
