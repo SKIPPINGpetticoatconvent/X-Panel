@@ -385,6 +385,11 @@ func (t *Tgbot) OnReceive() {
 		return nil
 	}, th.AnyCommand())
 
+	// 【修复】: 注册 CallbackQuery Handler，确保按钮回调被正确处理
+	botHandler.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
+		t.answerCallback(&query, checkAdmin(query.From.ID))
+		return nil
+	}, th.AnyCallbackQuery())
 
 	botHandler.Start()
 }
@@ -1312,7 +1317,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			}
 			return
 		} else {
-			switch callbackQuery.Data {
+			// 【修复】: 统一使用 decodedQuery 进行 switch 判断，确保哈希策略变更时的兼容性
+			switch decodedQuery {
 			case "get_inbounds":
 				inbounds, err := t.getInbounds()
 				if err != nil {
@@ -1327,7 +1333,14 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		}
 	}
 
-	switch callbackQuery.Data {
+	// 【修复】: 统一使用 decodedQuery 进行 switch 判断
+	// 先解码 callbackQuery.Data（对于非管理员用户也需要解码）
+	decodedQueryForAll, decodeErr := t.decodeQuery(callbackQuery.Data)
+	if decodeErr != nil {
+		decodedQueryForAll = callbackQuery.Data // 如果解码失败，使用原始数据
+	}
+
+	switch decodedQueryForAll {
 	case "get_usage":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.buttons.serverUsage"))
 		t.getServerUsage(chatId)
@@ -1664,6 +1677,11 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在进入中转类别...")
 		t.sendRelayOptions(chatId)
+
+	case "oneclick_category_direct":
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在进入直连类别...")
+		t.sendDirectOptions(chatId)
 
 	case "oneclick_reality":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -3096,6 +3114,22 @@ func (t *Tgbot) sendRelayOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "【中转】类别 - 适合需要中转的场景：\n\n🛡️ Vless Encryption + XHTTP + TLS: 加密传输，可配合CDN\n🌀 Switch + Vision Seed: 特殊配置（开发中）", relayKeyboard)
 }
 
+// 【新增函数】: 显示直连类别的具体配置选项
+func (t *Tgbot) sendDirectOptions(chatId int64) {
+	directKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🚀 Vless + TCP + Reality").WithCallbackData(t.encodeQuery("oneclick_reality")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ Vless + XHTTP + Reality").WithCallbackData(t.encodeQuery("oneclick_xhttp_reality")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
+		),
+	)
+	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连：\n\n🚀 Vless + TCP + Reality: 高性能直连，优秀兼容性\n⚡ Vless + XHTTP + Reality: 新型传输，更佳隐蔽性", directKeyboard)
+}
+
 // 【新增函数】: 检查并安装【订阅转换】
 func (t *Tgbot) checkAndInstallSubconverter(chatId int64) {
 	domain, err := t.getDomain()
@@ -3860,93 +3894,6 @@ func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 	database.Checkpoint()
 }
 
-func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) error {
-	// 1) 确保 Message 可访问 —— 注意必须调用 cq.Message.Message() 而不是直接访问 .Message
-	if cq.Message == nil || cq.Message.Message == nil {
-		_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("消息对象不存在"))
-		return nil
-	}
-
-	// 关键修正：这里要调用方法 Message()
-	msg := cq.Message.Message() // <- 调用方法，返回 *telego.Message
-	// 现在 msg 是 *telego.Message，可以访问 Chat / MessageID
-	chatIDInt64 := msg.Chat.ID
-	messageID := msg.MessageID
-
-	// 解码回调数据（沿用你已有函数）
-	data, err := t.decodeQuery(cq.Data)
-	if err != nil {
-		_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("回调数据解析失败"))
-		return nil
-	}
-
-	// 移除内联键盘（telegoutil 构造 params）
-	if _, err := ctx.Bot().EditMessageReplyMarkup(ctx, tu.EditMessageReplyMarkup(tu.ID(chatIDInt64), messageID, nil)); err != nil {
-		logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
-	}
-
-	// ---------- oneclick_ 分支 ----------
-	if strings.HasPrefix(data, "oneclick_") {
-		configType := strings.TrimPrefix(data, "oneclick_")
-
-		var creationMessage string
-		switch configType {
-		case "options":
-			// 返回主菜单
-			t.SendMsgToTgbot(chatIDInt64, "请选择【一键配置】类型：")
-			t.sendOneClickOptions(chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("主菜单已显示"))
-			return nil
-
-
-		case "category_relay":
-			// 进入中转类别
-			t.SendMsgToTgbot(chatIDInt64, "正在进入中转类别...")
-			t.sendRelayOptions(chatIDInt64)
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("中转类别已显示"))
-			return nil
-
-		case "reality":
-			creationMessage = "🚀 Vless + TCP + Reality + Vision"
-		case "xhttp_reality":
-			creationMessage = "⚡ Vless + XHTTP + Reality"
-		case "tls":
-			creationMessage = "🛡️ Vless Encryption + XHTTP + TLS"
-		case "switch_vision": // 【新增】: 为占位按钮提供单独的提示
-			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
-			return nil
-		default:
-			creationMessage = strings.ToUpper(configType)
-		}
-
-		// 注意：不要把无返回值函数当作表达式使用，直接调用即可
-		t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", creationMessage))
-		t.remoteCreateOneClickInbound(configType, chatIDInt64)
-
-		_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
-		return nil
-	}
-
-	// ---------- confirm_sub_install 分支 ----------
-	if data == "confirm_sub_install" {
-		t.SendMsgToTgbot(chatIDInt64, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
-
-		if err := t.serverService.InstallSubconverter(); err != nil {
-			// 直接调用发送函数（无返回值）
-			t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err))
-		} else {
-			t.SendMsgToTgbot(chatIDInt64, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
-		}
-
-		_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID))
-		return nil
-	}
-
-	// 默认回答，避免用户界面卡住
-	_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("操作已完成。"))
-	return nil
-}
 
 // 新增一个公共方法 (大写 G) 来包装私有方法
 func (t *Tgbot) GetDomain() (string, error) {
