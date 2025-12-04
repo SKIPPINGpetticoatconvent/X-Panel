@@ -508,6 +508,32 @@ func (t *Tgbot) OnReceive() {
 				t.addClient(message.Chat.ID, message_text)
 			}
 
+			// 新增批量创建域名的处理
+			if strings.HasPrefix(userState, "awaiting_batch_domains_") {
+				domains := t.parseDomainList(message.Text)
+				if len(domains) == 0 {
+					t.SendMsgToTgbotDeleteAfter(message.Chat.ID, "❌ 未找到有效的域名，请重新输入（每个域名一行或用空格分隔）", 5, tu.ReplyKeyboardRemove())
+					return nil
+				}
+				
+				configType := ""
+				if userState == "awaiting_batch_domains_reality" {
+					t.SendMsgToTgbotDeleteAfter(message.Chat.ID, fmt.Sprintf("🚀 开始为 %d 个域名创建 Vless+TCP+Reality+Vision 节点...", len(domains)), 3, tu.ReplyKeyboardRemove())
+					configType = "reality"
+				} else if userState == "awaiting_batch_domains_xhttp" {
+					t.SendMsgToTgbotDeleteAfter(message.Chat.ID, fmt.Sprintf("⚡ 开始为 %d 个域名创建 Vless+XHTTP+Reality 节点...", len(domains)), 3, tu.ReplyKeyboardRemove())
+					configType = "xhttp_reality"
+				}
+				
+				delete(userStates, message.Chat.ID)
+				
+				// 异步批量创建
+				go func() {
+					t.batchCreateNodes(configType, message.Chat.ID, domains)
+				}()
+				return nil
+			}
+
 		} else {
 			if message.UsersShared != nil {
 				if checkAdmin(message.From.ID) {
@@ -3239,10 +3265,14 @@ func (t *Tgbot) sendDirectConnectionOptions(chatId int64) {
 			tu.InlineKeyboardButton("⚡ Vless + XHTTP + Reality").WithCallbackData(t.encodeQuery("oneclick_xhttp_reality")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📦 批量 Vless+TCP+Reality").WithCallbackData(t.encodeQuery("oneclick_batch_reality")),
+			tu.InlineKeyboardButton("📦 批量 Vless+XHTTP+Reality").WithCallbackData(t.encodeQuery("oneclick_batch_xhttp_reality")),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
 		),
 	)
-	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🚀 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置", directKeyboard)
+	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🚀 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置\n\n📦 批量创建: 支持根据伪装域名批量创建节点", directKeyboard)
 }
 
 // 【新增函数】: 显示中转类别的具体配置选项
@@ -3376,7 +3406,18 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	keyPair := keyPairMsg.(map[string]any)
 	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
 	uuid := uuidMsg["uuid"]
-	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	
+	// 根据是否提供域名生成不同的remark
+	var remark string
+	if len(targetDest) > 0 && targetDest[0] != "" {
+		// 使用域名生成remark
+		domain := t.cleanDomainName(targetDest[0])
+		suffix := t.randomString(4, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+		remark = fmt.Sprintf("%s_%s", domain, suffix)
+	} else {
+		// 保持原有的随机生成方式
+		remark = t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	}
 	port := 10000 + common.RandomInt(55535-10000+1)
 
 	var ufwWarning string = "" // NEW
@@ -3637,7 +3678,18 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	keyPair := keyPairMsg.(map[string]any)
 	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
 	uuid := uuidMsg["uuid"]
-	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	
+	// 根据是否提供域名生成不同的remark
+	var remark string
+	if len(targetDest) > 0 && targetDest[0] != "" {
+		// 使用域名生成remark
+		domain := t.cleanDomainName(targetDest[0])
+		suffix := t.randomString(4, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+		remark = fmt.Sprintf("%s_%s", domain, suffix)
+	} else {
+		// 保持原有的随机生成方式
+		remark = t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	}
 	port := 10000 + common.RandomInt(55535-10000+1)
 	path := "/" + t.randomString(8, "abcdefghijklmnopqrstuvwxyz")
 
@@ -4085,6 +4137,18 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
 			return nil
+		case "batch_reality":
+			// 切换到等待域名的状态
+			userStates[chatIDInt64] = "awaiting_batch_domains_reality"
+			t.SendMsgToTgbot(chatIDInt64, "📦 正在准备批量创建 Vless+TCP+Reality+Vision 节点...\n\n请输入伪装域名（每个域名一行或用空格分隔）:\n\n例如：\ngoogle.com\nfacebook.com\nyoutube.com", tu.ReplyKeyboardRemove())
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("请输入域名列表"))
+			return nil
+		case "batch_xhttp_reality":
+			// 切换到等待域名的状态
+			userStates[chatIDInt64] = "awaiting_batch_domains_xhttp"
+			t.SendMsgToTgbot(chatIDInt64, "📦 正在准备批量创建 Vless+XHTTP+Reality 节点...\n\n请输入伪装域名（每个域名一行或用空格分隔）:\n\n例如：\ngoogle.com\nfacebook.com\nyoutube.com", tu.ReplyKeyboardRemove())
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("请输入域名列表"))
+			return nil
 		default:
 			creationMessage = strings.ToUpper(configType)
 		}
@@ -4240,4 +4304,174 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 
 	// 成功返回 *telego.Message 对象
 	return msg, nil
+}
+
+// 【新增批量创建功能】: 批量创建节点
+func (t *Tgbot) batchCreateNodes(configType string, chatId int64, domains []string) {
+	successCount := 0
+	failCount := 0
+	
+	for i, domain := range domains {
+		// 清理域名（去除www.前缀等）
+		cleanedDomain := t.cleanDomainName(domain)
+		if cleanedDomain == "" {
+			continue
+		}
+		
+		// 添加延迟以避免资源竞争和VPS性能问题
+		if i > 0 {
+			time.Sleep(2 * time.Second)
+		}
+		
+		var err error
+		var newInbound *model.Inbound
+		var ufwWarning string
+		
+		// 根据配置类型创建不同的节点
+		if configType == "reality" {
+			newInbound, ufwWarning, err = t.buildRealityInbound(cleanedDomain)
+		} else if configType == "xhttp_reality" {
+			newInbound, ufwWarning, err = t.buildXhttpRealityInbound(cleanedDomain)
+		} else {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 未知的配置类型: %s", configType))
+			return
+		}
+		
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 为域名 %s 创建节点失败: %v", cleanedDomain, err))
+			failCount++
+			continue
+		}
+		
+		// 创建入站服务并保存节点
+		inboundService := InboundService{}
+		inboundService.SetTelegramService(t)
+		
+		createdInbound, _, err := inboundService.AddInbound(newInbound)
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 为域名 %s 保存节点失败: %v", cleanedDomain, err))
+			failCount++
+			continue
+		}
+		
+		logger.Infof("TG Bot 批量创建入站 %s 成功！", createdInbound.Remark)
+		
+		// 发送成功通知（仅针对失败的端口放行）
+		if ufwWarning != "" {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 节点 %s 创建成功，但端口放行失败:\n%s", cleanedDomain, ufwWarning))
+		}
+		
+		// 发送配置链接
+		err = t.SendOneClickConfig(createdInbound, false, chatId)
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 节点 %s 创建成功，但发送配置失败: %v", cleanedDomain, err))
+		}
+		
+		successCount++
+	}
+	
+	// 发送完成报告
+	completionMessage := fmt.Sprintf("🎉 **批量创建完成！**\n\n✅ 成功创建: %d 个节点\n❌ 创建失败: %d 个节点\n📝 总计处理: %d 个域名",
+		successCount, failCount, len(domains))
+	t.SendMsgToTgbot(chatId, completionMessage)
+}
+
+// 【新增辅助函数】: 解析域名列表
+func (t *Tgbot) parseDomainList(input string) []string {
+	if input == "" {
+		return nil
+	}
+	
+	// 替换换行符、逗号等分隔符为空格
+	cleanedInput := strings.ReplaceAll(input, "\n", " ")
+	cleanedInput = strings.ReplaceAll(cleanedInput, ",", " ")
+	cleanedInput = strings.ReplaceAll(cleanedInput, ";", " ")
+	cleanedInput = strings.ReplaceAll(cleanedInput, "\r", " ")
+	
+	// 按空格分割
+	parts := strings.Fields(cleanedInput)
+	
+	var domains []string
+	for _, part := range parts {
+		domain := strings.TrimSpace(part)
+		if domain != "" && t.isValidDomain(domain) {
+			domains = append(domains, domain)
+		}
+	}
+	
+	return domains
+}
+
+// 【新增辅助函数】: 验证域名格式
+func (t *Tgbot) isValidDomain(domain string) bool {
+	domain = strings.ToLower(domain)
+	
+	// 基本域名格式检查
+	if len(domain) < 3 || len(domain) > 253 {
+		return false
+	}
+	
+	// 检查是否包含有效字符
+	if !regexp.MustCompile(`^[a-z0-9.-]+$`).MatchString(domain) {
+		return false
+	}
+	
+	// 检查是否以点或横线开头或结尾
+	if strings.HasPrefix(domain, ".") || strings.HasPrefix(domain, "-") ||
+	   strings.HasSuffix(domain, ".") || strings.HasSuffix(domain, "-") {
+		return false
+	}
+	
+	// 检查是否至少有一个点
+	if !strings.Contains(domain, ".") {
+		return false
+	}
+	
+	// 检查域名段
+	parts := strings.Split(domain, ".")
+	if len(parts) < 2 {
+		return false
+	}
+	
+	// 检查每个段
+	for _, part := range parts {
+		if len(part) == 0 || len(part) > 63 {
+			return false
+		}
+		if strings.HasPrefix(part, "-") || strings.HasSuffix(part, "-") {
+			return false
+		}
+	}
+	
+	return true
+}
+
+// 【新增辅助函数】: 清理域名名称
+func (t *Tgbot) cleanDomainName(domain string) string {
+	domain = strings.TrimSpace(domain)
+	domain = strings.ToLower(domain)
+	
+	// 去除协议前缀
+	domain = strings.TrimPrefix(domain, "http://")
+	domain = strings.TrimPrefix(domain, "https://")
+	
+	// 去除www.前缀
+	domain = strings.TrimPrefix(domain, "www.")
+	
+	// 去除路径
+	if idx := strings.Index(domain, "/"); idx != -1 {
+		domain = domain[:idx]
+	}
+	
+	// 去除端口
+	if idx := strings.Index(domain, ":"); idx != -1 {
+		domain = domain[:idx]
+	}
+	
+	// 最终验证
+	if !t.isValidDomain(domain) {
+		return ""
+	}
+	
+	return domain
 }
