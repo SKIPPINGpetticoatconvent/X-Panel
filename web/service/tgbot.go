@@ -3242,7 +3242,7 @@ func (t *Tgbot) sendDirectConnectionOptions(chatId int64) {
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("oneclick_options")),
 		),
 	)
-	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🚀 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置\n\n💡 **注意：** 批量创建功能已移除。\n\n请手动创建 Reality 节点。", directKeyboard)
+	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连使用：\n\n🚀 Vless + TCP + Reality + Vision: 最佳性能直连配置\n⚡ Vless + XHTTP + Reality: 高效HTTP3直连配置", directKeyboard)
 }
 
 // 【新增函数】: 显示中转类别的具体配置选项
@@ -3357,139 +3357,6 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 3、随机分配一个可用端口，TG端会【自动放行】该端口，生成后请直接复制【**链接地址**】。
 4、TG端 的【一键配置】生成功能，与后台 Web端 类似，跟【入站】的数据是打通的。
 5、你可以在"一键创建"后于列表中，手动查看/复制或编辑详细信息，以便添加其他参数。`
-
-	t.SendMsgToTgbot(chatId, usageMessage)
-}
-
-// 【新增函数】: 批量创建【一键配置】入站（5个不同配置）
-func (t *Tgbot) remoteCreateBatchInbounds(configType string, chatId int64) {
-	var inboundsToCreate []struct {
-		name    string
-		config  string
-		buildFn func() (*model.Inbound, string, error)
-	}
-
-	// 根据类型确定要创建的入站配置
-	if configType == "batch_reality" {
-		inboundsToCreate = []struct {
-			name    string
-			config  string
-			buildFn func() (*model.Inbound, string, error)
-		}{
-			{"Reality-标准", "reality", func() (*model.Inbound, string, error) { return t.buildRealityInbound("") }},
-			{"Reality-随机1", "reality", func() (*model.Inbound, string, error) { return t.buildRealityInbound("") }},
-			{"Reality-随机2", "reality", func() (*model.Inbound, string, error) { return t.buildRealityInbound("") }},
-			{"Reality-随机3", "reality", func() (*model.Inbound, string, error) { return t.buildRealityInbound("") }},
-			{"Reality-随机4", "reality", func() (*model.Inbound, string, error) { return t.buildRealityInbound("") }},
-		}
-	} else if configType == "batch_xhttp_reality" {
-		inboundsToCreate = []struct {
-			name    string
-			config  string
-			buildFn func() (*model.Inbound, string, error)
-		}{
-			{"XHTTP-Reality-标准", "xhttp_reality", func() (*model.Inbound, string, error) { return t.buildXhttpRealityInbound("") }},
-			{"XHTTP-Reality-随机1", "xhttp_reality", func() (*model.Inbound, string, error) { return t.buildXhttpRealityInbound("") }},
-			{"XHTTP-Reality-随机2", "xhttp_reality", func() (*model.Inbound, string, error) { return t.buildXhttpRealityInbound("") }},
-			{"XHTTP-Reality-随机3", "xhttp_reality", func() (*model.Inbound, string, error) { return t.buildXhttpRealityInbound("") }},
-			{"XHTTP-Reality-随机4", "xhttp_reality", func() (*model.Inbound, string, error) { return t.buildXhttpRealityInbound("") }},
-		}
-	} else {
-		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 批量创建失败: 未知的配置类型 %s", configType))
-		return
-	}
-
-	// 创建 InboundService 实例
-	inboundService := InboundService{}
-	inboundService.SetTelegramService(t)
-
-	successCount := 0
-	failCount := 0
-	var createdInbounds []*model.Inbound
-	var ufwWarnings []string
-
-	// 逐个创建入站配置
-	for i, inboundConfig := range inboundsToCreate {
-		t.SendMsgToTgbot(chatId, fmt.Sprintf("🔄 正在创建第 %d/%d 个配置：%s ...", i+1, len(inboundsToCreate), inboundConfig.name))
-
-		newInbound, ufwWarning, err := inboundConfig.buildFn()
-		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 第 %d 个配置创建失败: %v", i+1, err))
-			failCount++
-			continue
-		}
-
-		// 添加备注后缀以区分不同配置
-		suffix := fmt.Sprintf("-%d", i+1)
-		newInbound.Remark = newInbound.Remark + suffix
-
-		createdInbound, _, err := inboundService.AddInbound(newInbound)
-		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 第 %d 个配置保存失败: %v", i+1, err))
-			failCount++
-			continue
-		}
-
-		successCount++
-		createdInbounds = append(createdInbounds, createdInbound)
-		if ufwWarning != "" {
-			ufwWarnings = append(ufwWarnings, fmt.Sprintf("⚠️ 配置 %d: %s", i+1, ufwWarning))
-		}
-
-		logger.Infof("TG 机器人批量创建第 %d 个入站 %s 成功！", i+1, createdInbound.Remark)
-
-		// 避免过快的请求，添加短暂延迟
-		time.Sleep(500 * time.Millisecond)
-	}
-
-	// 发送完成报告
-	t.SendMsgToTgbot(chatId, fmt.Sprintf("🎉 **批量创建完成！**\n\n✅ 成功创建: %d 个配置\n❌ 创建失败: %d 个配置", successCount, failCount))
-
-	// 如果有端口放行警告，统一显示
-	if len(ufwWarnings) > 0 {
-		t.SendMsgToTgbot(chatId, "⚠️ **端口放行警告汇总：**\n\n"+strings.Join(ufwWarnings, "\n\n"))
-	}
-
-	// 发送所有成功创建的配置链接
-	if successCount > 0 {
-		t.SendMsgToTgbot(chatId, fmt.Sprintf("📋 **正在发送 %d 个配置的链接和二维码...**", successCount))
-
-		for i, inbound := range createdInbounds {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("🔗 **配置 %d：%s (端口 %d)**", i+1, inbound.Remark, inbound.Port))
-
-			err := t.SendOneClickConfig(inbound, false, chatId)
-			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 配置 %d 链接发送失败: %v", i+1, err))
-			}
-
-			// 配置间添加分隔
-			if i < len(createdInbounds)-1 {
-				t.SendMsgToTgbot(chatId, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-			}
-
-			time.Sleep(1000 * time.Millisecond)
-		}
-	}
-
-	// 发送批量用法说明
-	usageMessage := fmt.Sprintf(`💡 **批量创建用法说明：**
-
-✅ 已成功创建 %d 个不同的入站配置，每个都有：
-• 独立随机生成的 UUID
-• 不同的端口号（自动分配）
-• 独立的 Reality 密钥对
-• 自动端口放行（如果系统支持）
-
-📝 **使用建议：**
-1、每个配置都是独立的，可以单独使用或分享
-2、建议测试不同配置的网络效果，选择最佳线路
-3、可以在面板后台查看所有创建的配置详情
-4、如遇端口冲突，可手动修改端口设置
-
-🔄 **后续管理：**
-• 所有配置都显示在"入站列表"中
-• 可以单独编辑、删除或禁用任意配置
-• 流量统计分别计算，便于管理`, successCount)
 
 	t.SendMsgToTgbot(chatId, usageMessage)
 }
