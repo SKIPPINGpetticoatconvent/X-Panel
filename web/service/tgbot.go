@@ -2529,10 +2529,6 @@ func (t *Tgbot) clientInfoMsg(
 		output += t.I18nBot("tgbot.messages.download", "Download=="+common.FormatTraffic(traffic.Down))
 		output += t.I18nBot("tgbot.messages.total", "UpDown=="+common.FormatTraffic((traffic.Up+traffic.Down)), "Total=="+total)
 	}
-	if printRefreshed {
-		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
-	}
-
 	return output
 }
 
@@ -2572,7 +2568,6 @@ func (t *Tgbot) getClientUsage(chatId int64, tgUserID int64, email ...string) {
 		}
 	}
 
-	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
 	t.SendMsgToTgbot(chatId, output)
 	output = t.I18nBot("tgbot.commands.pleaseChoose")
 	t.SendAnswer(chatId, output, false)
@@ -2587,7 +2582,6 @@ func (t *Tgbot) searchClientIps(chatId int64, email string, messageID ...int) {
 	output := ""
 	output += t.I18nBot("tgbot.messages.email", "Email=="+email)
 	output += t.I18nBot("tgbot.messages.ips", "IPs=="+ips)
-	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
 
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -2626,7 +2620,6 @@ func (t *Tgbot) clientTelegramUserInfo(chatId int64, email string, messageID ...
 	output := ""
 	output += t.I18nBot("tgbot.messages.email", "Email=="+email)
 	output += t.I18nBot("tgbot.messages.TGUser", "TelegramID=="+tgId)
-	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
 
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -2922,11 +2915,9 @@ func (t *Tgbot) getExhausted(chatId int64) {
 		} else {
 			cols = 2
 		}
-		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
 		keyboard := tu.InlineKeyboardGrid(tu.InlineKeyboardCols(cols, buttons...))
 		t.SendMsgToTgbot(chatId, output, keyboard)
 	} else {
-		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
 		t.SendMsgToTgbot(chatId, output)
 	}
 }
