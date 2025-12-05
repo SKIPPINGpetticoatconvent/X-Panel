@@ -355,9 +355,10 @@ func TestGetConnectionsRust(t *testing.T) {
 			t.Errorf("连接 %d 本地端口为 0", i)
 		}
 		
-		if conn.RemotePort == 0 {
-			t.Errorf("连接 %d 远程端口为 0", i)
-		}
+		// 远程端口为0是正常的（比如监听状态的连接）
+		// if conn.RemotePort == 0 {
+		// 	t.Errorf("连接 %d 远程端口为 0", i)
+		// }
 		
 		if conn.Protocol != 6 && conn.Protocol != 17 {
 			t.Errorf("连接 %d 协议未知: %d", i, conn.Protocol)
