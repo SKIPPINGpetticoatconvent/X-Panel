@@ -97,7 +97,8 @@ jobs:
           
           # Build Go application with Rust integration
           if [ "${{ matrix.platform }}" = "armv5" ]; then
-            go build -tags rust -ldflags "-w -s $CGO_LDFLAGS" -o xui-release -v main.go
+            echo "Building armv5 without Rust support (using stub implementations)"
+            go build -ldflags "-w -s $CGO_LDFLAGS" -o xui-release -v main.go
           else
             go build -tags rust -ldflags "-w -s -linkmode external -extldflags '-static $CGO_LDFLAGS'" -o xui-release -v main.go
           fi
