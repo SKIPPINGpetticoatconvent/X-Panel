@@ -255,20 +255,13 @@ jobs:
             $rust_target = "i686-pc-windows-msvc"
           }
 
-          # 〔中文注释〕: 编译 Rust 静态库
-          if ($rust_target) {
-            Write-Host "Compiling Rust library for $rust_target"
-            Set-Location rust/xpanel-sys
-            cargo build --release --target $rust_target
-            Set-Location ../..
-            $env:CGO_LDFLAGS = "-L rust/xpanel-sys/target/$rust_target/release/xpanel_sys.lib -lole32 -luser32 -ladvapi32 -lws2_32 -lkernel32"
-          } else {
-            Write-Host "Skipping Rust compilation for unsupported platform ${{ matrix.platform }}"
-            $env:CGO_LDFLAGS = ""
-          }
+          # 〔中文注释〕: Windows 平台使用 Stub 实现（不需要 Rust 库）
+          # 注意：Rust 桥接目前只支持 Linux，Windows 构建使用 Stub 版本以避免链接错误
+          Write-Host "Using Go Stub implementation for Windows (Rust not supported on Windows yet)"
+          $env:CGO_LDFLAGS = ""
 
-          # 〔中文注释〕: 执行 Go 编译命令。-o 指定输出文件为 .exe 可执行文件
-          go build -tags rust -ldflags "-w -s $env:CGO_LDFLAGS" -o x-ui-release.exe -v main.go
+          # 〔中文注释〕: 执行 Go 编译命令。使用 !rust 标签确保使用 Stub 实现，-o 指定输出文件为 .exe 可执行文件
+          go build -tags "!rust" -ldflags "-w -s $env:CGO_LDFLAGS" -o x-ui-release.exe -v main.go
 
           # 〔中文注释〕: 创建用于打包的文件夹
           mkdir x-ui
