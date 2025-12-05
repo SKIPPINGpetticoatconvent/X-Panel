@@ -267,6 +267,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 			{Command: "oneclick", Description: "一键配置节点"},
 			{Command: "subconverter", Description: "检测或安装订阅转换"},
 			{Command: "restartx", Description: "重启X-Panel面板"},
+			{Command: "xrayversion", Description: "管理Xray版本"},
 		},
 	})
 	if err != nil {
@@ -496,6 +497,13 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 		} else {
 			handleUnknownCommand()
 		}
+	case "xrayversion":
+		onlyMessage = true
+		if isAdmin {
+			t.sendXrayVersionOptions(chatId)
+		} else {
+			handleUnknownCommand()
+		}
 	default:
 		handleUnknownCommand()
 	}
@@ -546,8 +554,37 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		dataArray := strings.Split(decodedQuery, " ")
 
 		if len(dataArray) >= 2 && len(dataArray[1]) > 0 {
-			email := dataArray[1]
 			switch dataArray[0] {
+			case "update_xray_ask":
+				version := dataArray[1]
+				confirmKeyboard := tu.InlineKeyboard(
+					tu.InlineKeyboardRow(
+						tu.InlineKeyboardButton("✅ 确认更新").WithCallbackData(t.encodeQuery(fmt.Sprintf("update_xray_confirm %s", version))),
+					),
+					tu.InlineKeyboardRow(
+						tu.InlineKeyboardButton("❌ 取消").WithCallbackData(t.encodeQuery("update_xray_cancel")),
+					),
+				)
+				t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), confirmKeyboard)
+			case "update_xray_confirm":
+				version := dataArray[1]
+				t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在启动 Xray 更新任务...")
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("🚀 正在更新 Xray 到版本 %s，更新任务已在后台启动...", version))
+				go func() {
+					err := t.serverService.UpdateXray(version)
+					if err != nil {
+						t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ Xray 更新失败: %v", err))
+					} else {
+						t.SendMsgToTgbot(chatId, fmt.Sprintf("✅ Xray 成功更新到版本 %s", version))
+					}
+				}()
+			case "update_xray_cancel":
+				t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+				t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
+				return
+			default:
+				email := dataArray[1]
+				switch dataArray[0] {
 			case "client_get_usage":
 				t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.messages.email", "Email=="+email))
 				t.searchClient(chatId, email)
@@ -1316,9 +1353,10 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				t.addClient(callbackQuery.Message.GetChat().ID, message_text)
 			}
 			return
-		} else {
-			// 【修复】: 统一使用 decodedQuery 进行 switch 判断，确保哈希策略变更时的兼容性
-			switch decodedQuery {
+		}
+		
+		// 【修复】: 统一使用 decodedQuery 进行 switch 判断，确保哈希策略变更时的兼容性
+		switch decodedQuery {
 			case "get_inbounds":
 				inbounds, err := t.getInbounds()
 				if err != nil {
@@ -1962,6 +2000,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("xrayversion")),
 		),
 		// VPS推荐按钮已移除
 		// TODOOOOOOOOOOOOOO: Add restart button here.
@@ -4018,6 +4059,39 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 
 	// 成功返回 *telego.Message 对象
 	return msg, nil
+}
+
+// 【新增函数】: 发送 Xray 版本选项给用户
+func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
+	// 获取 Xray 版本列表
+	versions, err := t.serverService.GetXrayVersions()
+	if err != nil {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 获取 Xray 版本列表失败: %v", err))
+		return
+	}
+
+	if len(versions) == 0 {
+		t.SendMsgToTgbot(chatId, "❌ 未找到可用的 Xray 版本")
+		return
+	}
+
+	// 构建版本按钮
+	var buttons []telego.InlineKeyboardButton
+	for _, version := range versions {
+		callbackData := t.encodeQuery(fmt.Sprintf("update_xray_ask %s", version))
+		button := tu.InlineKeyboardButton(version).WithCallbackData(callbackData)
+		buttons = append(buttons, button)
+	}
+
+	// 添加取消按钮
+	cancelButton := tu.InlineKeyboardButton("❌ 取消").WithCallbackData(t.encodeQuery("update_xray_cancel"))
+	buttons = append(buttons, cancelButton)
+
+	// 构建键盘
+	keyboard := tu.InlineKeyboardGrid(tu.InlineKeyboardCols(1, buttons...))
+
+	// 发送版本选择消息
+	t.SendMsgToTgbot(chatId, "🚀 **Xray 版本管理**\n\n请选择要更新的版本：", keyboard)
 }
 
 

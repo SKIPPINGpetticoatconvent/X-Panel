@@ -357,30 +357,41 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 
 	var versions []string
 	for _, release := range releases {
-		tagVersion := strings.TrimPrefix(release.TagName, "v")
-		tagParts := strings.Split(tagVersion, ".")
+		tagVersion := release.TagName
+		// 保留对 v 前缀的检查
+		if !strings.HasPrefix(tagVersion, "v") {
+			continue
+		}
+		
+		// 验证版本格式是否正确
+		versionWithoutPrefix := strings.TrimPrefix(tagVersion, "v")
+		tagParts := strings.Split(versionWithoutPrefix, ".")
 		if len(tagParts) != 3 {
 			continue
 		}
 
-		major, err1 := strconv.Atoi(tagParts[0])
-		minor, err2 := strconv.Atoi(tagParts[1])
-		patch, err3 := strconv.Atoi(tagParts[2])
+		// 验证版本号是否为有效数字
+		_, err1 := strconv.Atoi(tagParts[0])
+		_, err2 := strconv.Atoi(tagParts[1])
+		_, err3 := strconv.Atoi(tagParts[2])
 		if err1 != nil || err2 != nil || err3 != nil {
 			continue
 		}
 
-		if major > 25 || (major == 25 && minor > 9) || (major == 25 && minor == 9 && patch >= 10) {
-			versions = append(versions, release.TagName)
-		}
+		versions = append(versions, tagVersion)
 	}
 	
 	// 如果没有找到版本，返回友好的错误信息
 	if len(versions) == 0 {
-		return nil, fmt.Errorf("未找到符合条件的Xray版本")
+		return nil, fmt.Errorf("未找到任何有效的Xray版本")
 	}
 	
-	logger.Infof("成功获取到 %d 个Xray版本", len(versions))
+	// 按版本号排序（最新在前）并只返回最新的3个版本
+	if len(versions) > 3 {
+		versions = versions[:3]
+	}
+	
+	logger.Infof("成功获取到最新的 %d 个Xray版本", len(versions))
 	return versions, nil
 }
 
@@ -515,74 +526,112 @@ func (s *ServerService) UpdateXray(version string) error {
 	go func() {
 		logger.Infof("开始异步更新Xray到版本: %s", version)
 		
-		// 1. Stop xray before doing anything
+		// 检查Telegram服务是否可用
+		tgAvailable := s.tgService != nil && s.tgService.IsRunning()
+		
+		// 1. 在异步更新任务开始时发送开始通知
+		if tgAvailable {
+			startMessage := fmt.Sprintf("🔄 **开始更新 Xray 版本**\n\n正在更新到版本: `%s`\n\n⏳ 请稍候，这可能需要几分钟时间...", version)
+			if err := s.tgService.SendMessage(startMessage); err != nil {
+				logger.Warningf("发送Xray更新开始通知失败: %v", err)
+			}
+		}
+		
+		var updateErr error
+		
+		// 2. Stop xray before doing anything
 		if err := s.StopXrayService(); err != nil {
 			logger.Warning("failed to stop xray before update:", err)
-		}
-
-		// 2. Download the zip
-		zipFileName, err := s.downloadXRay(version)
-		if err != nil {
-			logger.Error("下载Xray失败:", err)
-			return
-		}
-		defer os.Remove(zipFileName)
-
-		zipFile, err := os.Open(zipFileName)
-		if err != nil {
-			logger.Error("打开zip文件失败:", err)
-			return
-		}
-		defer zipFile.Close()
-
-		stat, err := zipFile.Stat()
-		if err != nil {
-			logger.Error("获取zip文件信息失败:", err)
-			return
-		}
-		reader, err := zip.NewReader(zipFile, stat.Size())
-		if err != nil {
-			logger.Error("创建zip reader失败:", err)
-			return
-		}
-
-		// 3. Helper to extract files
-		copyZipFile := func(zipName string, fileName string) error {
-			zipFile, err := reader.Open(zipName)
-			if err != nil {
-				return err
-			}
-			defer zipFile.Close()
-			os.MkdirAll(filepath.Dir(fileName), 0755)
-			os.Remove(fileName)
-			file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-			_, err = io.Copy(file, zipFile)
-			return err
-		}
-
-		// 4. Extract correct binary
-		if runtime.GOOS == "windows" {
-			targetBinary := filepath.Join("bin", "xray-windows-amd64.exe")
-			err = copyZipFile("xray.exe", targetBinary)
+			updateErr = fmt.Errorf("停止Xray服务失败: %v", err)
 		} else {
-			err = copyZipFile("xray", xray.GetBinaryPath())
-		}
-		if err != nil {
-			logger.Error("解压Xray文件失败:", err)
-			return
+			// 3. Download the zip
+			zipFileName, err := s.downloadXRay(version)
+			if err != nil {
+				logger.Error("下载Xray失败:", err)
+				updateErr = fmt.Errorf("下载Xray失败: %v", err)
+			} else {
+				defer os.Remove(zipFileName)
+
+				zipFile, err := os.Open(zipFileName)
+				if err != nil {
+					logger.Error("打开zip文件失败:", err)
+					updateErr = fmt.Errorf("打开zip文件失败: %v", err)
+				} else {
+					defer zipFile.Close()
+
+					stat, err := zipFile.Stat()
+					if err != nil {
+						logger.Error("获取zip文件信息失败:", err)
+						updateErr = fmt.Errorf("获取zip文件信息失败: %v", err)
+					} else {
+						reader, err := zip.NewReader(zipFile, stat.Size())
+						if err != nil {
+							logger.Error("创建zip reader失败:", err)
+							updateErr = fmt.Errorf("创建zip reader失败: %v", err)
+						} else {
+							// 4. Helper to extract files
+							copyZipFile := func(zipName string, fileName string) error {
+								zipFile, err := reader.Open(zipName)
+								if err != nil {
+									return err
+								}
+								defer zipFile.Close()
+								os.MkdirAll(filepath.Dir(fileName), 0755)
+								os.Remove(fileName)
+								file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
+								if err != nil {
+									return err
+								}
+								defer file.Close()
+								_, err = io.Copy(file, zipFile)
+								return err
+							}
+
+							// 5. Extract correct binary
+							if runtime.GOOS == "windows" {
+								targetBinary := filepath.Join("bin", "xray-windows-amd64.exe")
+								err = copyZipFile("xray.exe", targetBinary)
+							} else {
+								err = copyZipFile("xray", xray.GetBinaryPath())
+							}
+							if err != nil {
+								logger.Error("解压Xray文件失败:", err)
+								updateErr = fmt.Errorf("解压Xray文件失败: %v", err)
+							} else {
+								// 6. Restart xray
+								if err := s.xrayService.RestartXray(true); err != nil {
+									logger.Error("重启Xray失败:", err)
+									updateErr = fmt.Errorf("重启Xray失败: %v", err)
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 
-		// 5. Restart xray
-		if err := s.xrayService.RestartXray(true); err != nil {
-			logger.Error("重启Xray失败:", err)
-			return
+		// 7. 根据更新结果发送相应的通知
+		if tgAvailable {
+			if updateErr == nil {
+				// 更新成功通知
+				successMessage := fmt.Sprintf("✅ **Xray 更新成功！**\n\n版本: `%s`\n\n🎉 Xray 已成功更新并重新启动！", version)
+				if err := s.tgService.SendMessage(successMessage); err != nil {
+					logger.Warningf("发送Xray更新成功通知失败: %v", err)
+				}
+			} else {
+				// 更新失败通知
+				failMessage := fmt.Sprintf("❌ **Xray 更新失败**\n\n版本: `%s`\n\n错误信息: %v\n\n请检查日志以获取更多信息。", version, updateErr)
+				if err := s.tgService.SendMessage(failMessage); err != nil {
+					logger.Warningf("发送Xray更新失败通知失败: %v", err)
+				}
+			}
 		}
 
-		logger.Infof("Xray版本更新成功: %s", version)
+		if updateErr != nil {
+			logger.Errorf("Xray版本更新失败: %v", updateErr)
+		} else {
+			logger.Infof("Xray版本更新成功: %s", version)
+		}
 	}()
 	
 	return nil
