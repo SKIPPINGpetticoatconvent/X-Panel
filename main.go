@@ -58,8 +58,13 @@ func runWebServer() {
 	// 〔中文注释〕: 1. 初始化所有需要的服务实例
 	xrayService := service.XrayService{}
 	settingService := service.SettingService{}
-	// 初始化防火墙服务
-	firewallService, _ := firewall.NewFirewallService()
+	// 初始化防火墙服务（修复404错误：检查初始化错误）
+	firewallService, err := firewall.NewFirewallService()
+	if err != nil {
+		logger.Warningf("防火墙服务初始化失败: %v，使用 iptables 作为兜底方案", err)
+		// 使用兜底的 iptables 服务
+		firewallService = firewall.NewIptablesService()
+	}
 	serverService := service.ServerService{
 		FirewallService: firewallService,
 	}
