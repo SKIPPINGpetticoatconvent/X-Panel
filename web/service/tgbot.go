@@ -499,11 +499,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 		}
 	case "xrayversion":
 		onlyMessage = true
-		if isAdmin {
-			t.sendXrayVersionOptions(chatId)
-		} else {
-			handleUnknownCommand()
-		}
+		t.sendXrayVersionOptions(chatId)
 	default:
 		handleUnknownCommand()
 	}
@@ -1810,26 +1806,48 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "VPS推荐功能已移除")
 
-	// 【修复】: 处理 Xray 版本管理相关回调
+	// 【新增代码】: 处理 Xray 版本管理相关回调
 	case "xrayversion":
-		// 【关键修复】: 处理非管理员点击 Xray 版本管理按钮
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 权限不足：只有管理员才能管理 Xray 版本")
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 请选择要更新的版本...")
+		t.sendXrayVersionOptions(chatId)
 
 	case "update_xray_ask":
-		// 【关键修复】: 防止非管理员访问 Xray 更新功能
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 权限不足：只有管理员才能管理 Xray 版本")
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		// 处理 Xray 版本更新请求
+		tempDataArray := strings.Split(decodedQueryForAll, " ")
+		if len(tempDataArray) >= 2 && len(tempDataArray[1]) > 0 {
+			version := tempDataArray[1]
+			confirmKeyboard := tu.InlineKeyboard(
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("✅ 确认更新").WithCallbackData(t.encodeQuery(fmt.Sprintf("update_xray_confirm %s", version))),
+				),
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("❌ 取消").WithCallbackData(t.encodeQuery("update_xray_cancel")),
+				),
+			)
+			t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), confirmKeyboard)
+		}
 
 	case "update_xray_confirm":
-		// 【关键修复】: 防止非管理员访问 Xray 更新功能
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 权限不足：只有管理员才能管理 Xray 版本")
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		// 处理 Xray 版本更新确认
+		tempDataArray := strings.Split(decodedQueryForAll, " ")
+		if len(tempDataArray) >= 2 && len(tempDataArray[1]) > 0 {
+			version := tempDataArray[1]
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在启动 Xray 更新任务...")
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("🚀 正在更新 Xray 到版本 %s，更新任务已在后台启动...", version))
+			go func() {
+				err := t.serverService.UpdateXray(version)
+				if err != nil {
+					t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ Xray 更新失败: %v", err))
+				} else {
+					t.SendMsgToTgbot(chatId, fmt.Sprintf("✅ Xray 成功更新到版本 %s", version))
+				}
+			}()
+		}
 
 	case "update_xray_cancel":
-		// 这个可以允许所有用户取消操作
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
+		return
 	}
 }
 

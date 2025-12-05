@@ -30,19 +30,64 @@ class HttpUtil {
     }
 
     static async postForm(url, data) {
-    const formData = new URLSearchParams();
-    for (const key in data) {
-        formData.append(key, data[key]);
+        try {
+            const formData = new URLSearchParams();
+            for (const key in data) {
+                formData.append(key, data[key]);
+            }
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
+            
+            // 检查HTTP状态码
+            if (!res.ok) {
+                // 尝试读取错误响应内容
+                let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
+                try {
+                    const contentType = res.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await res.json();
+                        errorMsg = errorData.msg || errorData.message || errorMsg;
+                    } else {
+                        const text = await res.text();
+                        errorMsg = text || errorMsg;
+                    }
+                } catch (parseError) {
+                    console.warn('无法解析错误响应:', parseError);
+                }
+                return new Msg(false, errorMsg);
+            }
+            
+            // 检查响应内容类型
+            const contentType = res.headers.get('content-type');
+            if (contentType && !contentType.includes('application/json')) {
+                // 如果返回的不是JSON格式，直接返回文本内容
+                const text = await res.text();
+                return new Msg(true, text || '操作成功');
+            }
+            
+            // 尝试解析JSON响应
+            try {
+                const jsonData = await res.json();
+                if (typeof jsonData === 'object' && 'success' in jsonData) {
+                    return new Msg(jsonData.success, jsonData.msg, jsonData.obj);
+                }
+                return typeof jsonData === 'object' ? jsonData : new Msg(true, '操作成功');
+            } catch (jsonError) {
+                // JSON解析失败，返回原始文本
+                const text = await res.text();
+                console.warn('JSON解析失败，原始响应:', text, jsonError);
+                return new Msg(true, text || '操作完成');
+            }
+        } catch (error) {
+            console.error('POST form 请求失败:', error);
+            return new Msg(false, error.message || '网络请求失败');
+        }
     }
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData.toString()
-    });
-    return res.json();
-}
 
 
     static async get(url, params, options = {}) {
