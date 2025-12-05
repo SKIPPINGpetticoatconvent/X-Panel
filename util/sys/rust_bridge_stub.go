@@ -1,5 +1,5 @@
-//go:build !linux || !rust
-// +build !linux,!rust
+//go:build !rust
+// +build !rust
 
 package sys
 
