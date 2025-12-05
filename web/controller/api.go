@@ -33,7 +33,7 @@ func (a *APIController) initRouter(g *gin.RouterGroup) {
 
 	// Server API
 	server := api.Group("/server")
-	a.serverController = NewServerController(server, serverService)
+	a.serverController = NewServerController(server, a.serverService)
 
 	// Extra routes
 	api.GET("/backuptotgbot", a.BackuptoTgbot)
