@@ -150,6 +150,8 @@
 "readDatabaseError" = "Ocurrió un error al leer la base de datos"
 "getDatabaseError" = "Ocurrió un error al obtener la base de datos"
 "getConfigError" = "Ocurrió un error al obtener el archivo de configuración"
+"sourceCode" = "Código Fuente"
+"issues" = "Issues"
 
 [pages.inbounds]
 "allTimeTraffic" = "Tráfico Total"

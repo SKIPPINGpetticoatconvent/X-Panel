@@ -1809,6 +1809,27 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		// VPS推荐功能已移除
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "VPS推荐功能已移除")
+
+	// 【修复】: 处理 Xray 版本管理相关回调
+	case "xrayversion":
+		// 【关键修复】: 处理非管理员点击 Xray 版本管理按钮
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 权限不足：只有管理员才能管理 Xray 版本")
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+
+	case "update_xray_ask":
+		// 【关键修复】: 防止非管理员访问 Xray 更新功能
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 权限不足：只有管理员才能管理 Xray 版本")
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+
+	case "update_xray_confirm":
+		// 【关键修复】: 防止非管理员访问 Xray 更新功能
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 权限不足：只有管理员才能管理 Xray 版本")
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+
+	case "update_xray_cancel":
+		// 这个可以允许所有用户取消操作
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 	}
 }
 

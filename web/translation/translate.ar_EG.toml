@@ -150,6 +150,8 @@
 "readDatabaseError" = "حدث خطأ أثناء قراءة قاعدة البيانات"
 "getDatabaseError" = "حدث خطأ أثناء استرجاع قاعدة البيانات"
 "getConfigError" = "حدث خطأ أثناء استرجاع ملف الإعدادات"
+"sourceCode" = "الكود المصدري"
+"issues" = "المشاكل"
 
 [pages.inbounds]
 "allTimeTraffic" = "إجمالي حركة المرور"

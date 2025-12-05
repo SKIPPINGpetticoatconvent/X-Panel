@@ -158,6 +158,8 @@
 "builtOnXray" = "基于 Xray Core 构建"
 "xpanelTitle" = "〔X-Panel面板〕"
 "tgPrivateChat" = "TG私聊交流"
+"sourceCode" = "源代码"
+"issues" = "问题反馈"
 "portCheck" = "端口检测"
 "speedTest" = "网络测速"
 

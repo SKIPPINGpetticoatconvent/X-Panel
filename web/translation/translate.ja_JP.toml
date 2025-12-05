@@ -150,6 +150,8 @@
 "readDatabaseError" = "データベースの読み取り中にエラーが発生しました"
 "getDatabaseError" = "データベースの取得中にエラーが発生しました"
 "getConfigError" = "設定ファイルの取得中にエラーが発生しました"
+"sourceCode" = "ソースコード"
+"issues" = "問題"
 
 [pages.inbounds]
 "allTimeTraffic" = "総トラフィック"

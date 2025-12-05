@@ -154,6 +154,8 @@
 "readDatabaseError" = "讀取資料庫時發生錯誤"
 "getDatabaseError" = "擷取資料庫時發生錯誤"
 "getConfigError" = "擷取設定檔時發生錯誤"
+"sourceCode" = "原始碼"
+"issues" = "問題回饋"
 "betterPanel" = "一個更好的面板"
 "builtOnXray" = "基於 Xray Core 建置"
 "xpanelTitle" = "〔X-Panel面板〕"

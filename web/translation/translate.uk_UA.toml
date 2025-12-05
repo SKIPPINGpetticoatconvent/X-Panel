@@ -150,6 +150,8 @@
 "readDatabaseError" = "Виникла помилка під час читання бази даних"
 "getDatabaseError" = "Виникла помилка під час отримання бази даних"
 "getConfigError" = "Виникла помилка під час отримання файлу конфігурації"
+"sourceCode" = "Вихідний код"
+"issues" = "Проблеми"
 
 [pages.inbounds]
 "allTimeTraffic" = "Загальний трафік"

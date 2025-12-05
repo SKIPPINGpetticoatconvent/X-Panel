@@ -150,6 +150,8 @@
 "readDatabaseError" = "Terjadi kesalahan saat membaca database"
 "getDatabaseError" = "Terjadi kesalahan saat mengambil database"
 "getConfigError" = "Terjadi kesalahan saat mengambil file konfigurasi"
+"sourceCode" = "Kode Sumber"
+"issues" = "Masalah"
 
 [pages.inbounds]
 "allTimeTraffic" = "Total Lalu Lintas"

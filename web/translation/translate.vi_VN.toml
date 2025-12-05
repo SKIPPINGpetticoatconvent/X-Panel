@@ -150,6 +150,8 @@
 "readDatabaseError" = "Lỗi xảy ra khi đọc cơ sở dữ liệu"
 "getDatabaseError" = "Lỗi xảy ra khi truy xuất cơ sở dữ liệu"
 "getConfigError" = "Lỗi xảy ra khi truy xuất tệp cấu hình"
+"sourceCode" = "Mã nguồn"
+"issues" = "Vấn đề"
 
 [pages.inbounds]
 "allTimeTraffic" = "Tổng Lưu Lượng"

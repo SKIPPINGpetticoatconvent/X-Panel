@@ -158,6 +158,8 @@
 "tgPrivateChat" = "TG Private Chat"
 "portCheck" = "Port Check"
 "speedTest" = "Speed Test"
+"sourceCode" = "Source Code"
+"issues" = "Issues"
 
 [pages.inbounds]
 "allTimeTraffic" = "All-time Traffic"

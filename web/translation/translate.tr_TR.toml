@@ -150,6 +150,8 @@
 "readDatabaseError" = "Veritabanı okunurken bir hata oluştu"
 "getDatabaseError" = "Veritabanı alınırken bir hata oluştu"
 "getConfigError" = "Yapılandırma dosyası alınırken bir hata oluştu"
+"sourceCode" = "Kaynak Kod"
+"issues" = "Sorunlar"
 
 [pages.inbounds]
 "allTimeTraffic" = "Toplam Trafik"

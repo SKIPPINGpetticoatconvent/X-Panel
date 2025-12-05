@@ -150,6 +150,8 @@
 "readDatabaseError" = "خطا در خواندن پایگاه داده"
 "getDatabaseError" = "خطا در دریافت پایگاه داده"
 "getConfigError" = "خطا در دریافت فایل پیکربندی"
+"sourceCode" = "کد منبع"
+"issues" = "مسائل"
 
 [pages.inbounds]
 "allTimeTraffic" = "کل ترافیک"

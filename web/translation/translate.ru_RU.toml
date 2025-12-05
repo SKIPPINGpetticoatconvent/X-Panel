@@ -150,6 +150,8 @@
 "readDatabaseError" = "Произошла ошибка при чтении базы данных"
 "getDatabaseError" = "Произошла ошибка при получении базы данных"
 "getConfigError" = "Произошла ошибка при получении конфигурационного файла"
+"sourceCode" = "Исходный код"
+"issues" = "Проблемы"
 
 [pages.inbounds]
 "allTimeTraffic" = "Общий трафик"
