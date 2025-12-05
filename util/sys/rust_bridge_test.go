@@ -255,3 +255,114 @@ func RunInteractiveRustTest() {
 	
 	fmt.Println("✓ 测试完成")
 }
+
+// 测试磁盘使用率获取（Rust 版本）
+func TestGetDiskUsageRust(t *testing.T) {
+	if !IsRustAvailable() {
+		t.Skip("Rust bridge not available")
+	}
+
+	// 测试根目录
+	diskUsage, err := GetDiskUsageRust("/")
+	if err != nil {
+		t.Fatalf("GetDiskUsageRust 失败: %v", err)
+	}
+
+	fmt.Printf("✓ Rust 磁盘使用率 (/):\n")
+	fmt.Printf("   总空间: %d bytes (%.2f GB)\n", diskUsage.Total, float64(diskUsage.Total)/1024/1024/1024)
+	fmt.Printf("   已使用: %d bytes (%.2f GB)\n", diskUsage.Used, float64(diskUsage.Used)/1024/1024/1024)
+	fmt.Printf("   可用: %d bytes (%.2f GB)\n", diskUsage.Free, float64(diskUsage.Free)/1024/1024/1024)
+	
+	// 验证数据合理性
+	if diskUsage.Total == 0 {
+		t.Errorf("磁盘总空间不能为 0")
+	}
+	
+	if diskUsage.Used > diskUsage.Total {
+		t.Errorf("已使用空间 (%d) 不能大于总空间 (%d)", diskUsage.Used, diskUsage.Total)
+	}
+	
+	if diskUsage.Free > diskUsage.Total {
+		t.Errorf("可用空间 (%d) 不能大于总空间 (%d)", diskUsage.Free, diskUsage.Total)
+	}
+	
+	// 计算使用率
+	if diskUsage.Total > 0 {
+		usagePercent := float64(diskUsage.Used) / float64(diskUsage.Total) * 100
+		fmt.Printf("   使用率: %.2f%%\n", usagePercent)
+		
+		if usagePercent < 0 || usagePercent > 100 {
+			t.Errorf("磁盘使用率应该在 0-100 之间: %.2f%%", usagePercent)
+		}
+	}
+	
+	// 测试当前工作目录
+	diskUsage, err = GetDiskUsageRust(".")
+	if err != nil {
+		t.Fatalf("GetDiskUsageRust 失败 (当前目录): %v", err)
+	}
+	
+	fmt.Printf("✓ Rust 磁盘使用率 (.): %.2f%%\n", float64(diskUsage.Used)/float64(diskUsage.Total)*100)
+}
+
+// 测试网络连接信息获取（Rust 版本）
+func TestGetConnectionsRust(t *testing.T) {
+	if !IsRustAvailable() {
+		t.Skip("Rust bridge not available")
+	}
+
+	connections, err := GetConnectionsRust()
+	if err != nil {
+		t.Fatalf("GetConnectionsRust 失败: %v", err)
+	}
+
+	fmt.Printf("✓ Rust 网络连接数: %d\n", len(connections))
+	
+	// 显示前5个连接作为示例
+	maxDisplay := 5
+	if len(connections) < maxDisplay {
+		maxDisplay = len(connections)
+	}
+	
+	for i := 0; i < maxDisplay; i++ {
+		conn := connections[i]
+		protocolStr := "Unknown"
+		if conn.Protocol == 6 {
+			protocolStr = "TCP"
+		} else if conn.Protocol == 17 {
+			protocolStr = "UDP"
+		}
+		
+		fmt.Printf("   连接 %d: %s:%d -> %s:%d [%s] 状态:%d\n",
+			i+1, conn.LocalIP, conn.LocalPort, conn.RemoteIP, conn.RemotePort, protocolStr, conn.State)
+	}
+	
+	if len(connections) > maxDisplay {
+		fmt.Printf("   ... 还有 %d 个连接未显示\n", len(connections)-maxDisplay)
+	}
+	
+	// 验证连接数据结构
+	for i, conn := range connections {
+		if conn.LocalIP == "" {
+			t.Errorf("连接 %d 本地 IP 为空", i)
+		}
+		
+		if conn.RemoteIP == "" {
+			t.Errorf("连接 %d 远程 IP 为空", i)
+		}
+		
+		if conn.LocalPort == 0 {
+			t.Errorf("连接 %d 本地端口为 0", i)
+		}
+		
+		if conn.RemotePort == 0 {
+			t.Errorf("连接 %d 远程端口为 0", i)
+		}
+		
+		if conn.Protocol != 6 && conn.Protocol != 17 {
+			t.Errorf("连接 %d 协议未知: %d", i, conn.Protocol)
+		}
+	}
+	
+	fmt.Printf("✓ 网络连接数据验证通过\n")
+}

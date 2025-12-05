@@ -41,6 +41,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-musl,armv7-unknown-linux-musleabihf,armv6-unknown-linux-musleabihf,i686-unknown-linux-musl,s390x-unknown-linux-gnu
+          components: cargo
+
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
@@ -54,15 +60,15 @@ jobs:
           export GOARCH=${{ matrix.platform }}
           # Use Bootlin prebuilt cross-toolchains (musl 1.2.5 in stable series)
           case "${{ matrix.platform }}" in
-            amd64) BOOTLIN_ARCH="x86-64" ;;
-            arm64) BOOTLIN_ARCH="aarch64" ;;
-            armv7) BOOTLIN_ARCH="armv7-eabihf"; export GOARCH=arm GOARM=7 ;;
-            armv6) BOOTLIN_ARCH="armv6-eabihf"; export GOARCH=arm GOARM=6 ;;
-            armv5) BOOTLIN_ARCH="armv5-eabi"; export GOARCH=arm GOARM=5; export CGO_ENABLED=0 ;;
-            386) BOOTLIN_ARCH="x86-i686" ;;
-            s390x) BOOTLIN_ARCH="s390x-z13" ;;
+            amd64) BOOTLIN_ARCH="x86-64"; RUST_TARGET="x86_64-unknown-linux-musl" ;;
+            arm64) BOOTLIN_ARCH="aarch64"; RUST_TARGET="aarch64-unknown-linux-musl" ;;
+            armv7) BOOTLIN_ARCH="armv7-eabihf"; RUST_TARGET="armv7-unknown-linux-musleabihf"; export GOARCH=arm GOARM=7 ;;
+            armv6) BOOTLIN_ARCH="armv6-eabihf"; RUST_TARGET="armv6-unknown-linux-musleabihf"; export GOARCH=arm GOARM=6 ;;
+            armv5) BOOTLIN_ARCH="armv5-eabi"; RUST_TARGET=""; export GOARCH=arm GOARM=5; export CGO_ENABLED=0 ;;
+            386) BOOTLIN_ARCH="x86-i686"; RUST_TARGET="i686-unknown-linux-musl" ;;
+            s390x) BOOTLIN_ARCH="s390x-z13"; RUST_TARGET="s390x-unknown-linux-gnu" ;;
           esac
-          echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }})"
+          echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }}, rust_target=$RUST_TARGET)"
           TARBALL_BASE="https://toolchains.bootlin.com/downloads/releases/toolchains/$BOOTLIN_ARCH/tarballs/"
           TARBALL_URL=$(curl -fsSL "$TARBALL_BASE" | grep -oE "${BOOTLIN_ARCH}--musl--stable-[^\"]+\\.tar\\.xz" | sort -r | head -n1)
           [ -z "$TARBALL_URL" ] && { echo "Failed to locate Bootlin musl toolchain for arch=$BOOTLIN_ARCH" >&2; exit 1; }
@@ -75,10 +81,25 @@ jobs:
           export CC=$(realpath "$(find "$TOOLCHAIN_DIR/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
           [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_DIR/bin" >&2; exit 1; }
           cd -
-          if [ "${{ matrix.platform }}" = "armv5" ]; then
-            go build -ldflags "-w -s" -o xui-release -v main.go
+          
+          # Compile Rust static library if target is supported
+          if [ -n "$RUST_TARGET" ]; then
+            echo "Compiling Rust library for $RUST_TARGET"
+            cd rust/xpanel-sys
+            export CC_${RUST_TARGET//-/_}=$(which clang || echo "$CC")
+            cargo build --release --target "$RUST_TARGET"
+            cd ../..
+            export CGO_LDFLAGS="-L rust/xpanel-sys/target/$RUST_TARGET/release -lxpanel_sys -lpthread -ldl -lrt -lm"
           else
-            go build -ldflags "-w -s -linkmode external -extldflags '-static'" -o xui-release -v main.go
+            echo "Skipping Rust compilation for unsupported platform ${{ matrix.platform }}"
+            export CGO_LDFLAGS=""
+          fi
+          
+          # Build Go application with Rust integration
+          if [ "${{ matrix.platform }}" = "armv5" ]; then
+            go build -tags rust -ldflags "-w -s $CGO_LDFLAGS" -o xui-release -v main.go
+          else
+            go build -tags rust -ldflags "-w -s -linkmode external -extldflags '-static $CGO_LDFLAGS'" -o xui-release -v main.go
           fi
           file xui-release
           ldd xui-release || echo "Static binary confirmed"
@@ -171,6 +192,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,i686-pc-windows-msvc
+          components: cargo
+
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
@@ -185,10 +212,29 @@ jobs:
           $env:GOOS = "windows"
           $env:GOARCH = "${{ matrix.platform }}"
           # 〔中文注释〕: CGO 在 Windows 下通常不需要，设置为 0
-          $env:CGO_ENABLED = "0"
+          $env:CGO_ENABLED = "1"
+
+          # 〔中文注释〕: 设置 Rust 编译目标
+          if ("${{ matrix.platform }}" -eq "amd64") {
+            $rust_target = "x86_64-pc-windows-msvc"
+          } elseif ("${{ matrix.platform }}" -eq "386") {
+            $rust_target = "i686-pc-windows-msvc"
+          }
+
+          # 〔中文注释〕: 编译 Rust 静态库
+          if ($rust_target) {
+            Write-Host "Compiling Rust library for $rust_target"
+            Set-Location rust/xpanel-sys
+            cargo build --release --target $rust_target
+            Set-Location ../..
+            $env:CGO_LDFLAGS = "-L rust/xpanel-sys/target/$rust_target/release/xpanel_sys.lib -lole32 -luser32 -ladvapi32 -lws2_32 -lkernel32"
+          } else {
+            Write-Host "Skipping Rust compilation for unsupported platform ${{ matrix.platform }}"
+            $env:CGO_LDFLAGS = ""
+          }
 
           # 〔中文注释〕: 执行 Go 编译命令。-o 指定输出文件为 .exe 可执行文件
-          go build -ldflags "-w -s" -o x-ui-release.exe -v main.go
+          go build -tags rust -ldflags "-w -s $env:CGO_LDFLAGS" -o x-ui-release.exe -v main.go
 
           # 〔中文注释〕: 创建用于打包的文件夹
           mkdir x-ui
