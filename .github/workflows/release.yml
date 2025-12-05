@@ -66,27 +66,60 @@ jobs:
             armv6) BOOTLIN_ARCH="armv6-eabihf"; RUST_TARGET="arm-unknown-linux-musleabihf"; export GOARCH=arm GOARM=6 ;;
             armv5) BOOTLIN_ARCH="armv5-eabi"; RUST_TARGET=""; export GOARCH=arm GOARM=5; export CGO_ENABLED=0 ;;
             386) BOOTLIN_ARCH="x86-i686"; RUST_TARGET="i686-unknown-linux-musl" ;;
-            s390x) BOOTLIN_ARCH="s390x-z13"; RUST_TARGET="s390x-unknown-linux-gnu" ;;
+            s390x) 
+              # For s390x, use system gnu toolchain to match Rust target
+              RUST_TARGET="s390x-unknown-linux-gnu";
+              # Install s390x cross-compilation toolchain and dependencies
+              sudo apt-get update -qq
+              sudo apt-get install -y gcc-s390x-linux-gnu g++-s390x-linux-gnu libc6-dev-s390x-cross
+              export CC=s390x-linux-gnu-gcc
+              export CXX=s390x-linux-gnu-g++
+              export AR=s390x-linux-gnu-ar
+              export STRIP=s390x-linux-gnu-strip
+              # Set library paths for s390x
+              export LIBRARY_PATH=/usr/s390x-linux-gnu/lib:$LIBRARY_PATH
+            ;;
           esac
-          echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }}, rust_target=$RUST_TARGET)"
-          TARBALL_BASE="https://toolchains.bootlin.com/downloads/releases/toolchains/$BOOTLIN_ARCH/tarballs/"
-          TARBALL_URL=$(curl -fsSL "$TARBALL_BASE" | grep -oE "${BOOTLIN_ARCH}--musl--stable-[^\"]+\\.tar\\.xz" | sort -r | head -n1)
-          [ -z "$TARBALL_URL" ] && { echo "Failed to locate Bootlin musl toolchain for arch=$BOOTLIN_ARCH" >&2; exit 1; }
-          echo "Downloading: $TARBALL_URL"
-          cd /tmp
-          curl -fL -sS -o "$(basename "$TARBALL_URL")" "$TARBALL_BASE/$TARBALL_URL"
-          tar -xf "$(basename "$TARBALL_URL")"
-          TOOLCHAIN_DIR=$(find . -maxdepth 1 -type d -name "${BOOTLIN_ARCH}--musl--stable-*" | head -n1)
-          export PATH="$(realpath "$TOOLCHAIN_DIR")/bin:$PATH"
-          export CC=$(realpath "$(find "$TOOLCHAIN_DIR/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
-          [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_DIR/bin" >&2; exit 1; }
-          cd -
+          
+          # For non-s390x platforms, use Bootlin toolchain as before
+          if [ "${{ matrix.platform }}" != "s390x" ]; then
+            echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }}, rust_target=$RUST_TARGET)"
+            TARBALL_BASE="https://toolchains.bootlin.com/downloads/releases/toolchains/$BOOTLIN_ARCH/tarballs/"
+            TARBALL_URL=$(curl -fsSL "$TARBALL_BASE" | grep -oE "${BOOTLIN_ARCH}--musl--stable-[^\"]+\\.tar\\.xz" | sort -r | head -n1)
+            [ -z "$TARBALL_URL" ] && { echo "Failed to locate Bootlin musl toolchain for arch=$BOOTLIN_ARCH" >&2; exit 1; }
+            echo "Downloading: $TARBALL_URL"
+            cd /tmp
+            curl -fL -sS -o "$(basename "$TARBALL_URL")" "$TARBALL_BASE/$TARBALL_URL"
+            tar -xf "$(basename "$TARBALL_URL")"
+            TOOLCHAIN_DIR=$(find . -maxdepth 1 -type d -name "${BOOTLIN_ARCH}--musl--stable-*" | head -n1)
+            export PATH="$(realpath "$TOOLCHAIN_DIR")/bin:$PATH"
+            export CC=$(realpath "$(find "$TOOLCHAIN_DIR/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
+            [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_DIR/bin" >&2; exit 1; }
+            cd -
+          fi
+          
+          echo "Environment setup complete for platform=${{ matrix.platform }}"
+          echo "CC=$CC"
+          echo "CXX=$CXX"
+          echo "RUST_TARGET=$RUST_TARGET"
           
           # Compile Rust static library if target is supported
           if [ -n "$RUST_TARGET" ]; then
             echo "Compiling Rust library for $RUST_TARGET"
             cd rust/xpanel-sys
-            export CC_${RUST_TARGET//-/_}=$(which clang || echo "$CC")
+            
+            # Set cross-compilation linker for Rust
+            if [ "$RUST_TARGET" = "s390x-unknown-linux-gnu" ]; then
+              export CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc
+              export CC_s390x_unknown_linux_gnu=s390x-linux-gnu-gcc
+              export CXX_s390x_unknown_linux_gnu=s390x-linux-gnu-g++
+              export AR_s390x_unknown_linux_gnu=s390x-linux-gnu-ar
+              export STRIP_s390x_unknown_linux_gnu=s390x-linux-gnu-strip
+              export RUSTFLAGS="-C link-arg=-s"
+            else
+              export CC_${RUST_TARGET//-/_}=$(which clang || echo "$CC")
+            fi
+            
             cargo build --release --target "$RUST_TARGET"
             cd ../..
             export CGO_LDFLAGS="-L rust/xpanel-sys/target/$RUST_TARGET/release -lxpanel_sys -lpthread -ldl -lrt -lm"
