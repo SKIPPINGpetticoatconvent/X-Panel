@@ -233,13 +233,13 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		logger.Warning("can not find io counters")
 	}
 
-	// TCP/UDP connections
-	status.TcpCount, err = sys.GetTCPCount()
+	// TCP/UDP connections (使用 Rust 实现)
+	status.TcpCount, err = sys.GetTCPCountRust()
 	if err != nil {
 		logger.Warning("get tcp connections failed:", err)
 	}
 
-	status.UdpCount, err = sys.GetUDPCount()
+	status.UdpCount, err = sys.GetUDPCountRust()
 	if err != nil {
 		logger.Warning("get udp connections failed:", err)
 	}

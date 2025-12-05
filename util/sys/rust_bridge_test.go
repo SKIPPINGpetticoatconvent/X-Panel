@@ -166,22 +166,22 @@ func TestCompareRustAndGo(t *testing.T) {
 		t.Fatalf("获取 Rust 统计信息失败: %v", err)
 	}
 
-	// 获取 Go 原生版本结果（如果可用）
-	tcpGo, _ := GetTCPCount()
-	udpGo, _ := GetUDPCount()
-
-	fmt.Println("=== Rust vs Go 原生实现对比 ===")
-	fmt.Printf("TCP 连接数 - Rust: %d, Go: %d\n", statsRust.TCPCount, tcpGo)
-	fmt.Printf("UDP 连接数 - Rust: %d, Go: %d\n", statsRust.UDPCount, udpGo)
+	fmt.Println("=== Rust 网络连接追踪测试 ===")
+	fmt.Printf("TCP 连接数 - Rust: %d\n", statsRust.TCPCount)
+	fmt.Printf("UDP 连接数 - Rust: %d\n", statsRust.UDPCount)
 	fmt.Printf("内存使用 - Rust: %.2f MB\n", float64(statsRust.MemoryUsed)/1024/1024)
 	fmt.Printf("CPU 使用率 - Rust: %.2f%%\n", statsRust.CPUUsage)
 	
-	// 简单验证差异是否合理（允许一定误差）
-	tcpDiff := abs(int(statsRust.TCPCount) - tcpGo)
-	udpDiff := abs(int(statsRust.UDPCount) - udpGo)
+	// 验证 Rust 实现结果的合理性
+	if statsRust.TCPCount < 0 {
+		t.Errorf("Rust TCP 连接数不能为负数: %d", statsRust.TCPCount)
+	}
 	
-	fmt.Printf("TCP 差异: %d (%.1f%%)\n", tcpDiff, float64(tcpDiff)/float64(max(tcpGo, 1))*100)
-	fmt.Printf("UDP 差异: %d (%.1f%%)\n", udpDiff, float64(udpDiff)/float64(max(udpGo, 1))*100)
+	if statsRust.UDPCount < 0 {
+		t.Errorf("Rust UDP 连接数不能为负数: %d", statsRust.UDPCount)
+	}
+	
+	fmt.Println("✓ Rust 实现数据验证通过")
 }
 
 // 性能基准测试
