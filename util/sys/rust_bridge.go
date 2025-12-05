@@ -205,7 +205,8 @@ func GetConnectionsRust() ([]Connection, error) {
 
 	// 转换为 Go slice
 	var connections []Connection
-	header := (*[1 << 30]C.ConnectionInfo)(unsafe.Pointer(cList.data))[:cList.len:cList.len]
+	// 使用安全的slice访问方式，避免在32位系统上分配过大数组
+	header := (*C.ConnectionInfo)(unsafe.Pointer(cList.data))
 	
 	for i := 0; i < int(cList.len); i++ {
 		conn := header[i]
