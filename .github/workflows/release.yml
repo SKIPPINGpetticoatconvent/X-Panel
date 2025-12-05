@@ -246,7 +246,7 @@ jobs:
           $env:GOOS = "windows"
           $env:GOARCH = "${{ matrix.platform }}"
           # 〔中文注释〕: CGO 在 Windows 下通常不需要，设置为 0
-          $env:CGO_ENABLED = "1"
+          $env:CGO_ENABLED = "0"
 
           # 〔中文注释〕: 设置 Rust 编译目标
           if ("${{ matrix.platform }}" -eq "amd64") {
