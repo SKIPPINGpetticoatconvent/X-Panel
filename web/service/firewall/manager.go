@@ -12,31 +12,49 @@ func NewFirewallService() (FirewallService, error) {
 	// 优先级：Firewalld > UFW > iptables
 	firewallServices := []struct {
 		name     string
-		checkCmd string
 		create   func() FirewallService
+		isRunning func() bool
 	}{
 		{
 			name:     "Firewalld",
-			checkCmd: "firewall-cmd",
 			create:   func() FirewallService { return NewFirewalldService() },
+			isRunning: func() bool { return NewFirewalldService().IsRunning() },
 		},
 		{
 			name:     "UFW",
-			checkCmd: "ufw",
 			create:   func() FirewallService { return NewUfwService() },
+			isRunning: func() bool { return NewUfwService().IsRunning() },
 		},
 		{
 			name:     "iptables",
-			checkCmd: "iptables",
 			create:   func() FirewallService { return NewIptablesService() },
+			isRunning: func() bool { return NewIptablesService().IsRunning() },
 		},
 	}
 
+	// 第一阶段：检查正在运行的服务
 	for _, service := range firewallServices {
-		if isCommandAvailable(service.checkCmd) {
-			logger.Infof("检测到系统防火墙: %s", service.name)
+		if service.isRunning() {
+			logger.Infof("检测到正在运行的防火墙服务: %s", service.name)
 			return service.create(), nil
 		}
+	}
+
+	// 第二阶段：如果没有服务正在运行，检查命令是否存在
+	// 优先级：Firewalld > UFW > iptables
+	if isCommandAvailable("firewall-cmd") {
+		logger.Infof("检测到系统防火墙: Firewalld")
+		return NewFirewalldService(), nil
+	}
+	
+	if isCommandAvailable("ufw") {
+		logger.Infof("检测到系统防火墙: UFW")
+		return NewUfwService(), nil
+	}
+	
+	if isCommandAvailable("iptables") {
+		logger.Infof("检测到系统防火墙: iptables")
+		return NewIptablesService(), nil
 	}
 
 	// 如果都没有找到，返回一个模拟的iptables服务作为兜底

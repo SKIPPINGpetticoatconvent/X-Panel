@@ -18,6 +18,7 @@ type InboundController struct {
 }
 
 func NewInboundController(g *gin.RouterGroup) *InboundController {
+	// 通过全局函数获取服务实例
 	a := &InboundController{}
 	a.initRouter(g)
 	return a
@@ -107,12 +108,20 @@ func (a *InboundController) addInbound(c *gin.Context) {
 	}
 
 	needRestart := false
-	inbound, needRestart, err = a.inboundService.AddInbound(inbound)
+	var firewallWarning string
+	inbound, needRestart, firewallWarning, err = a.inboundService.AddInbound(inbound)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
-	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundCreateSuccess"), inbound, nil)
+	
+	// 构建响应消息，包含警告信息
+	responseMessage := I18nWeb(c, "pages.inbounds.toasts.inboundCreateSuccess")
+	if firewallWarning != "" {
+		responseMessage += "\n\n⚠️ " + firewallWarning
+	}
+	
+	jsonMsgObj(c, responseMessage, inbound, nil)
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
@@ -319,8 +328,16 @@ func (a *InboundController) importInbound(c *gin.Context) {
 	}
 
 	needRestart := false
-	inbound, needRestart, err = a.inboundService.AddInbound(inbound)
-	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundCreateSuccess"), inbound, err)
+	var firewallWarning string
+	inbound, needRestart, firewallWarning, err = a.inboundService.AddInbound(inbound)
+	
+	// 构建响应消息，包含警告信息
+	responseMessage := I18nWeb(c, "pages.inbounds.toasts.inboundCreateSuccess")
+	if firewallWarning != "" {
+		responseMessage += "\n\n⚠️ " + firewallWarning
+	}
+	
+	jsonMsgObj(c, responseMessage, inbound, err)
 	if err == nil && needRestart {
 		a.xrayService.SetToNeedRestart()
 	}

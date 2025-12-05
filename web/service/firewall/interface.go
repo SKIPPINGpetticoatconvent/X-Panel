@@ -1,5 +1,11 @@
 package firewall
 
+// 协议常量
+const (
+	ProtocolTCP = "tcp"
+	ProtocolUDP = "udp"
+)
+
 // FirewallService 定义防火墙操作的标准接口
 type FirewallService interface {
 	// Name 返回防火墙的名称

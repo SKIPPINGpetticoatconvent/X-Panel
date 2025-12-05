@@ -38,7 +38,9 @@ func (f *FirewalldService) IsRunning() bool {
 		return false
 	}
 	
-	return strings.Contains(string(output), "running")
+	// 检查输出是否包含 "running" 状态
+	outputStr := strings.TrimSpace(string(output))
+	return strings.Contains(outputStr, "running")
 }
 
 // ensureFirewalldInstalled 检查并安装 Firewalld
@@ -103,7 +105,7 @@ func (f *FirewalldService) openDefaultPorts() error {
 // openSinglePort 放行单个端口
 func (f *FirewalldService) openSinglePort(port int, protocol string) error {
 	if protocol == "" {
-		protocol = "tcp"
+		protocol = ProtocolTCP
 	}
 	
 	// 检查端口是否已开放
@@ -136,7 +138,7 @@ func (f *FirewalldService) openPortWithProtocols(port int, protocol string) erro
 		if err := f.openSinglePort(port, "tcp"); err != nil {
 			return fmt.Errorf("放行 TCP 端口 %d 失败: %v", port, err)
 		}
-		if err := f.openSinglePort(port, "udp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolUDP); err != nil {
 			return fmt.Errorf("放行 UDP 端口 %d 失败: %v", port, err)
 		}
 		logger.Infof("端口 %d 已同时开放 TCP 和 UDP", port)
@@ -192,7 +194,7 @@ func (f *FirewalldService) OpenPort(port int, protocol string) error {
 // ClosePort 关闭指定端口
 func (f *FirewalldService) ClosePort(port int, protocol string) error {
 	if protocol == "" {
-		protocol = "tcp"
+		protocol = ProtocolTCP
 	}
 	
 	// 移除端口规则

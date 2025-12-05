@@ -13,13 +13,15 @@ import (
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/xray"
+	"x-ui/web/service/firewall"
 
 	"gorm.io/gorm"
 )
 
 type InboundService struct {
-	xrayApi xray.XrayAPI
-	tgService TelegramService
+	xrayApi        xray.XrayAPI
+	tgService      TelegramService
+	firewallService firewall.FirewallService
 }
 
 // 【新增方法】: 用于从外部注入 XrayAPI 实例
@@ -30,6 +32,11 @@ func (s *InboundService) SetXrayAPI(api xray.XrayAPI) {
 // 【新增方法】: 用于从外部注入 TelegramService 实例
 func (s *InboundService) SetTelegramService(tgService TelegramService) {
     s.tgService = tgService
+}
+
+// 【新增方法】: 用于从外部注入防火墙服务实例
+func (s *InboundService) SetFirewallService(firewallService firewall.FirewallService) {
+    s.firewallService = firewallService
 }
 
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
@@ -165,29 +172,29 @@ func (s *InboundService) checkEmailExistForInbound(inbound *model.Inbound) (stri
 }
 
 // AddInbound adds a new inbound to db
-func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
+func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, bool, string, error) {
 	// 中文注释：检查端口是否已存在
 	exist, err := s.checkPortExist(inbound.Listen, inbound.Port, 0)
 	if err != nil {
-		return inbound, false, err
+		return inbound, false, "", err
 	}
 	if exist {
-		return inbound, false, common.NewError("Port already exists:", inbound.Port)
+		return inbound, false, "", common.NewError("Port already exists:", inbound.Port)
 	}
 
 	// 中文注释：检查邮箱是否重复
 	existEmail, err := s.checkEmailExistForInbound(inbound)
 	if err != nil {
-		return inbound, false, err
+		return inbound, false, "", err
 	}
 	if existEmail != "" {
-		return inbound, false, common.NewError("Duplicate email:", existEmail)
+		return inbound, false, "", common.NewError("Duplicate email:", existEmail)
 	}
 
 	// 中文注释：获取入站规则中的客户端信息
 	clients, err := s.GetClients(inbound)
 	if err != nil {
-		return inbound, false, err
+		return inbound, false, "", err
 	}
 
 	// 中文注释：确保客户端设置中包含创建和更新时间戳
@@ -219,15 +226,15 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		switch inbound.Protocol {
 		case "trojan":
 			if client.Password == "" {
-				return inbound, false, common.NewError("empty client ID")
+				return inbound, false, "", common.NewError("empty client ID")
 			}
 		case "shadowsocks":
 			if client.Email == "" {
-				return inbound, false, common.NewError("empty client ID")
+				return inbound, false, "", common.NewError("empty client ID")
 			}
 		default:
 			if client.ID == "" {
-				return inbound, false, common.NewError("empty client ID")
+				return inbound, false, "", common.NewError("empty client ID")
 			}
 		}
 	}
@@ -239,7 +246,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	var existingIDs []int
 	//    使用 Pluck 方法可以更高效地只查询出 id 这一列，而不是整个对象
 	if err := database.GetDB().Model(&model.Inbound{}).Pluck("id", &existingIDs).Error; err != nil {
-		return inbound, false, err
+		return inbound, false, "", err
 	}
 
 	// 2. 对所有已存在的 ID 进行升序排序
@@ -315,7 +322,24 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 			}
 		}
 	} else {
-		return inbound, false, err
+		return inbound, false, "", err
+	}
+
+	// 【新增】: 自动防火墙端口放行逻辑
+	var firewallWarning string
+	if s.firewallService != nil {
+		// 尝试放行端口，并获取警告信息
+		if err := s.firewallService.OpenPort(inbound.Port, ""); err != nil {
+			// 端口放行失败，生成警告信息但不中断主流程
+			firewallWarning = fmt.Sprintf("自动放行端口 %d 失败，请务必手动到您的 **VPS 防火墙**（例如 ufw、security group）放行该端口，否则入站将无法连接。错误详情：%v", inbound.Port, err)
+			logger.Warningf("自动放行端口 %d 失败: %v", inbound.Port, err)
+		} else {
+			logger.Infof("成功自动放行端口 %d", inbound.Port)
+		}
+	} else {
+		// 如果没有防火墙服务，生成警告信息
+		firewallWarning = fmt.Sprintf("防火墙服务未配置，请手动放行端口 %d，否则入站将无法连接", inbound.Port)
+		logger.Info("防火墙服务未配置，跳过自动端口放行")
 	}
 
 	// 中文注释：如果入站规则是启用的，则尝试通过 API 热加载到 Xray-core
@@ -338,8 +362,8 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		s.xrayApi.Close()
 	}
 
-	// 中文注释：返回创建好的入站对象、是否需要重启以及错误信息
-	return inbound, needRestart, err
+	// 中文注释：返回创建好的入站对象、是否需要重启、警告信息以及错误信息
+	return inbound, needRestart, firewallWarning, err
 }
 
 func (s *InboundService) DelInbound(id int) (bool, error) {

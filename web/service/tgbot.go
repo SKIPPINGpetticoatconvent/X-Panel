@@ -3274,7 +3274,19 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	inboundService := InboundService{}
 	inboundService.SetTelegramService(t) // 将当前的 bot 实例注入
 
-	createdInbound, _, err := inboundService.AddInbound(newInbound)
+	createdInbound, _, warn, err := inboundService.AddInbound(newInbound)
+
+
+	if err != nil {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))
+		return
+	}
+
+
+	// 【新增功能】：如果端口放行失败，发送警告
+	if warn != "" {
+		t.SendMsgToTgbot(chatId, "⚠️ "+warn)
+	}
 
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))

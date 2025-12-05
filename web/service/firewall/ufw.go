@@ -38,7 +38,17 @@ func (f *UfwService) IsRunning() bool {
 		return false
 	}
 	
-	return strings.Contains(string(output), "Status: active")
+	// 解析输出，确认状态为 "active"
+	outputStr := strings.TrimSpace(string(output))
+	lines := strings.Split(outputStr, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, "Status:") && strings.Contains(line, "active") {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // ensureUfwInstalled 检查并安装 UFW
@@ -71,7 +81,7 @@ func (f *UfwService) ensureUfwInstalled() error {
 // openDefaultPorts 放行默认端口
 func (f *UfwService) openDefaultPorts() error {
 	for _, port := range f.defaultPorts {
-		if err := f.openSinglePort(port, "tcp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolTCP); err != nil {
 			return fmt.Errorf("放行默认端口 %d 失败: %v", port, err)
 		}
 	}
@@ -81,7 +91,7 @@ func (f *UfwService) openDefaultPorts() error {
 // openSinglePort 放行单个端口
 func (f *UfwService) openSinglePort(port int, protocol string) error {
 	if protocol == "" {
-		protocol = "tcp"
+		protocol = ProtocolTCP
 	}
 	
 	// 检查规则是否已存在
@@ -111,10 +121,10 @@ func (f *UfwService) openPortWithProtocols(port int, protocol string) error {
 	// 如果 protocol 为空、"both" 或 "tcp/udp"，则同时开放 TCP 和 UDP
 	if protocol == "" || protocol == "both" || protocol == "tcp/udp" {
 		// 同时开放 TCP 和 UDP
-		if err := f.openSinglePort(port, "tcp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolTCP); err != nil {
 			return fmt.Errorf("放行 TCP 端口 %d 失败: %v", port, err)
 		}
-		if err := f.openSinglePort(port, "udp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolUDP); err != nil {
 			return fmt.Errorf("放行 UDP 端口 %d 失败: %v", port, err)
 		}
 		logger.Infof("端口 %d 已同时开放 TCP 和 UDP", port)
@@ -176,7 +186,7 @@ func (f *UfwService) OpenPort(port int, protocol string) error {
 // ClosePort 关闭指定端口
 func (f *UfwService) ClosePort(port int, protocol string) error {
 	if protocol == "" {
-		protocol = "tcp"
+		protocol = ProtocolTCP
 	}
 	
 	cmd := exec.Command("ufw", "delete", "allow", fmt.Sprintf("%d/%s", port, protocol))

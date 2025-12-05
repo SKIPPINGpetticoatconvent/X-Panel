@@ -28,8 +28,8 @@ func (f *IptablesService) Name() string {
 
 // IsRunning 检查防火墙服务是否正在运行
 func (f *IptablesService) IsRunning() bool {
-	// iptables 总是可用的，因为它直接在内核中运行
-	cmd := exec.Command("iptables", "--version")
+	// 检查 iptables -L 是否能成功执行
+	cmd := exec.Command("iptables", "-L")
 	if err := cmd.Run(); err != nil {
 		return false
 	}
@@ -39,7 +39,9 @@ func (f *IptablesService) IsRunning() bool {
 		return false
 	}
 	
-	return strings.Contains(string(output), "iptables")
+	// 检查输出是否包含有效的链信息
+	outputStr := strings.TrimSpace(string(output))
+	return strings.Contains(outputStr, "Chain") && len(outputStr) > 0
 }
 
 // ensureIptablesAvailable 检查 iptables 是否可用
@@ -62,7 +64,7 @@ func (f *IptablesService) ensureIptablesAvailable() error {
 // openDefaultPorts 放行默认端口
 func (f *IptablesService) openDefaultPorts() error {
 	for _, port := range f.defaultPorts {
-		if err := f.openSinglePort(port, "tcp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolTCP); err != nil {
 			return fmt.Errorf("放行默认端口 %d 失败: %v", port, err)
 		}
 	}
@@ -72,7 +74,7 @@ func (f *IptablesService) openDefaultPorts() error {
 // openSinglePort 放行单个端口
 func (f *IptablesService) openSinglePort(port int, protocol string) error {
 	if protocol == "" {
-		protocol = "tcp"
+		protocol = ProtocolTCP
 	}
 	
 	// 检查规则是否已存在
@@ -99,10 +101,10 @@ func (f *IptablesService) openPortWithProtocols(port int, protocol string) error
 	// 如果 protocol 为空、"both" 或 "tcp/udp"，则同时开放 TCP 和 UDP
 	if protocol == "" || protocol == "both" || protocol == "tcp/udp" {
 		// 同时开放 TCP 和 UDP
-		if err := f.openSinglePort(port, "tcp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolTCP); err != nil {
 			return fmt.Errorf("放行 TCP 端口 %d 失败: %v", port, err)
 		}
-		if err := f.openSinglePort(port, "udp"); err != nil {
+		if err := f.openSinglePort(port, ProtocolUDP); err != nil {
 			return fmt.Errorf("放行 UDP 端口 %d 失败: %v", port, err)
 		}
 		logger.Infof("端口 %d 已同时开放 TCP 和 UDP", port)
@@ -156,7 +158,7 @@ func (f *IptablesService) OpenPort(port int, protocol string) error {
 // ClosePort 关闭指定端口
 func (f *IptablesService) ClosePort(port int, protocol string) error {
 	if protocol == "" {
-		protocol = "tcp"
+		protocol = ProtocolTCP
 	}
 	
 	// 移除规则

@@ -68,8 +68,8 @@ func runWebServer() {
 	serverService := service.ServerService{
 		FirewallService: firewallService,
 	}
-	// 还需要 InboundService 等，按需添加
-	inboundService := service.InboundService{}
+	// 【新增】: 创建全局可访问的服务实例
+	var inboundService = service.InboundService{}
 	lastStatus := service.Status{}
 
 	// 创建 Xray API 实例
@@ -100,6 +100,8 @@ func runWebServer() {
 	serverService.SetTelegramService(tgBotService)
 	//    同理，也为 InboundService 注入
 	inboundService.SetTelegramService(tgBotService)
+	// 【新增】: 注入防火墙服务到 InboundService
+	inboundService.SetFirewallService(firewallService)
 	
 	var server *web.Server
 	
