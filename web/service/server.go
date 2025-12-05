@@ -17,13 +17,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
 	"x-ui/config"
 	"x-ui/database"
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/util/sys"
+	"x-ui/web/service/firewall"
 	"x-ui/xray"
 
 	"github.com/google/uuid"
@@ -94,12 +94,13 @@ type Release struct {
 }
 
 type ServerService struct {
-	xrayService    XrayService
-	inboundService InboundService
-	tgService      TelegramService
-	cachedIPv4     string
-	cachedIPv6     string
-	noIPv6         bool
+	xrayService     XrayService
+	inboundService  InboundService
+	tgService       TelegramService
+	cachedIPv4      string
+	cachedIPv6      string
+	noIPv6          bool
+	FirewallService firewall.FirewallService // 新增防火墙服务字段
 }
 
 // 【新增方法】: 用于从外部注入 TelegramService 实例
@@ -1251,75 +1252,20 @@ func (s *ServerService) InstallSubconverter() error {
 }
 
 // openSubconverterPorts 检查/安装 ufw 并放行 8000 和 15268 端口
+// 【重构后】: 使用新的防火墙服务替代原始的 Shell 脚本逻辑
 func (s *ServerService) openSubconverterPorts() error {
-	// 【中文注释】: Shell 脚本更新，增加了默认端口列表和相应的放行逻辑。
-	shellCommand := `
-	PORTS_TO_OPEN="8000 15268"
-	# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
-	DEFAULT_PORTS="22 80 443 13688 8443"
+	// 订阅转换所需的端口列表
+	subconverterPorts := []int{8000, 15268}
 	
-	echo "脚本启动：正在为订阅转换服务配置防火墙..."
-
-	# 1. 检查/安装 ufw
-	if ! command -v ufw &>/dev/null; then
-		echo "ufw 防火墙未安装，正在安装..."
-		# 静默更新和安装
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
-		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败或权限不足。"; exit 1; fi
-	fi
-
-	# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
-	echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
-	for p in $DEFAULT_PORTS; do
-		# 检查规则是否已存在，不存在时才添加，避免重复
-		if ! ufw status | grep -qw "$p/tcp"; then
-			echo "端口 $p/tcp 未放行，正在添加规则..."
-			ufw allow $p/tcp >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
-		else
-			echo "端口 $p/tcp 规则已存在，跳过。"
-		fi
-	done
-	echo "✅ 基础服务端口检查完毕。"
-
-
-	# 3. 放行 Subconverter 自身需要的端口
-	echo "正在检查并放行订阅转换服务端口: $PORTS_TO_OPEN"
-	for port in $PORTS_TO_OPEN; do
-		if ! ufw status | grep -qw "$port"; then
-			echo "正在执行 ufw allow $port..."
-			ufw allow $port >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $port 放行失败。"; exit 1; fi
-		else
-			echo "端口 $port 规则已存在，跳过。"
-		fi
-	done
-
-	# 4. 检查/激活防火墙
-	if ! ufw status | grep -q "Status: active"; then
-		echo "ufw 状态：未激活。正在尝试激活..."
-		ufw --force enable
-		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
-	fi
-    
-    echo "✅ 所有端口 ($DEFAULT_PORTS $PORTS_TO_OPEN) 已成功放行/检查。"
-    exit 0
-	`
-
-    // 使用 /bin/bash -c 执行命令，并捕获输出
-	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
-	output, err := cmd.CombinedOutput()
-	logOutput := string(output)
-	
-	// 记录日志，无论成功与否
-	logger.Infof("执行 Subconverter 端口放行命令结果:\n%s", logOutput)
-
-	if err != nil {
-        // 如果 Shell 命令返回非零退出码，则返回错误
-		return fmt.Errorf("ufw 端口放行失败: %v. 脚本输出: %s", err, logOutput)
+	// 依次放行所有需要的端口（默认同时开放 TCP 和 UDP）
+	for _, port := range subconverterPorts {
+		err := s.FirewallService.OpenPort(port, "")
+		if err != nil {
+			return fmt.Errorf("放行订阅转换端口 %d 失败: %v", port, err)
+		}
+		logger.Infof("订阅转换端口 %d 已成功放行", port)
 	}
-
+	
 	return nil
 }
 
@@ -1328,6 +1274,7 @@ func (s *ServerService) openSubconverterPorts() error {
 // OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
 // 〔中文注释〕: 整个函数逻辑被放入一个 go func() 协程中，实现异步后台执行。
 // 〔中文注释〕: 函数签名不再返回 error，因为它会立即返回，无法得知后台任务的最终结果。
+// 【重构后】: 使用新的防火墙服务替代原始的 Shell 脚本逻辑
 func (s *ServerService) OpenPort(port string) {
 	// 〔中文注释〕: 启动一个新的协程来处理耗时任务，这样 HTTP 请求可以立刻返回。
 	go func() {
@@ -1339,75 +1286,19 @@ func (s *ServerService) OpenPort(port string) {
 			return
 		}
 
-		// 2. 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
-		// 【中文注释】: 此处同样增加了默认端口的定义和放行逻辑。
-		shellCommand := fmt.Sprintf(`
-		PORT_TO_OPEN=%d
-		# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
-		DEFAULT_PORTS="22 80 443 13688 8443"
+		// 2. 使用新的防火墙服务异步放行端口（默认同时开放 TCP 和 UDP）
+		// 使用异步方法，以便不会阻塞协程
+		isSuccess, err := s.FirewallService.OpenPortAsync(portInt, "")
 		
-		echo "正在为入站配置自动检查并放行端口..."
-
-		# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
-		if ! command -v ufw &>/dev/null; then
-			echo "ufw 防火墙未安装，正在安装..."
-			# 使用绝对路径执行 apt-get，避免 PATH 问题
-			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
-		fi
-
-		# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
-		echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
-		for p in $DEFAULT_PORTS; do
-			if ! ufw status | grep -qw "$p/tcp"; then
-				echo "端口 $p/tcp 未放行，正在添加规则..."
-				ufw allow $p/tcp >/dev/null
-				if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
-			else
-				echo "端口 $p/tcp 规则已存在，跳过。"
-			fi
-		done
-		echo "✅ 基础服务端口检查完毕。"
-
-		# 3. 放行前端指定的端口 (TCP/UDP)
-		echo "正在检查【入站配置】并放行指定端口 $PORT_TO_OPEN..."
-		if ! ufw status | grep -qw "$PORT_TO_OPEN"; then
-			echo "正在执行 ufw allow $PORT_TO_OPEN..."
-			ufw allow $PORT_TO_OPEN >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
-		else
-			echo "端口 $PORT_TO_OPEN 规则已存在，跳过。"
-		fi
-
-		# 4. 检查/激活防火墙
-		if ! ufw status | grep -q "Status: active"; then
-			echo "ufw 状态：未激活。正在尝试激活..."
-			ufw --force enable
-			if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
-		fi
-		echo "✅ 端口 $PORT_TO_OPEN 及所有基础端口已成功放行/检查。"
-		`, portInt) // 使用转换后的 portInt
-
-		// 3. 使用 exec.CommandContext 运行命令
-		// 添加 70 秒超时，防止命令挂起导致 HTTP 连接断开
-		ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
-		defer cancel() // 确保 context 在函数退出时被取消
-
-		cmd := exec.CommandContext(ctx, "/bin/bash", "-c", shellCommand)
-
-		// 4. 捕获命令的输出
-		output, err := cmd.CombinedOutput()
-
-		// 5. 记录日志，以便诊断
-		logOutput := strings.TrimSpace(string(output))
-		logger.Infof("执行 ufw 端口放行命令（端口 %s）结果：\n%s", port, logOutput)
-
-		// 〔中文注释〕: 这里的错误处理现在只用于在后台记录日志。
+		// 3. 记录日志，以便诊断
 		if err != nil {
 			errorMsg := fmt.Sprintf("后台执行端口 %s 自动放行失败。错误: %v", port, err)
 			logger.Error(errorMsg)
 			// 〔可选〕: 未来可以在这里加入 Telegram 机器人通知等功能，来通知管理员任务失败。
+		} else if isSuccess {
+			logger.Infof("端口 %s 已成功放行", port)
+		} else {
+			logger.Warningf("端口 %s 放行操作未完成或超时", port)
 		}
 	}()
 }

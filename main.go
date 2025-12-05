@@ -22,6 +22,7 @@ import (
 	"x-ui/web"
 	"x-ui/web/global"
 	"x-ui/web/service"
+	"x-ui/web/service/firewall"
 	"x-ui/xray"
 
 	"github.com/joho/godotenv"
@@ -57,7 +58,11 @@ func runWebServer() {
 	// 〔中文注释〕: 1. 初始化所有需要的服务实例
 	xrayService := service.XrayService{}
 	settingService := service.SettingService{}
-	serverService := service.ServerService{}
+	// 初始化防火墙服务
+	firewallService, _ := firewall.NewFirewallService()
+	serverService := service.ServerService{
+		FirewallService: firewallService,
+	}
 	// 还需要 InboundService 等，按需添加
 	inboundService := service.InboundService{}
 	lastStatus := service.Status{}

@@ -28,6 +28,7 @@ import (
 	"x-ui/util/common"
 	"x-ui/web/global"
 	"x-ui/web/locale"
+	"x-ui/web/service/firewall"
 	"x-ui/xray"
 
 	"github.com/google/uuid"
@@ -93,11 +94,12 @@ const (
 )
 
 type Tgbot struct {
-	inboundService *InboundService
-	settingService *SettingService
-	serverService  *ServerService
-	xrayService    *XrayService
-	lastStatus     *Status
+	inboundService  *InboundService
+	settingService  *SettingService
+	serverService   *ServerService
+	xrayService     *XrayService
+	lastStatus      *Status
+	firewallService firewall.FirewallService // 新增防火墙服务字段
 }
 
 // 【新增】: GetRealityDestinations 方法 - 提供统一的 SNI 域名列表
@@ -132,12 +134,14 @@ func NewTgBot(
 	xrayService *XrayService,
 	lastStatus *Status,
 ) *Tgbot {
+	firewallService, _ := firewall.NewFirewallService()
 	return &Tgbot{
-		inboundService: inboundService,
-		settingService: settingService,
-		serverService:  serverService,
-		xrayService:    xrayService,
-		lastStatus:     lastStatus,
+		inboundService:  inboundService,
+		settingService:  settingService,
+		serverService:   serverService,
+		xrayService:     xrayService,
+		lastStatus:      lastStatus,
+		firewallService: firewallService,
 	}
 }
 
@@ -3981,79 +3985,12 @@ func (t *Tgbot) GetDomain() (string, error) {
 }
 
 // openPortWithUFW 检查/安装 ufw，放行一系列默认端口，并放行指定的端口
+// 【重构后】: 使用新的防火墙服务替代原始的 Shell 脚本逻辑
 func (t *Tgbot) openPortWithUFW(port int) error {
-	// 【中文注释】: 将所有 Shell 逻辑整合为一个命令。
-	// 新增了对默认端口列表 (22, 80, 443, 13688, 8443) 的放行逻辑。
-	shellCommand := fmt.Sprintf(`
-	# 定义需要放行的指定端口和一系列默认端口
-	PORT_TO_OPEN=%d
-	DEFAULT_PORTS="22 80 443 13688 8443"
-
-	echo "脚本开始：准备配置 ufw 防火墙..."
-
-	# 1. 检查/安装 ufw
-	if ! command -v ufw &> /dev/null; then
-		echo "ufw 防火墙未安装，正在自动安装..."
-		# 使用绝对路径执行 apt-get，避免 PATH 问题，并抑制不必要的输出
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
-		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败。"; exit 1; fi
-		echo "✅ ufw 安装成功。"
-	fi
-
-	# 2. 【新增】循环放行所有默认端口
-	echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
-	for p in $DEFAULT_PORTS; do
-		# 使用静默模式检查规则是否存在，如果不存在则添加
-		if ! ufw status | grep -qw "$p/tcp"; then
-			echo "端口 $p/tcp 未放行，正在执行 ufw allow $p/tcp..."
-			ufw allow $p/tcp >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
-		else
-			echo "端口 $p/tcp 规则已存在，跳过。"
-		fi
-	done
-	echo "✅ 基础服务端口检查/放行完毕。"
-
-	# 3. 放行指定的端口
-	echo "正在为当前【入站配置】放行指定端口 $PORT_TO_OPEN..."
-	if ! ufw status | grep -qw "$PORT_TO_OPEN/tcp"; then
-		ufw allow $PORT_TO_OPEN/tcp >/dev/null
-		if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
-		echo "✅ 端口 $PORT_TO_OPEN 已成功放行。"
-	else
-		echo "端口 $PORT_TO_OPEN 规则已存在，跳过。"
-	fi
-	
-
-	# 4. 检查/激活防火墙
-	if ! ufw status | grep -q "Status: active"; then
-		echo "ufw 状态：未激活。正在强制激活..."
-		# --force 选项可以无需交互直接激活
-		ufw --force enable
-		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
-		echo "✅ ufw 已成功激活。"
-	else
-		echo "ufw 状态已经是激活状态。"
-	fi
-
-	echo "🎉 所有防火墙配置已完成。"
-
-	`, port) // 将函数传入的 port 参数填充到 Shell 脚本中
-
-	// 使用 exec.CommandContext 运行完整的 shell 脚本
-	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
-
-	// 捕获命令的标准输出和标准错误
-	output, err := cmd.CombinedOutput()
-
-	// 无论成功与否，都记录完整的 Shell 执行日志，便于调试
-	logOutput := string(output)
-	logger.Infof("执行 ufw 端口放行脚本（目标端口 %d）的完整输出：\n%s", port, logOutput)
-
+	// 使用新的防火墙服务放行端口（默认同时开放 TCP 和 UDP）
+	err := t.firewallService.OpenPort(port, "")
 	if err != nil {
-		// 如果脚本执行出错 (例如 exit 1)，则返回包含详细输出的错误信息
-		return fmt.Errorf("执行 ufw 端口放行脚本时发生错误: %v, Shell 输出: %s", err, logOutput)
+		return fmt.Errorf("使用新防火墙服务放行端口 %d 失败: %v", port, err)
 	}
 
 	return nil
