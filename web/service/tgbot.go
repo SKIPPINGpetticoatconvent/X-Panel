@@ -101,7 +101,18 @@ type Tgbot struct {
 	xrayService     *XrayService
 	lastStatus      *Status
 	firewallService firewall.FirewallService // 新增防火墙服务字段
+	
+	// 新增：模块化架构字段
+	hashStorage    *global.HashStorage
+	commandHandler CommandHandler
+	callbackHandler CallbackHandler
 }
+
+// CommandHandler 命令处理器接口
+type CommandHandler func(message telego.Message, isAdmin bool) error
+
+// CallbackHandler 回调处理器接口  
+type CallbackHandler func(query telego.CallbackQuery, isAdmin bool) error
 
 // 【新增】: GetRealityDestinations 方法 - 提供统一的 SNI 域名列表
 func (t *Tgbot) GetRealityDestinations() []string {
@@ -123,6 +134,14 @@ func (t *Tgbot) SetServerService(s *ServerService) {
 // 配合目前 main.go 代码结构实践。
 func (t *Tgbot) SetInboundService(s *InboundService) {
 	t.inboundService = s
+}
+
+// initializeModularHandlers 初始化新的模块化组件
+func (t *Tgbot) initializeModularHandlers() {
+	// 初始化命令和回调处理器
+	// 这里我们先创建简单的处理器，后续可以替换为更复杂的模块化逻辑
+	t.commandHandler = t.handleCommand
+	t.callbackHandler = t.handleCallback
 }
 
 // 〔中文注释〕: 在这里添加新的构造函数
@@ -169,6 +188,10 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 
 	// Initialize hash storage to store callback queries
 	hashStorage = global.NewHashStorage(20 * time.Minute)
+	t.hashStorage = hashStorage // 设置到 Tgbot 实例中
+
+	// 初始化新的模块化组件
+	t.initializeModularHandlers()
 
 	t.SetHostname()
 
@@ -379,21 +402,39 @@ func (t *Tgbot) OnReceive() {
 
 	botHandler, _ = th.NewBotHandler(bot, updates)
 
+	// 处理关闭键盘的消息
 	botHandler.HandleMessage(func(ctx *th.Context, message telego.Message) error {
 		delete(userStates, message.Chat.ID)
 		t.SendMsgToTgbot(message.Chat.ID, t.I18nBot("tgbot.keyboardClosed"), tu.ReplyKeyboardRemove())
 		return nil
 	}, th.TextEqual(t.I18nBot("tgbot.buttons.closeKeyboard")))
 
+	// 处理命令消息 - 使用新的模块化架构
 	botHandler.HandleMessage(func(ctx *th.Context, message telego.Message) error {
+		isAdmin := checkAdmin(message.From.ID)
+		
+		// 如果有新的命令处理器，优先使用
+		if t.commandHandler != nil {
+			return t.commandHandler(message, isAdmin)
+		}
+		
+		// 否则使用原有的逻辑
 		delete(userStates, message.Chat.ID)
-		t.answerCommand(&message, message.Chat.ID, checkAdmin(message.From.ID))
+		t.answerCommand(&message, message.Chat.ID, isAdmin)
 		return nil
 	}, th.AnyCommand())
 
-	// 【修复】: 注册 CallbackQuery Handler，确保按钮回调被正确处理
+	// 处理回调查询 - 使用新的模块化架构
 	botHandler.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
-		t.answerCallback(&query, checkAdmin(query.From.ID))
+		isAdmin := checkAdmin(query.From.ID)
+		
+		// 如果有新的回调处理器，优先使用
+		if t.callbackHandler != nil {
+			return t.callbackHandler(query, isAdmin)
+		}
+		
+		// 否则使用原有的逻辑
+		t.answerCallback(&query, isAdmin)
 		return nil
 	}, th.AnyCallbackQuery())
 
@@ -4104,6 +4145,22 @@ func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 
 	// 发送版本选择消息
 	t.SendMsgToTgbot(chatId, "🚀 **Xray 版本管理**\n\n请选择要更新的版本：", keyboard)
+}
+
+// handleCommand 处理命令消息（新的模块化架构）
+func (t *Tgbot) handleCommand(message telego.Message, isAdmin bool) error {
+	// 这里将原有的 answerCommand 逻辑迁移过来
+	// 暂时保持原有的实现，等待进一步的模块化重构
+	t.answerCommand(&message, message.Chat.ID, isAdmin)
+	return nil
+}
+
+// handleCallback 处理回调查询（新的模块化架构）
+func (t *Tgbot) handleCallback(query telego.CallbackQuery, isAdmin bool) error {
+	// 这里将原有的 answerCallback 逻辑迁移过来
+	// 暂时保持原有的实现，等待进一步的模块化重构
+	t.answerCallback(&query, isAdmin)
+	return nil
 }
 
 
