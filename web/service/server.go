@@ -22,6 +22,7 @@ import (
 	"x-ui/database"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/security"
 	"x-ui/util/sys"
 	"x-ui/web/service/firewall"
 	"x-ui/xray"
@@ -639,11 +640,28 @@ func (s *ServerService) UpdateXray(version string) error {
 }
 
 func (s *ServerService) GetLogs(count string, level string, syslog string) []string {
-	c, _ := strconv.Atoi(count)
+	// 验证 count 参数
+	logCount, err := strconv.Atoi(count)
+	if err != nil || logCount < 1 || logCount > 10000 {
+		return []string{"日志数量参数无效，必须是 1-10000 之间的数字"}
+	}
+	
+	// 验证 level 参数
+	if err := security.ValidateLevel(level); err != nil {
+		return []string{fmt.Sprintf("日志级别参数无效: %v", err)}
+	}
+	
 	var lines []string
 
 	if syslog == "true" {
-		cmdArgs := []string{"journalctl", "-u", "x-ui", "--no-pager", "-n", count, "-p", level}
+		// 安全地构建命令参数
+		cmdArgs := []string{"journalctl", "-u", "x-ui", "--no-pager", "-n", fmt.Sprintf("%d", logCount), "-p", level}
+		
+		// 验证命令参数
+		if err := security.ValidateCommandArgs(cmdArgs); err != nil {
+			return []string{fmt.Sprintf("命令参数验证失败: %v", err)}
+		}
+		
 		// Run the command
 		cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 		var out bytes.Buffer
@@ -654,7 +672,7 @@ func (s *ServerService) GetLogs(count string, level string, syslog string) []str
 		}
 		lines = strings.Split(out.String(), "\n")
 	} else {
-		lines = logger.GetLogs(c, level)
+		lines = logger.GetLogs(logCount, level)
 	}
 
 	return lines
@@ -1033,6 +1051,11 @@ func (s *ServerService) GetNewmldsa65() (any, error) {
 }
 
 func (s *ServerService) GetNewEchCert(sni string) (interface{}, error) {
+	// 验证 SNI 参数
+	if err := security.ValidateDomain(sni); err != nil {
+		return nil, fmt.Errorf("SNI 参数验证失败: %v", err)
+	}
+	
 	// Run the command
 	cmd := exec.Command(xray.GetBinaryPath(), "tls", "ech", "--serverName", sni)
 	var out bytes.Buffer
@@ -1308,6 +1331,11 @@ func (s *ServerService) OpenPort(port string) {
 func (s *ServerService) RestartPanel() error {
 	// 〔中文注释〕: 定义脚本的绝对路径，确保执行的命令是正确的。
 	scriptPath := "/usr/bin/x-ui"
+
+	// 验证脚本路径安全性
+	if err := security.ValidateScriptPath(scriptPath); err != nil {
+		return fmt.Errorf("脚本路径验证失败: %v", err)
+	}
 
 	// 〔中文注释〕: 检查脚本文件是否存在，增加健壮性。
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {

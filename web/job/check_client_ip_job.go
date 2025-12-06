@@ -12,15 +12,16 @@ import (
 	"sort"
 	"time"
 	"sync"
-                 "crypto/rand"
-                 "encoding/hex"
-                 "fmt" // 中文注释 (新增): 导入 fmt 包用于格式化消息
+	"crypto/rand"
+	"encoding/hex"
+	"fmt" // 中文注释 (新增): 导入 fmt 包用于格式化消息
 
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
+	"x-ui/util/security"
 	"x-ui/xray"
-    "x-ui/web/service"
+	"x-ui/web/service"
 )
 
 // =================================================================
@@ -521,8 +522,16 @@ func (j *CheckClientIpJob) processLogFile() bool {
 }
 
 func (j *CheckClientIpJob) checkFail2BanInstalled() bool {
+	// 验证命令参数
 	cmd := "fail2ban-client"
 	args := []string{"-h"}
+	
+	// 验证命令名称和参数安全性
+	if err := security.ValidateCommandArgs(append([]string{cmd}, args...)); err != nil {
+		logger.Warningf("Fail2ban 命令参数验证失败: %v", err)
+		return false
+	}
+	
 	err := exec.Command(cmd, args...).Run()
 	return err == nil
 }

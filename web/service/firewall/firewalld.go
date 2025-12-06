@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"x-ui/logger"
+	"x-ui/util/security"
 )
 
 // FirewalldService Firewalld 防火墙的具体实现
@@ -59,21 +60,47 @@ func (f *FirewalldService) openSinglePort(port int, protocol string) error {
 		protocol = ProtocolTCP
 	}
 	
+	// 验证端口号
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("端口号必须在 1-65535 范围内: %d", port)
+	}
+	
+	// 验证协议
+	if protocol != ProtocolTCP && protocol != ProtocolUDP {
+		return fmt.Errorf("无效的协议类型: %s", protocol)
+	}
+	
+	// 构建安全的命令参数
+	queryArgs := []string{"--permanent", "--query-port", fmt.Sprintf("%d/%s", port, protocol)}
+	addArgs := []string{"--permanent", "--add-port", fmt.Sprintf("%d/%s", port, protocol)}
+	reloadArgs := []string{"--reload"}
+	
+	// 验证命令参数
+	if err := security.ValidateCommandArgs(queryArgs); err != nil {
+		return fmt.Errorf("查询端口命令参数验证失败: %v", err)
+	}
+	if err := security.ValidateCommandArgs(addArgs); err != nil {
+		return fmt.Errorf("添加端口命令参数验证失败: %v", err)
+	}
+	if err := security.ValidateCommandArgs(reloadArgs); err != nil {
+		return fmt.Errorf("重载配置命令参数验证失败: %v", err)
+	}
+	
 	// 检查端口是否已开放
-	cmd := exec.Command("firewall-cmd", "--permanent", "--query-port", fmt.Sprintf("%d/%s", port, protocol))
+	cmd := exec.Command("firewall-cmd", queryArgs...)
 	if err := cmd.Run(); err == nil {
 		// 端口已开放，跳过
 		return nil
 	}
 	
 	// 添加端口规则
-	cmd = exec.Command("firewall-cmd", "--permanent", "--add-port", fmt.Sprintf("%d/%s", port, protocol))
+	cmd = exec.Command("firewall-cmd", addArgs...)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("放行端口 %d 失败: %v", port, err)
 	}
 	
 	// 重新加载配置使更改生效
-	cmd = exec.Command("firewall-cmd", "--reload")
+	cmd = exec.Command("firewall-cmd", reloadArgs...)
 	if err := cmd.Run(); err != nil {
 		logger.Warningf("重载 Firewalld 配置失败: %v", err)
 	}
@@ -102,10 +129,28 @@ func (f *FirewalldService) openPortWithProtocols(port int, protocol string) erro
 
 // OpenPort 放行指定端口
 func (f *FirewalldService) OpenPort(port int, protocol string) error {
+	// 验证端口号
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("端口号必须在 1-65535 范围内: %d", port)
+	}
+	
+	// 验证协议
+	if protocol != "" && protocol != "both" && protocol != "tcp/udp" && protocol != ProtocolTCP && protocol != ProtocolUDP {
+		return fmt.Errorf("无效的协议类型: %s", protocol)
+	}
+	
 	// 1. 检查服务是否运行
 	if !f.IsRunning() {
+		// 构建启动服务命令参数
+		startArgs := []string{"start", "firewalld"}
+		
+		// 验证命令参数
+		if err := security.ValidateCommandArgs(startArgs); err != nil {
+			return fmt.Errorf("启动服务命令参数验证失败: %v", err)
+		}
+		
 		// 尝试启动 firewalld 服务
-		cmd := exec.Command("systemctl", "start", "firewalld")
+		cmd := exec.Command("systemctl", startArgs...)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("启动 Firewalld 服务失败: %v", err)
 		}
@@ -143,14 +188,36 @@ func (f *FirewalldService) ClosePort(port int, protocol string) error {
 		protocol = ProtocolTCP
 	}
 	
+	// 验证端口号
+	if port < 1 || port > 65535 {
+		return fmt.Errorf("端口号必须在 1-65535 范围内: %d", port)
+	}
+	
+	// 验证协议
+	if protocol != ProtocolTCP && protocol != ProtocolUDP {
+		return fmt.Errorf("无效的协议类型: %s", protocol)
+	}
+	
+	// 构建安全的命令参数
+	removeArgs := []string{"--permanent", "--remove-port", fmt.Sprintf("%d/%s", port, protocol)}
+	reloadArgs := []string{"--reload"}
+	
+	// 验证命令参数
+	if err := security.ValidateCommandArgs(removeArgs); err != nil {
+		return fmt.Errorf("移除端口命令参数验证失败: %v", err)
+	}
+	if err := security.ValidateCommandArgs(reloadArgs); err != nil {
+		return fmt.Errorf("重载配置命令参数验证失败: %v", err)
+	}
+	
 	// 移除端口规则
-	cmd := exec.Command("firewall-cmd", "--permanent", "--remove-port", fmt.Sprintf("%d/%s", port, protocol))
+	cmd := exec.Command("firewall-cmd", removeArgs...)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("关闭端口 %d 失败: %v", port, err)
 	}
 	
 	// 重新加载配置使更改生效
-	cmd = exec.Command("firewall-cmd", "--reload")
+	cmd = exec.Command("firewall-cmd", reloadArgs...)
 	if err := cmd.Run(); err != nil {
 		logger.Warningf("重载 Firewalld 配置失败: %v", err)
 	}

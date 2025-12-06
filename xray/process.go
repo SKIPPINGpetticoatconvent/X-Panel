@@ -16,6 +16,7 @@ import (
 	"x-ui/config"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/security"
 )
 
 func GetBinaryName() string {
@@ -181,7 +182,23 @@ func (p *process) refreshAPIPort() {
 }
 
 func (p *process) refreshVersion() {
-	cmd := exec.Command(GetBinaryPath(), "-version")
+	// 获取二进制路径并验证
+	binaryPath := GetBinaryPath()
+	if err := security.ValidateFilePath(binaryPath); err != nil {
+		logger.Warningf("Xray 二进制路径验证失败: %v", err)
+		p.version = "Unknown"
+		return
+	}
+	
+	// 构建版本查询命令参数
+	args := []string{"-version"}
+	if err := security.ValidateCommandArgs(args); err != nil {
+		logger.Warningf("版本查询命令参数验证失败: %v", err)
+		p.version = "Unknown"
+		return
+	}
+	
+	cmd := exec.Command(binaryPath, args...)
 	data, err := cmd.Output()
 	if err != nil {
 		p.version = "Unknown"
@@ -218,12 +235,30 @@ func (p *process) Start() (err error) {
 	}
 
 	configPath := GetConfigPath()
+	
+	// 验证配置文件路径安全性
+	if err := security.ValidateFilePath(configPath); err != nil {
+		return common.NewErrorf("配置文件路径验证失败: %v", err)
+	}
+	
 	err = os.WriteFile(configPath, data, fs.ModePerm)
 	if err != nil {
 		return common.NewErrorf("Failed to write configuration file: %v", err)
 	}
 
-	cmd := exec.Command(GetBinaryPath(), "-c", configPath)
+	// 获取二进制路径并验证
+	binaryPath := GetBinaryPath()
+	if err := security.ValidateFilePath(binaryPath); err != nil {
+		return common.NewErrorf("Xray 二进制路径验证失败: %v", err)
+	}
+	
+	// 构建启动命令参数
+	args := []string{"-c", configPath}
+	if err := security.ValidateCommandArgs(args); err != nil {
+		return common.NewErrorf("启动命令参数验证失败: %v", err)
+	}
+	
+	cmd := exec.Command(binaryPath, args...)
 	p.cmd = cmd
 
 	cmd.Stdout = p.logWriter

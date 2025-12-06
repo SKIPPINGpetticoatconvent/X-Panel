@@ -26,6 +26,7 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/security"
 	"x-ui/web/global"
 	"x-ui/web/locale"
 	"x-ui/web/service/firewall"
@@ -3928,7 +3929,19 @@ func (t *Tgbot) SendSubconverterSuccess() {
 
 // 【新增辅助函数】: 获取域名（shell 方案）
 func (t *Tgbot) getDomain() (string, error) {
-	cmd := exec.Command("/usr/local/x-ui/x-ui", "setting", "-getCert", "true")
+	// 验证脚本路径安全性
+	scriptPath := "/usr/local/x-ui/x-ui"
+	if err := security.ValidateScriptPath(scriptPath); err != nil {
+		return "", fmt.Errorf("脚本路径验证失败: %v", err)
+	}
+	
+	// 验证命令参数
+	args := []string{"setting", "-getCert", "true"}
+	if err := security.ValidateCommandArgs(args); err != nil {
+		return "", fmt.Errorf("命令参数验证失败: %v", err)
+	}
+	
+	cmd := exec.Command(scriptPath, args...)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.New("执行命令获取证书路径失败，请确保已为面板配置 SSL 证书")
@@ -3952,7 +3965,18 @@ func (t *Tgbot) getDomain() (string, error) {
 		return "", errors.New("证书路径为空，请确保已为面板配置 SSL 证书")
 	}
 
+	// 验证证书路径安全性
+	if err := security.ValidateFilePath(certPath); err != nil {
+		return "", fmt.Errorf("证书路径验证失败: %v", err)
+	}
+
 	domain := filepath.Base(filepath.Dir(certPath))
+	
+	// 验证域名格式
+	if err := security.ValidateDomain(domain); err != nil {
+		return "", fmt.Errorf("域名格式验证失败: %v", err)
+	}
+	
 	return domain, nil
 }
 
