@@ -43,55 +43,6 @@ func (f *FirewalldService) IsRunning() bool {
 	return strings.Contains(outputStr, "running")
 }
 
-// ensureFirewalldInstalled 检查并安装 Firewalld
-func (f *FirewalldService) ensureFirewalldInstalled() error {
-	// 检查 firewall-cmd 是否已安装
-	cmd := exec.Command("which", "firewall-cmd")
-	if err := cmd.Run(); err == nil {
-		return nil // firewall-cmd 已安装
-	}
-	
-	// 安装 firewalld
-	logger.Info("Firewalld 防火墙未安装，正在自动安装...")
-	
-	// 检测操作系统类型
-	if _, err := exec.Command("which", "apt-get").Output(); err == nil {
-		// Debian/Ubuntu
-		cmd = exec.Command("bash", "-c", "DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("更新包列表失败: %v", err)
-		}
-		
-		cmd = exec.Command("bash", "-c", "DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq firewalld")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("安装 Firewalld 失败: %v", err)
-		}
-	} else if _, err := exec.Command("which", "yum").Output(); err == nil {
-		// CentOS/RHEL
-		cmd = exec.Command("bash", "-c", "/usr/bin/yum install -y firewalld")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("安装 Firewalld 失败: %v", err)
-		}
-	} else if _, err := exec.Command("which", "dnf").Output(); err == nil {
-		// Fedora
-		cmd = exec.Command("bash", "-c", "/usr/bin/dnf install -y firewalld")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("安装 Firewalld 失败: %v", err)
-		}
-	} else {
-		return fmt.Errorf("未识别的包管理器，无法自动安装 Firewalld")
-	}
-	
-	// 启动并启用 firewalld 服务
-	cmd = exec.Command("systemctl", "enable", "--now", "firewalld")
-	if err := cmd.Run(); err != nil {
-		logger.Warningf("启动 Firewalld 服务失败: %v", err)
-	}
-	
-	logger.Info("Firewalld 防火墙安装并启动成功")
-	return nil
-}
-
 // openDefaultPorts 放行默认端口
 func (f *FirewalldService) openDefaultPorts() error {
 	for _, port := range f.defaultPorts {
@@ -151,12 +102,7 @@ func (f *FirewalldService) openPortWithProtocols(port int, protocol string) erro
 
 // OpenPort 放行指定端口
 func (f *FirewalldService) OpenPort(port int, protocol string) error {
-	// 1. 检查并安装 Firewalld
-	if err := f.ensureFirewalldInstalled(); err != nil {
-		return fmt.Errorf("Firewalld 安装检查失败: %v", err)
-	}
-	
-	// 2. 检查服务是否运行
+	// 1. 检查服务是否运行
 	if !f.IsRunning() {
 		// 尝试启动 firewalld 服务
 		cmd := exec.Command("systemctl", "start", "firewalld")
@@ -177,12 +123,12 @@ func (f *FirewalldService) OpenPort(port int, protocol string) error {
 		}
 	}
 	
-	// 3. 放行默认端口
+	// 2. 放行默认端口
 	if err := f.openDefaultPorts(); err != nil {
 		logger.Warningf("放行默认端口时出现警告: %v", err)
 	}
 	
-	// 4. 放行指定端口
+	// 3. 放行指定端口
 	if err := f.openPortWithProtocols(port, protocol); err != nil {
 		return fmt.Errorf("放行端口 %d 失败: %v", port, err)
 	}
@@ -222,11 +168,6 @@ func (f *FirewalldService) Reload() error {
 	
 	logger.Info("Firewalld 配置已重载")
 	return nil
-}
-
-// EnsureInstalled 检查并尝试安装防火墙
-func (f *FirewalldService) EnsureInstalled() error {
-	return f.ensureFirewalldInstalled()
 }
 
 // OpenPortAsync 异步放行端口，返回是否成功的布尔值和错误信息

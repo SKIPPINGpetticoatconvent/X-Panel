@@ -51,33 +51,6 @@ func (f *UfwService) IsRunning() bool {
 	return false
 }
 
-// ensureUfwInstalled 检查并安装 UFW
-func (f *UfwService) ensureUfwInstalled() error {
-	// 检查 ufw 是否已安装
-	cmd := exec.Command("which", "ufw")
-	if err := cmd.Run(); err == nil {
-		return nil // ufw 已安装
-	}
-	
-	// 安装 ufw
-	logger.Info("UFW 防火墙未安装，正在自动安装...")
-	
-	// 更新包列表
-	cmd = exec.Command("bash", "-c", "DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("更新包列表失败: %v", err)
-	}
-	
-	// 安装 ufw
-	cmd = exec.Command("bash", "-c", "DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("安装 UFW 失败: %v", err)
-	}
-	
-	logger.Info("UFW 防火墙安装成功")
-	return nil
-}
-
 // openDefaultPorts 放行默认端口
 func (f *UfwService) openDefaultPorts() error {
 	for _, port := range f.defaultPorts {
@@ -157,23 +130,18 @@ func (f *UfwService) activateUfw() error {
 
 // OpenPort 放行指定端口
 func (f *UfwService) OpenPort(port int, protocol string) error {
-	// 1. 检查并安装 UFW
-	if err := f.ensureUfwInstalled(); err != nil {
-		return fmt.Errorf("UFW 安装检查失败: %v", err)
-	}
-	
-	// 2. 放行默认端口
+	// 1. 放行默认端口
 	if err := f.openDefaultPorts(); err != nil {
 		logger.Warningf("放行默认端口时出现警告: %v", err)
 		// 不返回错误，因为默认端口放行失败不应该影响主要端口的放行
 	}
 	
-	// 3. 放行指定端口
+	// 2. 放行指定端口
 	if err := f.openPortWithProtocols(port, protocol); err != nil {
 		return fmt.Errorf("放行端口 %d 失败: %v", port, err)
 	}
 	
-	// 4. 激活防火墙
+	// 3. 激活防火墙
 	if err := f.activateUfw(); err != nil {
 		logger.Warningf("UFW 激活时出现警告: %v", err)
 		// 不返回错误，因为防火墙激活失败不应该影响端口放行
@@ -207,11 +175,6 @@ func (f *UfwService) Reload() error {
 	
 	logger.Info("UFW 配置已重载")
 	return nil
-}
-
-// EnsureInstalled 检查并尝试安装防火墙
-func (f *UfwService) EnsureInstalled() error {
-	return f.ensureUfwInstalled()
 }
 
 // OpenPortAsync 异步放行端口，返回是否成功的布尔值和错误信息

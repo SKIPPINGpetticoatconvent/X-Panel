@@ -1,6 +1,7 @@
 package firewall
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 
 // NewFirewallService 根据系统环境自动返回合适的防火墙实现
 func NewFirewallService() (FirewallService, error) {
-	// 优先级：Firewalld > UFW > iptables
+	// 优先级：Firewalld > UFW
 	firewallServices := []struct {
 		name     string
 		create   func() FirewallService
@@ -25,11 +26,6 @@ func NewFirewallService() (FirewallService, error) {
 			create:   func() FirewallService { return NewUfwService() },
 			isRunning: func() bool { return NewUfwService().IsRunning() },
 		},
-		{
-			name:     "iptables",
-			create:   func() FirewallService { return NewIptablesService() },
-			isRunning: func() bool { return NewIptablesService().IsRunning() },
-		},
 	}
 
 	// 第一阶段：检查正在运行的服务
@@ -41,7 +37,7 @@ func NewFirewallService() (FirewallService, error) {
 	}
 
 	// 第二阶段：如果没有服务正在运行，检查命令是否存在
-	// 优先级：Firewalld > UFW > iptables
+	// 优先级：Firewalld > UFW
 	if isCommandAvailable("firewall-cmd") {
 		logger.Infof("检测到系统防火墙: Firewalld")
 		return NewFirewalldService(), nil
@@ -51,15 +47,9 @@ func NewFirewallService() (FirewallService, error) {
 		logger.Infof("检测到系统防火墙: UFW")
 		return NewUfwService(), nil
 	}
-	
-	if isCommandAvailable("iptables") {
-		logger.Infof("检测到系统防火墙: iptables")
-		return NewIptablesService(), nil
-	}
 
-	// 如果都没有找到，返回一个模拟的iptables服务作为兜底
-	logger.Warning("未检测到任何支持的防火墙服务，使用 iptables 作为兜底方案")
-	return NewIptablesService(), nil
+	// 如果都没有找到，返回错误
+	return nil, fmt.Errorf("未检测到任何支持的防火墙服务 (Firewalld 或 UFW)")
 }
 
 // isCommandAvailable 检查系统命令是否存在
@@ -78,42 +68,4 @@ func isCommandAvailable(cmd string) bool {
 
 	// 检查输出是否包含有效的路径
 	return len(strings.TrimSpace(string(output))) > 0
-}
-
-// GetAvailableFirewalls 获取所有可用的防火墙列表
-func GetAvailableFirewalls() []string {
-	var available []string
-	
-	firewallServices := []struct {
-		name     string
-		checkCmd string
-	}{
-		{"Firewalld", "firewall-cmd"},
-		{"UFW", "ufw"},
-		{"iptables", "iptables"},
-	}
-
-	for _, service := range firewallServices {
-		if isCommandAvailable(service.checkCmd) {
-			available = append(available, service.name)
-		}
-	}
-
-	return available
-}
-
-// RecommendFirewall 推荐最适合的防火墙
-func RecommendFirewall() string {
-	available := GetAvailableFirewalls()
-	
-	// 优先级推荐
-	for _, priority := range []string{"Firewalld", "UFW", "iptables"} {
-		for _, availableFirewall := range available {
-			if availableFirewall == priority {
-				return availableFirewall
-			}
-		}
-	}
-	
-	return "iptables" // 默认推荐
 }

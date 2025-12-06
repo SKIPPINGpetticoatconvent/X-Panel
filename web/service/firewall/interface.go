@@ -27,7 +27,4 @@ type FirewallService interface {
 	
 	// OpenPortAsync 异步放行端口，返回是否成功的布尔值和错误信息
 	OpenPortAsync(port int, protocol string) (bool, error)
-	
-	// EnsureInstalled 检查并尝试安装防火墙 (可选实现)
-	EnsureInstalled() error
 }
