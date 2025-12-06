@@ -294,7 +294,7 @@ func (s *SubJsonService) genVnext(inbound *model.Inbound, streamSettings json_ut
 	outbound := Outbound{}
 	usersData := make([]UserVnext, 1)
 
-	usersData[0].ID = client.ID
+	usersData[0].ID = client.Key
 	usersData[0].Level = 8
 	if inbound.Protocol == model.VMESS {
 		usersData[0].Security = client.Security

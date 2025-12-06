@@ -239,8 +239,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				speedByEmail[dbc.Email] = dbc.SpeedLimit
 			}
 			// 如果有 id 字段也建立映射（以防 email 不存在）
-			if dbc.ID != "" {
-				speedById[dbc.ID] = dbc.SpeedLimit
+			if dbc.Key != "" {
+				speedById[dbc.Key] = dbc.SpeedLimit
 			}
 		}
 

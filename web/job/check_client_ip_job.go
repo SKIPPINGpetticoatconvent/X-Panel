@@ -313,7 +313,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	tempClient := *client
 
                  // 适用于 VMess/VLESS
-	if tempClient.ID != "" { tempClient.ID = RandomUUID() }
+	if tempClient.Key != "" { tempClient.Key = RandomUUID() }
 
                  // 适用于 Trojan/Shadowsocks/Socks
 	if tempClient.Password != "" { tempClient.Password = RandomUUID() }
@@ -452,7 +452,7 @@ func (j *CheckClientIpJob) hasLimitIp() bool {
 		clients := settings["clients"]
 
 		for _, client := range clients {
-			limitIp := client.LimitIP
+			limitIp := client.LimitIp
 			if limitIp > 0 {
 				return true
 			}
@@ -632,7 +632,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 
 	for _, client := range clients {
 		if client.Email == clientEmail {
-			limitIp := client.LimitIP
+			limitIp := client.LimitIp
 
 			if limitIp > 0 && inbound.Enable {
 				shouldCleanLog = true

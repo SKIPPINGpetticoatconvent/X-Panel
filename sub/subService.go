@@ -270,7 +270,7 @@ func (s *SubService) genVmessLink(inbound *model.Inbound, email string) string {
 			break
 		}
 	}
-	obj["id"] = clients[clientIndex].ID
+	obj["id"] = clients[clientIndex].Key
 	obj["scy"] = clients[clientIndex].Security
 
 	externalProxies, _ := stream["externalProxy"].([]any)
@@ -326,7 +326,7 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 			break
 		}
 	}
-	uuid := clients[clientIndex].ID
+	uuid := clients[clientIndex].Key
 	port := inbound.Port
 	streamNetwork := stream["network"].(string)
 	params := make(map[string]string)

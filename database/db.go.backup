@@ -30,7 +30,6 @@ func initModels() error {
 	models := []any{
 		&model.User{},
 		&model.Inbound{},
-		&model.Client{},        // 新增：Client 数据库表
 		&model.OutboundTraffics{},
 		&model.Setting{},
 		&model.InboundClientIps{},

@@ -90,78 +90,31 @@ func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (
 }
 
 func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, error) {
-	db := database.GetDB()
-	var clients []model.Client
-	
-	// 尝试从数据库的 clients 表获取
-	err := db.Where("inbound_id = ?", inbound.Id).Find(&clients).Error
-	if err == nil && len(clients) > 0 {
-		return clients, nil
-	}
-	
-	// 如果数据库中没有数据，尝试从 JSON 中获取（向后兼容）
-	if err == gorm.ErrRecordNotFound || len(clients) == 0 {
-		return s.getClientsFromJSON(inbound)
-	}
-	
-	return nil, err
-}
-
-// getClientsFromJSON 从 JSON 中获取客户端数据（向后兼容）
-func (s *InboundService) getClientsFromJSON(inbound *model.Inbound) ([]model.Client, error) {
-	settings := map[string][]model.ClientForJSON{}
-	if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
-		return nil, fmt.Errorf("setting is null: %v", err)
+	settings := map[string][]model.Client{}
+	json.Unmarshal([]byte(inbound.Settings), &settings)
+	if settings == nil {
+		return nil, fmt.Errorf("setting is null")
 	}
 
-	clientsJSON := settings["clients"]
-	if clientsJSON == nil {
+	clients := settings["clients"]
+	if clients == nil {
 		return nil, nil
 	}
-
-	// 转换为新的 Client 结构体
-	var clients []model.Client
-	for _, clientJSON := range clientsJSON {
-		client := model.Client{
-			Key:        clientJSON.ID,
-			Password:   clientJSON.Password,
-			Security:   clientJSON.Security,
-			Flow:       clientJSON.Flow,
-			Email:      clientJSON.Email,
-			LimitIp:    clientJSON.LimitIP,
-			TotalGB:    clientJSON.TotalGB,
-			ExpiryTime: clientJSON.ExpiryTime,
-			SpeedLimit: clientJSON.SpeedLimit,
-			Enable:     clientJSON.Enable,
-			TgID:       clientJSON.TgID,
-			SubID:      clientJSON.SubID,
-			Comment:    clientJSON.Comment,
-			Reset:      clientJSON.Reset,
-			CreatedAt:  clientJSON.CreatedAt,
-			UpdatedAt:  clientJSON.UpdatedAt,
-		}
-		clients = append(clients, client)
-	}
-	
 	return clients, nil
 }
 
 func (s *InboundService) getAllEmails() ([]string, error) {
 	db := database.GetDB()
 	var emails []string
-	
-	// 首先尝试从 clients 表获取
-	err := db.Model(&model.Client{}).Pluck("email", &emails).Error
+	err := db.Raw(`
+		SELECT JSON_EXTRACT(client.value, '$.email')
+		FROM inbounds,
+			JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client
+		`).Scan(&emails).Error
 	if err != nil {
-		// 如果 clients 表不存在或无数据，使用传统方式（向后兼容）
-		err = db.Raw(`
-			SELECT JSON_EXTRACT(client.value, '$.email')
-			FROM inbounds,
-				JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client
-			`).Scan(&emails).Error
+		return nil, err
 	}
-	
-	return emails, err
+	return emails, nil
 }
 
 func (s *InboundService) contains(slice []string, str string) bool {
@@ -280,7 +233,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 				return inbound, false, "", common.NewError("empty client ID")
 			}
 		default:
-			if client.Key == "" {
+			if client.ID == "" {
 				return inbound, false, "", common.NewError("empty client ID")
 			}
 		}
@@ -639,7 +592,30 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 		return false, err
 	}
 
-	// 验证客户端ID和邮箱重复
+	var settings map[string]any
+	err = json.Unmarshal([]byte(data.Settings), &settings)
+	if err != nil {
+		return false, err
+	}
+
+	interfaceClients := settings["clients"].([]any)
+	// Add timestamps for new clients being appended
+	nowTs := time.Now().Unix() * 1000
+	for i := range interfaceClients {
+		if cm, ok := interfaceClients[i].(map[string]any); ok {
+			if _, ok2 := cm["created_at"]; !ok2 {
+				cm["created_at"] = nowTs
+			}
+			cm["updated_at"] = nowTs
+
+			// ↓↓↓↓↓↓  【重要补充】在这里手动确保 SpeedLimit 被写入数据库 ↓↓↓↓↓↓
+            // clients[i] 和 interfaceClients[i] 是一一对应的
+            // 我们从强类型的 clients[i] 对象中取出 SpeedLimit，赋值给弱类型的 map
+			cm["speedLimit"] = clients[i].SpeedLimit // 中文注释: 确保批量添加时，speedLimit 的值也被写入数据库。
+			
+			interfaceClients[i] = cm
+		}
+	}
 	existEmail, err := s.checkEmailsExistForClients(clients)
 	if err != nil {
 		return false, err
@@ -653,7 +629,7 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 		return false, err
 	}
 
-	// 验证客户端ID不为空
+	// Secure client ID
 	for _, client := range clients {
 		switch oldInbound.Protocol {
 		case "trojan":
@@ -665,11 +641,29 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 				return false, common.NewError("empty client ID")
 			}
 		default:
-			if client.Key == "" {
+			if client.ID == "" {
 				return false, common.NewError("empty client ID")
 			}
 		}
 	}
+
+	var oldSettings map[string]any
+	err = json.Unmarshal([]byte(oldInbound.Settings), &oldSettings)
+	if err != nil {
+		return false, err
+	}
+
+	oldClients := oldSettings["clients"].([]any)
+	oldClients = append(oldClients, interfaceClients...)
+
+	oldSettings["clients"] = oldClients
+
+	newSettings, err := json.MarshalIndent(oldSettings, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	oldInbound.Settings = string(newSettings)
 
 	db := database.GetDB()
 	tx := db.Begin()
@@ -682,22 +676,6 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 		}
 	}()
 
-	// 直接向 clients 表插入新记录
-	nowTs := time.Now().Unix() * 1000
-	for i := range clients {
-		// 设置时间戳
-		if clients[i].CreatedAt == 0 {
-			clients[i].CreatedAt = nowTs
-		}
-		clients[i].UpdatedAt = nowTs
-		clients[i].InboundId = data.Id
-
-		// 插入到数据库
-		if err := tx.Create(&clients[i]).Error; err != nil {
-			return false, err
-		}
-	}
-
 	needRestart := false
 	s.xrayApi.Init(p.GetAPIPort())
 	for _, client := range clients {
@@ -706,22 +684,19 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 			if client.Enable {
 				cipher := ""
 				if oldInbound.Protocol == "shadowsocks" {
-					// 获取 shadowsocks 的加密方法
-					var settings map[string]any
-					if err := json.Unmarshal([]byte(oldInbound.Settings), &settings); err == nil {
-						if method, ok := settings["method"].(string); ok {
-							cipher = method
-						}
-					}
+					cipher = oldSettings["method"].(string)
 				}
 
-				clientMap := map[string]any{
+				// 中文注释: 在这里为 API 调用添加 speedLimit 参数。
+					clientMap := map[string]any{
 					"email":    client.Email,
-					"id":       client.Key,
+					"id":       client.ID,
 					"security": client.Security,
 					"flow":     client.Flow,
 					"password": client.Password,
 					"cipher":   cipher,
+					
+					// Xray-core 会将这个值作为 level，然后去 policy 中寻找对应的限速策略。
 					"level":    client.SpeedLimit,
 				}
 				err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, clientMap)
@@ -739,7 +714,7 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 	}
 	s.xrayApi.Close()
 
-	return needRestart, nil
+	return needRestart, tx.Save(oldInbound).Error
 }
 
 func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool, error) {
@@ -748,71 +723,76 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 		logger.Error("Load Old Data Error")
 		return false, err
 	}
-
-	db := database.GetDB()
-
-	// 查找目标客户端
-	var targetClient model.Client
-	query := db.Model(&model.Client{}).Where("inbound_id = ?", inboundId)
-	switch oldInbound.Protocol {
-	case "trojan":
-		query = query.Where("password = ?", clientId)
-	case "shadowsocks":
-		query = query.Where("email = ?", clientId)
-	default:
-		query = query.Where("key = ?", clientId)
-	}
-
-	if err := query.First(&targetClient).Error; err != nil {
+	var settings map[string]any
+	err = json.Unmarshal([]byte(oldInbound.Settings), &settings)
+	if err != nil {
 		return false, err
 	}
 
-	// 检查删除后是否还有客户端剩余
-	var clientCount int64
-	if err := db.Model(&model.Client{}).Where("inbound_id = ?", inboundId).Count(&clientCount).Error; err != nil {
-		return false, err
+	email := ""
+	client_key := "id"
+	if oldInbound.Protocol == "trojan" {
+		client_key = "password"
 	}
-	if clientCount <= 1 {
+	if oldInbound.Protocol == "shadowsocks" {
+		client_key = "email"
+	}
+
+	interfaceClients := settings["clients"].([]any)
+	var newClients []any
+	needApiDel := false
+	for _, client := range interfaceClients {
+		c := client.(map[string]any)
+		c_id := c[client_key].(string)
+		if c_id == clientId {
+			email, _ = c["email"].(string)
+			needApiDel, _ = c["enable"].(bool)
+		} else {
+			newClients = append(newClients, client)
+		}
+	}
+
+	if len(newClients) == 0 {
 		return false, common.NewError("no client remained in Inbound")
 	}
 
-	// 从 clients 表中删除记录
-	if err := db.Where("inbound_id = ?", inboundId).Delete(&model.Client{}, query).Error; err != nil {
+	settings["clients"] = newClients
+	newSettings, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
 		return false, err
 	}
 
-	// 清理相关的客户端数据
-	err = s.DelClientIPs(db, targetClient.Email)
+	oldInbound.Settings = string(newSettings)
+
+	db := database.GetDB()
+
+	err = s.DelClientIPs(db, email)
 	if err != nil {
 		logger.Error("Error in delete client IPs")
 		return false, err
 	}
-
 	needRestart := false
-	if len(targetClient.Email) > 0 {
-		// 检查客户端是否启用
+
+	if len(email) > 0 {
 		notDepleted := true
-		err = db.Model(xray.ClientTraffic{}).Select("enable").Where("email = ?", targetClient.Email).First(&notDepleted).Error
+		err = db.Model(xray.ClientTraffic{}).Select("enable").Where("email = ?", email).First(&notDepleted).Error
 		if err != nil {
 			logger.Error("Get stats error")
 			return false, err
 		}
-
-		err = s.DelClientStat(db, targetClient.Email)
+		err = s.DelClientStat(db, email)
 		if err != nil {
 			logger.Error("Delete stats Data Error")
 			return false, err
 		}
-
-		// 如果客户端是启用的，通过 API 删除
-		if targetClient.Enable && notDepleted {
+		if needApiDel && notDepleted {
 			s.xrayApi.Init(p.GetAPIPort())
-			err1 := s.xrayApi.RemoveUser(oldInbound.Tag, targetClient.Email)
+			err1 := s.xrayApi.RemoveUser(oldInbound.Tag, email)
 			if err1 == nil {
-				logger.Debug("Client deleted by api:", targetClient.Email)
+				logger.Debug("Client deleted by api:", email)
 				needRestart = false
 			} else {
-				if strings.Contains(err1.Error(), fmt.Sprintf("User %s not found.", targetClient.Email)) {
+				if strings.Contains(err1.Error(), fmt.Sprintf("User %s not found.", email)) {
 					logger.Debug("User is already deleted. Nothing to do more...")
 				} else {
 					logger.Debug("Error in deleting client by api:", err1)
@@ -822,8 +802,7 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 			s.xrayApi.Close()
 		}
 	}
-
-	return needRestart, nil
+	return needRestart, db.Save(oldInbound).Error
 }
 
 func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId string) (bool, error) {
@@ -831,6 +810,14 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 	if err != nil {
 		return false, err
 	}
+
+	var settings map[string]any
+	err = json.Unmarshal([]byte(data.Settings), &settings)
+	if err != nil {
+		return false, err
+	}
+
+	interfaceClients := settings["clients"].([]any)
 
 	oldInbound, err := s.GetInbound(data.Id)
 	if err != nil {
@@ -842,36 +829,34 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		return false, err
 	}
 
-	// 根据协议查找目标客户端
-	var targetClient *model.Client
-	var oldEmail string
-	for _, client := range oldClients {
-		clientIdentifier := ""
+	oldEmail := ""
+	newClientId := ""
+	clientIndex := -1
+	for index, oldClient := range oldClients {
+		oldClientId := ""
 		switch oldInbound.Protocol {
 		case "trojan":
-			clientIdentifier = client.Password
+			oldClientId = oldClient.Password
+			newClientId = clients[0].Password
 		case "shadowsocks":
-			clientIdentifier = client.Email
+			oldClientId = oldClient.Email
+			newClientId = clients[0].Email
 		default:
-			clientIdentifier = client.Key
+			oldClientId = oldClient.ID
+			newClientId = clients[0].ID
 		}
-		if clientId == clientIdentifier {
-			targetClient = &client
-			oldEmail = client.Email
+		if clientId == oldClientId {
+			oldEmail = oldClient.Email
+			clientIndex = index
 			break
 		}
 	}
 
-	if targetClient == nil {
-		return false, common.NewError("Client not found")
-	}
-
-	// 验证新客户端ID不为空
-	if clients[0].Key == "" && clients[0].Password == "" && clients[0].Email == "" {
+	// Validate new client ID
+	if newClientId == "" || clientIndex == -1 {
 		return false, common.NewError("empty client ID")
 	}
 
-	// 检查邮箱重复
 	if len(clients[0].Email) > 0 && clients[0].Email != oldEmail {
 		existEmail, err := s.checkEmailsExistForClients(clients)
 		if err != nil {
@@ -882,6 +867,46 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		}
 	}
 
+	var oldSettings map[string]any
+	err = json.Unmarshal([]byte(oldInbound.Settings), &oldSettings)
+	if err != nil {
+		return false, err
+	}
+	settingsClients := oldSettings["clients"].([]any)
+	// Preserve created_at and set updated_at for the replacing client
+	var preservedCreated any
+	if clientIndex >= 0 && clientIndex < len(settingsClients) {
+		if oldMap, ok := settingsClients[clientIndex].(map[string]any); ok {
+			if v, ok2 := oldMap["created_at"]; ok2 {
+				preservedCreated = v
+			}
+		}
+	}
+	if len(interfaceClients) > 0 {
+		if newMap, ok := interfaceClients[0].(map[string]any); ok {
+			if preservedCreated == nil {
+				preservedCreated = time.Now().Unix() * 1000
+			}
+			newMap["created_at"] = preservedCreated
+			newMap["updated_at"] = time.Now().Unix() * 1000
+
+			// ↓↓↓↓↓↓  【重要补充】在这里手动确保 SpeedLimit 被写入数据库 ↓↓↓↓↓↓
+            // clients[0] 是从请求中解码出来的强类型对象，它的 SpeedLimit 字段是有值的。
+            // 我们把它手动赋值给即将用于保存的 newMap。
+			newMap["speedLimit"] = clients[0].SpeedLimit // 中文注释：确保将 speedLimit 的值写入将要保存到数据库的 map 中。
+			
+			interfaceClients[0] = newMap
+		}
+	}
+	settingsClients[clientIndex] = interfaceClients[0]
+	oldSettings["clients"] = settingsClients
+
+	newSettings, err := json.MarshalIndent(oldSettings, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	oldInbound.Settings = string(newSettings)
 	db := database.GetDB()
 	tx := db.Begin()
 
@@ -893,41 +918,6 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		}
 	}()
 
-	// 直接更新数据库中的客户端记录
-	updateData := map[string]any{
-		"key":        clients[0].Key,
-		"password":   clients[0].Password,
-		"security":   clients[0].Security,
-		"flow":       clients[0].Flow,
-		"email":      clients[0].Email,
-		"limit_ip":   clients[0].LimitIp,
-		"total_gb":   clients[0].TotalGB,
-		"expiry_time": clients[0].ExpiryTime,
-		"speed_limit": clients[0].SpeedLimit,
-		"enable":     clients[0].Enable,
-		"tg_id":      clients[0].TgID,
-		"sub_id":     clients[0].SubID,
-		"reset":      clients[0].Reset,
-		"comment":    clients[0].Comment,
-		"updated_at": time.Now().Unix() * 1000,
-	}
-
-	// 根据协议构建查询条件
-	query := tx.Model(&model.Client{}).Where("inbound_id = ?", data.Id)
-	switch oldInbound.Protocol {
-	case "trojan":
-		query = query.Where("password = ?", clientId)
-	case "shadowsocks":
-		query = query.Where("email = ?", clientId)
-	default:
-		query = query.Where("key = ?", clientId)
-	}
-
-	if err := query.Updates(updateData).Error; err != nil {
-		return false, err
-	}
-
-	// 处理客户端统计信息
 	if len(clients[0].Email) > 0 {
 		if len(oldEmail) > 0 {
 			err = s.UpdateClientStat(tx, oldEmail, &clients[0])
@@ -951,11 +941,10 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 			return false, err
 		}
 	}
-
 	needRestart := false
 	if len(oldEmail) > 0 {
 		s.xrayApi.Init(p.GetAPIPort())
-		if targetClient.Enable {
+		if oldClients[clientIndex].Enable {
 			err1 := s.xrayApi.RemoveUser(oldInbound.Tag, oldEmail)
 			if err1 == nil {
 				logger.Debug("Old client deleted by api:", oldEmail)
@@ -971,22 +960,18 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		if clients[0].Enable {
 			cipher := ""
 			if oldInbound.Protocol == "shadowsocks" {
-				// 获取 shadowsocks 的加密方法
-				var settings map[string]any
-				if err := json.Unmarshal([]byte(oldInbound.Settings), &settings); err == nil {
-					if method, ok := settings["method"].(string); ok {
-						cipher = method
-					}
-				}
+				cipher = oldSettings["method"].(string)
 			}
 
+			// 中文注释: 同样，在更新用户时，也必须把新的 speedLimit 值通过 API 传给 Xray-core。
 			clientMap := map[string]any{
 				"email":    clients[0].Email,
-				"id":       clients[0].Key,
+				"id":       clients[0].ID,
 				"security": clients[0].Security,
 				"flow":     clients[0].Flow,
 				"password": clients[0].Password,
 				"cipher":   cipher,
+				
 				"level":    clients[0].SpeedLimit,
 			}
 			err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, clientMap)
@@ -1003,8 +988,7 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		logger.Debug("Client old email not found")
 		needRestart = true
 	}
-
-	return needRestart, nil
+	return needRestart, tx.Save(oldInbound).Error
 }
 
 func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
@@ -1512,7 +1496,7 @@ func (s *InboundService) SetClientTelegramUserID(trafficId int, tgId int64) (boo
 			case "shadowsocks":
 				clientId = oldClient.Email
 			default:
-				clientId = oldClient.Key
+				clientId = oldClient.ID
 			}
 			break
 		}
@@ -1598,7 +1582,7 @@ func (s *InboundService) ToggleClientEnableByEmail(clientEmail string) (bool, bo
 			case "shadowsocks":
 				clientId = oldClient.Email
 			default:
-				clientId = oldClient.Key
+				clientId = oldClient.ID
 			}
 			clientOldEnabled = oldClient.Enable
 			break
@@ -1663,7 +1647,7 @@ func (s *InboundService) ResetClientIpLimitByEmail(clientEmail string, count int
 			case "shadowsocks":
 				clientId = oldClient.Email
 			default:
-				clientId = oldClient.Key
+				clientId = oldClient.ID
 			}
 			break
 		}
@@ -1722,7 +1706,7 @@ func (s *InboundService) ResetClientExpiryTimeByEmail(clientEmail string, expiry
 			case "shadowsocks":
 				clientId = oldClient.Email
 			default:
-				clientId = oldClient.Key
+				clientId = oldClient.ID
 			}
 			break
 		}
@@ -1784,7 +1768,7 @@ func (s *InboundService) ResetClientTrafficLimitByEmail(clientEmail string, tota
 			case "shadowsocks":
 				clientId = oldClient.Email
 			default:
-				clientId = oldClient.Key
+				clientId = oldClient.ID
 			}
 			break
 		}
@@ -1864,7 +1848,7 @@ func (s *InboundService) ResetClientTraffic(id int, clientEmail string) (bool, e
 				}
 				err1 := s.xrayApi.AddUser(string(inbound.Protocol), inbound.Tag, map[string]any{
 					"email":    client.Email,
-					"id":       client.Key,
+					"id":       client.ID,
 					"security": client.Security,
 					"flow":     client.Flow,
 					"password": client.Password,
@@ -2118,7 +2102,7 @@ func (s *InboundService) SearchClientTraffic(query string) (traffic *xray.Client
 
 	clients := settings["clients"]
 	for _, client := range clients {
-		if (client.Key == query || client.Password == query) && client.Email != "" {
+		if (client.ID == query || client.Password == query) && client.Email != "" {
 			traffic.Email = client.Email
 			break
 		}
@@ -2338,8 +2322,6 @@ func (s *InboundService) MigrationRequirements() {
 func (s *InboundService) MigrateDB() {
 	s.MigrationRequirements()
 	s.MigrationRemoveOrphanedTraffics()
-	// 执行数据库规范化迁移：将 JSON 中的 clients 数据迁移到独立的 clients 表
-	s.MigrateClientsToDatabase()
 }
 
 func (s *InboundService) GetOnlineClients() []string {
@@ -2393,217 +2375,4 @@ func (s *InboundService) FilterAndSortClientEmails(emails []string) ([]string, [
 
 	return validEmails, extraEmails, nil
 
-}
-
-// MigrateClientsToDatabase 将客户端数据从 JSON 格式迁移到独立的 clients 表
-func (s *InboundService) MigrateClientsToDatabase() error {
-	db := database.GetDB()
-	tx := db.Begin()
-	defer func() {
-		if err := recover(); err != nil {
-			tx.Rollback()
-			logger.Errorf("Panic during client migration: %v", err)
-		}
-	}()
-
-	// 获取所有有客户端数据的 Inbound 记录
-	var inbounds []*model.Inbound
-	err := tx.Model(model.Inbound{}).Where("settings LIKE '%\"clients\"%'").Find(&inbounds).Error
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to fetch inbounds: %v", err)
-	}
-
-	logger.Infof("开始迁移 %d 个入站的客户端数据", len(inbounds))
-	migratedClientCount := 0
-
-	for _, inbound := range inbounds {
-		// 解析 settings JSON
-		var settings map[string]any
-		if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
-			logger.Warningf("无法解析 inbound %d 的 settings: %v", inbound.Id, err)
-			continue
-		}
-
-		// 提取 clients 数组
-		clientsInterface, ok := settings["clients"]
-		if !ok || clientsInterface == nil {
-			continue
-		}
-
-		clientsArray, ok := clientsInterface.([]any)
-		if !ok {
-			logger.Warningf("inbound %d 的 clients 不是数组格式", inbound.Id)
-			continue
-		}
-
-		// 迁移每个客户端
-		for _, clientInterface := range clientsArray {
-			clientMap, ok := clientInterface.(map[string]any)
-			if !ok {
-				logger.Warningf("inbound %d 的 client 不是对象格式", inbound.Id)
-				continue
-			}
-
-			// 转换为 Client 结构体
-			client := s.convertJSONClientToDBClient(clientMap, inbound.Id)
-			if client == nil {
-				continue
-			}
-
-			// 检查邮箱是否已存在（防止重复）
-			var existingCount int64
-			tx.Model(&model.Client{}).Where("email = ?", client.Email).Count(&existingCount)
-			if existingCount > 0 {
-				logger.Warningf("邮箱 %s 已存在，跳过迁移", client.Email)
-				continue
-			}
-
-			// 插入到数据库
-			if err := tx.Create(client).Error; err != nil {
-				logger.Warningf("插入客户端 %s 失败: %v", client.Email, err)
-				continue
-			}
-
-			migratedClientCount++
-		}
-
-		// 从 settings 中移除 clients 数据
-		delete(settings, "clients")
-
-		// 重新序列化 settings
-		updatedSettings, err := json.MarshalIndent(settings, "", "  ")
-		if err != nil {
-			logger.Warningf("重新序列化 inbound %d 的 settings 失败: %v", inbound.Id, err)
-			continue
-		}
-
-		// 更新 inbound 记录
-		inbound.Settings = string(updatedSettings)
-		if err := tx.Save(inbound).Error; err != nil {
-			logger.Warningf("更新 inbound %d 的 settings 失败: %v", inbound.Id, err)
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return fmt.Errorf("迁移提交失败: %v", err)
-	}
-
-	logger.Infof("客户端数据迁移完成，共迁移 %d 个客户端", migratedClientCount)
-	return nil
-}
-
-// convertJSONClientToDBClient 将 JSON 客户端对象转换为数据库 Client 结构体
-func (s *InboundService) convertJSONClientToDBClient(clientMap map[string]any, inboundId int) *model.Client {
-	// 提取基本字段
-	email, _ := clientMap["email"].(string)
-	if email == "" {
-		logger.Warningf("客户端缺少 email 字段，跳过")
-		return nil
-	}
-
-	// 提取认证字段（根据协议不同可能使用 id 或 password）
-	key, _ := clientMap["id"].(string)  // VMess/VLESS 使用 UUID
-	if key == "" {
-		key, _ = clientMap["password"].(string)  // Trojan 可能使用 password
-	}
-	if key == "" {
-		key = email  // Shadowsocks 使用 email 作为标识
-	}
-
-	password, _ := clientMap["password"].(string)
-
-	// 提取其他字段
-	security, _ := clientMap["security"].(string)
-	flow, _ := clientMap["flow"].(string)
-	
-	limitIp := 0
-	if v, ok := clientMap["limitIp"].(float64); ok {
-		limitIp = int(v)
-	} else if v, ok := clientMap["limitIp"].(int); ok {
-		limitIp = v
-	}
-
-	totalGB := int64(0)
-	if v, ok := clientMap["totalGB"].(float64); ok {
-		totalGB = int64(v)
-	} else if v, ok := clientMap["totalGB"].(int64); ok {
-		totalGB = v
-	}
-
-	expiryTime := int64(0)
-	if v, ok := clientMap["expiryTime"].(float64); ok {
-		expiryTime = int64(v)
-	} else if v, ok := clientMap["expiryTime"].(int64); ok {
-		expiryTime = v
-	}
-
-	speedLimit := 0
-	if v, ok := clientMap["speedLimit"].(float64); ok {
-		speedLimit = int(v)
-	} else if v, ok := clientMap["speedLimit"].(int); ok {
-		speedLimit = v
-	}
-
-	enable := true
-	if v, ok := clientMap["enable"].(bool); ok {
-		enable = v
-	}
-
-	tgID := int64(0)
-	if v, ok := clientMap["tgId"].(float64); ok {
-		tgID = int64(v)
-	} else if v, ok := clientMap["tgId"].(int64); ok {
-		tgID = v
-	}
-
-	subID, _ := clientMap["subId"].(string)
-	
-	reset := 0
-	if v, ok := clientMap["reset"].(float64); ok {
-		reset = int(v)
-	} else if v, ok := clientMap["reset"].(int); ok {
-		reset = v
-	}
-
-	comment, _ := clientMap["comment"].(string)
-
-	// 处理时间戳
-	createdAt := int64(0)
-	if v, ok := clientMap["created_at"].(float64); ok {
-		createdAt = int64(v)
-	} else if v, ok := clientMap["created_at"].(int64); ok {
-		createdAt = v
-	} else {
-		createdAt = time.Now().Unix() * 1000
-	}
-
-	updatedAt := int64(0)
-	if v, ok := clientMap["updated_at"].(float64); ok {
-		updatedAt = int64(v)
-	} else if v, ok := clientMap["updated_at"].(int64); ok {
-		updatedAt = v
-	} else {
-		updatedAt = time.Now().Unix() * 1000
-	}
-
-	return &model.Client{
-		InboundId:   inboundId,
-		Key:         key,
-		Password:    password,
-		Security:    security,
-		Flow:        flow,
-		Email:       email,
-		LimitIp:     limitIp,
-		TotalGB:     totalGB,
-		ExpiryTime:  expiryTime,
-		SpeedLimit:  speedLimit,
-		Enable:      enable,
-		TgID:        tgID,
-		SubID:       subID,
-		Reset:       reset,
-		Comment:     comment,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
-	}
 }

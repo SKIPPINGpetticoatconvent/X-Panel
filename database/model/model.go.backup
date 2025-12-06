@@ -26,60 +26,6 @@ type User struct {
 	Password string `json:"password"`
 }
 
-// Client represents a database table for storing client information
-// This replaces the previous JSON-only Client struct
-type Client struct {
-	Id          int    `json:"id" form:"id" gorm:"primaryKey;autoIncrement"`
-	InboundId   int    `json:"inboundId" form:"inboundId" gorm:"index"` // Foreign key, links to Inbound table
-	
-	// Core authentication and configuration
-	Key         string `json:"key" form:"key"` // For VMess/VLESS: UUID; For Trojan/Shadowsocks: password
-	Password    string `json:"password" form:"password"`
-	Security    string `json:"security" form:"security"`
-	Flow        string `json:"flow" form:"flow"`
-	Email       string `json:"email" form:"email" gorm:"uniqueIndex"` // Globally unique email for traffic stats correlation
-	
-	// Usage limits and policies
-	LimitIp     int    `json:"limitIp" form:"limitIp" gorm:"default:0"`
-	TotalGB     int64  `json:"totalGB" form:"totalGB" gorm:"default:0"`
-	ExpiryTime  int64  `json:"expiryTime" form:"expiryTime" gorm:"default:0"`
-	SpeedLimit  int    `json:"speedLimit" form:"speedLimit" gorm:"default:0"` // KB/s
-	
-	// Status and metadata
-	Enable      bool   `json:"enable" form:"enable" gorm:"default:true"`
-	TgID        int64  `json:"tgId" form:"tgId" gorm:"default:0"`
-	SubID       string `json:"subId" form:"subId"`
-	Reset       int    `json:"reset" form:"reset" gorm:"default:0"`
-	Comment     string `json:"comment" form:"comment"`
-	
-	CreatedAt   int64  `json:"createdAt" gorm:"autoCreateTime:milli"` // Millisecond timestamp
-	UpdatedAt   int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"` // Millisecond timestamp
-}
-
-// ClientForJSON represents the legacy JSON-only client structure for backward compatibility
-// This is used for parsing settings JSON and should not be used for database operations
-type ClientForJSON struct {
-	ID         string `json:"id"`
-	Security   string `json:"security"`
-	Password   string `json:"password"`
-	
-	// 中文注释: 新增"限速"字段，单位 KB/s，0 表示不限速。
-    SpeedLimit   int           `json:"speedLimit" form:"speedLimit"`
-	
-	Flow       string `json:"flow"`
-	Email      string `json:"email"`
-	LimitIP    int    `json:"limitIp"`
-	TotalGB    int64  `json:"totalGB" form:"totalGB"`
-	ExpiryTime int64  `json:"expiryTime" form:"expiryTime"`
-	Enable     bool   `json:"enable" form:"enable"`
-	TgID       int64  `json:"tgId" form:"tgId"`
-	SubID      string `json:"subId" form:"subId"`
-	Comment    string `json:"comment" form:"comment"`
-	Reset      int    `json:"reset" form:"reset"`
-	CreatedAt  int64  `json:"created_at,omitempty"`
-	UpdatedAt  int64  `json:"updated_at,omitempty"`
-}
-
 type Inbound struct {
 	Id          int                  `json:"id" form:"id" gorm:"primaryKey"`
 	UserId      int                  `json:"-"`
@@ -96,9 +42,6 @@ type Inbound struct {
 	DeviceLimit   int                  `json:"deviceLimit" form:"deviceLimit" gorm:"column:device_limit;default:0"`
 
 	ClientStats []xray.ClientTraffic `gorm:"foreignKey:InboundId;references:Id" json:"clientStats" form:"clientStats"`
-	
-	// 新增：与 Client 表的关联
-	Clients []Client `gorm:"foreignKey:InboundId;references:Id" json:"clients,omitempty" form:"clients,omitempty"`
 
 	// config part
 	Listen         string   `json:"listen" form:"listen"`
@@ -151,9 +94,31 @@ type Setting struct {
 	Value string `json:"value" form:"value"`
 }
 
+type Client struct {
+	ID         string `json:"id"`
+	Security   string `json:"security"`
+	Password   string `json:"password"`
+	
+	// 中文注释: 新增“限速”字段，单位 KB/s，0 表示不限速。
+    SpeedLimit   int           `json:"speedLimit" form:"speedLimit"`
+	
+	Flow       string `json:"flow"`
+	Email      string `json:"email"`
+	LimitIP    int    `json:"limitIp"`
+	TotalGB    int64  `json:"totalGB" form:"totalGB"`
+	ExpiryTime int64  `json:"expiryTime" form:"expiryTime"`
+	Enable     bool   `json:"enable" form:"enable"`
+	TgID       int64  `json:"tgId" form:"tgId"`
+	SubID      string `json:"subId" form:"subId"`
+	Comment    string `json:"comment" form:"comment"`
+	Reset      int    `json:"reset" form:"reset"`
+	CreatedAt  int64  `json:"created_at,omitempty"`
+	UpdatedAt  int64  `json:"updated_at,omitempty"`
+}
+
 type VLESSSettings struct {
-	Clients    []ClientForJSON `json:"clients"`
-	Decryption string          `json:"decryption"`
-	Encryption string          `json:"encryption"`
-	Fallbacks  []any           `json:"fallbacks"`
+	Clients    []Client `json:"clients"`
+	Decryption string   `json:"decryption"`
+	Encryption string   `json:"encryption"`
+	Fallbacks  []any    `json:"fallbacks"`
 }
