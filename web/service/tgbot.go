@@ -2241,7 +2241,10 @@ func (t *Tgbot) UserLoginNotify(username string, password string, ip string, tim
 	msg += t.I18nBot("tgbot.messages.username", "Username=="+username)
 	msg += t.I18nBot("tgbot.messages.ip", "IP=="+ip)
 	msg += t.I18nBot("tgbot.messages.time", "Time=="+time)
-	t.SendMsgToTgbotAdmins(msg)
+	// 异步发送登录通知，避免阻塞登录流程
+	go func() {
+		t.SendMsgToTgbotAdmins(msg)
+	}()
 }
 
 func (t *Tgbot) getInboundUsages() string {
@@ -3906,7 +3909,10 @@ func (t *Tgbot) SendSubconverterSuccess() {
 			"可登录订阅转换后台修改您的密码！",
 		domain,
 	)
-	t.SendMsgToTgbotAdmins(msgText)
+	// 异步发送安装成功通知，避免阻塞安装流程
+	go func() {
+		t.SendMsgToTgbotAdmins(msgText)
+	}()
 	// t.SendMsgToTgbot(targetChatId, msgText)
 }
 
