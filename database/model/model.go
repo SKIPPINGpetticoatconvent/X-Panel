@@ -34,7 +34,7 @@ type Inbound struct {
 	Total       int64                `json:"total" form:"total"`
 	AllTime     int64                `json:"allTime" form:"allTime" gorm:"default:0"`
 	Remark      string               `json:"remark" form:"remark"`
-	Enable      bool                 `json:"enable" form:"enable"`
+	Enable      bool                 `json:"enable" form:"enable" gorm:"index"`
 	ExpiryTime  int64                `json:"expiryTime" form:"expiryTime"`
 
 	// 中文注释: 新增设备限制字段，用于存储每个入站的设备数限制。
