@@ -65,7 +65,6 @@
 | 国家/地区 | 代码 | 文件路径 | 域名数量 | 特色域名类型 |
 |-----------|------|----------|----------|--------------|
 | 美国 | US | `sni/US/sni_domains.txt` | 24+ | 科技巨头、电商平台 |
-| 中国 | CN | `sni/CN/sni_domains.txt` | 20+ | 国内主流网站 |
 | 日本 | JP | `sni/JP/sni_domains.txt` | 24+ | 本土品牌、日企 |
 | 英国 | UK/GB | `sni/UK/sni_domains.txt` | 23+ | 媒体、政府机构 |
 | 韩国 | KR | `sni/KR/sni_domains.txt` | 20+ | 韩国企业 |
