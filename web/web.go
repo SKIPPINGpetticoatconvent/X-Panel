@@ -309,8 +309,8 @@ func (s *Server) startTask() {
 
 	go func() {
 		time.Sleep(time.Second * 5)
-		// Statistics every 10 seconds, start the delay for 5 seconds for the first time, and staggered with the time to restart xray
-		s.cron.AddJob("@every 10s", job.NewXrayTrafficJob())
+		// Statistics every 30 seconds, start the delay for 5 seconds for the first time, and staggered with the time to restart xray
+		s.cron.AddJob("@every 30s", job.NewXrayTrafficJob())
 	}()
 
 	// check client ips from log file every 10 sec
@@ -337,7 +337,7 @@ func (s *Server) startTask() {
 		// Check CPU load and alarm to TgBot if threshold passes
 		cpuThreshold, err := s.settingService.GetTgCpu()
 		if (err == nil) && (cpuThreshold > 0) {
-			s.cron.AddJob("@every 10s", job.NewCheckCpuJob())
+			s.cron.AddJob("@every 30s", job.NewCheckCpuJob())
 		}
 	} else {
 		s.cron.Remove(entry)

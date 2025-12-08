@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"slices"
+	"time"
 
 	"x-ui/config"
 	"x-ui/database/model"
@@ -136,6 +137,19 @@ func InitDB(dbPath string) error {
 	if err != nil {
 		return err
 	}
+
+	// 数据库连接池配置优化
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	sqlDB.SetMaxOpenConns(25)          // 最大打开连接数
+	sqlDB.SetMaxIdleConns(5)           // 最大空闲连接数
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)  // 连接最大生命周期
+
+	// 启用 SQLite WAL 模式优化
+	db.Exec("PRAGMA journal_mode=WAL;")
+	db.Exec("PRAGMA synchronous=NORMAL;")
 
 	if err := initModels(); err != nil {
 		return err
