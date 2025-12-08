@@ -1734,7 +1734,7 @@ func (s *ServerService) GetUSASNIDomains() []string {
 	return domains
 }
 
-// 【新增方法】: 获取指定国家的SNI域名列表
+// 【新增方法】: 获取指定国家的SNI域名列表（包含去重机制）
 func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 	// 将国家代码转换为大写
 	countryCode = strings.ToUpper(countryCode)
@@ -1751,7 +1751,10 @@ func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 	}
 	
 	lines := strings.Split(string(data), "\n")
+	// 使用map来实现去重，key为域名，value为true
+	var domainMap = make(map[string]bool)
 	var domains []string
+	
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		// 跳过空行和注释行
@@ -1781,17 +1784,40 @@ func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 			if !strings.Contains(line, ":") {
 				line += ":443"
 			}
-			domains = append(domains, line)
+			
+			// 去重机制：检查域名是否已存在
+			if !domainMap[line] {
+				domainMap[line] = true
+				domains = append(domains, line)
+			}
 		}
 	}
 	
 	// 如果没有读取到有效域名，返回对应国家的默认列表
 	if len(domains) == 0 {
 		logger.Warningf("%s SNI文件内容无效，使用默认域名列表", filePath)
-		return s.getDefaultSNIDomains(countryCode)
+		defaultDomains := s.getDefaultSNIDomains(countryCode)
+		// 对默认域名列表也进行去重
+		return s.removeDuplicatesFromSlice(defaultDomains)
 	}
 	
+	logger.Infof("从 %s SNI文件读取到 %d 个去重后的域名", countryCode, len(domains))
 	return domains
+}
+
+// removeDuplicatesFromSlice 从字符串切片中移除重复元素
+func (s *ServerService) removeDuplicatesFromSlice(slice []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	
+	for _, item := range slice {
+		if !seen[item] {
+			seen[item] = true
+			result = append(result, item)
+		}
+	}
+	
+	return result
 }
 
 // getDefaultSNIDomains 获取默认的SNI域名列表

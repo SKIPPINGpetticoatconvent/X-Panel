@@ -106,10 +106,10 @@ func (t *Tgbot) GetRealityDestinations() []string {
 	if t.serverService != nil {
 		country, err := t.serverService.GetServerLocation()
 		if err == nil && country != "Unknown" {
-			// 获取对应国家的SNI域名列表
+			// 获取对应国家的SNI域名列表（包含去重机制）
 			countryDomains := t.serverService.GetCountrySNIDomains(country)
 			if len(countryDomains) > 0 {
-				logger.Infof("检测到服务器IP位于%s，使用%s-SNI域名列表（%d个域名）", country, country, len(countryDomains))
+				logger.Infof("检测到服务器IP位于%s，使用%s-SNI域名列表（%d个域名，已去重）", country, country, len(countryDomains))
 				return countryDomains
 			}
 		}
