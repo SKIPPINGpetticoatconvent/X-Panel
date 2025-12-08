@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"slices"
+	"time"
 
 	"x-ui/config"
 	"x-ui/database/model"
@@ -136,6 +137,15 @@ func InitDB(dbPath string) error {
 	if err != nil {
 		return err
 	}
+
+	// 获取底层 sql.DB 对象并设置连接池参数
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	if err := initModels(); err != nil {
 		return err
