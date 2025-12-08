@@ -105,6 +105,8 @@ type ServerService struct {
 	countryCheckTime time.Time
 	// SNI 域名选择器
 	sniSelector *SNISelector
+	// GeoIP 服务
+	geoIPService *GeoIPService
 }
 
 // 【新增方法】: 用于从外部注入 TelegramService 实例
@@ -1963,10 +1965,20 @@ func (s *ServerService) getDefaultSNIDomains(countryCode string) []string {
 
 // 初始化 SNI 选择器
 func (s *ServerService) initSNISelector() {
-	// 获取默认的 SNI 域名列表（使用国际通用域名）
-	domains := s.GetCountrySNIDomains("DEFAULT")
-	s.sniSelector = NewSNISelector(domains)
-	logger.Info("SNI selector initialized in ServerService")
+	// 初始化 GeoIP 服务
+	if s.geoIPService == nil {
+		s.geoIPService = NewGeoIPService()
+		logger.Info("GeoIP service initialized in ServerService")
+	}
+
+	// 获取服务器地理位置
+	countryCode := s.geoIPService.GetCountryCode()
+	logger.Infof("检测到服务器地理位置: %s", countryCode)
+
+	// 获取对应国家的 SNI 域名列表
+	domains := s.GetCountrySNIDomains(countryCode)
+	s.sniSelector = NewSNISelectorWithGeoIP(domains, s.geoIPService)
+	logger.Infof("SNI selector initialized with %s domains (%d domains)", countryCode, len(domains))
 }
 
 // GetNewSNI 获取下一个不重复的 SNI 域名
@@ -1976,4 +1988,31 @@ func (s *ServerService) GetNewSNI() string {
 		s.initSNISelector()
 	}
 	return s.sniSelector.Next()
+}
+
+// RefreshSNIFromGeoIP 根据地理位置刷新 SNI 域名列表
+func (s *ServerService) RefreshSNIFromGeoIP() {
+	if s.sniSelector == nil {
+		logger.Warning("SNI selector not initialized, cannot refresh")
+		return
+	}
+
+	// 使用 SNISelector 的刷新方法
+	s.sniSelector.RefreshDomainsFromGeoIP(s)
+	logger.Info("SNI域名列表已根据地理位置刷新")
+}
+
+// GetGeoIPInfo 获取当前 GeoIP 信息
+func (s *ServerService) GetGeoIPInfo() string {
+	if s.geoIPService == nil {
+		return "GeoIP 服务未初始化"
+	}
+	
+	location, err := s.geoIPService.FetchLocationWithRetry(1)
+	if err != nil {
+		return fmt.Sprintf("GeoIP 查询失败: %v", err)
+	}
+	
+	return fmt.Sprintf("服务器位置: %s (%s), IP: %s", 
+		location.GetCountry(), location.GetCountryCode(), location.IP)
 }
