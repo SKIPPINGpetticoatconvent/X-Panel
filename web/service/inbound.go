@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"x-ui/database"
@@ -18,8 +19,10 @@ import (
 )
 
 type InboundService struct {
-	xrayApi xray.XrayAPI
-	tgService TelegramService
+	xrayApi       xray.XrayAPI
+	tgService     TelegramService
+	settingsCache map[int]map[string]any
+	cacheMutex    sync.RWMutex
 }
 
 // 【新增方法】: 用于从外部注入 XrayAPI 实例
@@ -82,16 +85,58 @@ func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (
 	return count > 0, nil
 }
 
+func (s *InboundService) getParsedSettings(inboundId int, settingsStr string) map[string]any {
+	s.cacheMutex.RLock()
+	if s.settingsCache == nil {
+		s.settingsCache = make(map[int]map[string]any)
+	}
+	cached, exists := s.settingsCache[inboundId]
+	s.cacheMutex.RUnlock()
+	if exists {
+		return cached
+	}
+
+	var settings map[string]any
+	err := json.Unmarshal([]byte(settingsStr), &settings)
+	if err != nil {
+		return nil
+	}
+
+	s.cacheMutex.Lock()
+	s.settingsCache[inboundId] = settings
+	s.cacheMutex.Unlock()
+
+	return settings
+}
+
+func (s *InboundService) invalidateSettingsCache(inboundId int) {
+	s.cacheMutex.Lock()
+	delete(s.settingsCache, inboundId)
+	s.cacheMutex.Unlock()
+}
+
 func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, error) {
-	settings := map[string][]model.Client{}
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	settings := s.getParsedSettings(inbound.Id, inbound.Settings)
 	if settings == nil {
 		return nil, fmt.Errorf("setting is null")
 	}
 
-	clients := settings["clients"]
-	if clients == nil {
+	clientsInterface, ok := settings["clients"]
+	if !ok {
 		return nil, nil
+	}
+	clientsAny, ok := clientsInterface.([]any)
+	if !ok {
+		return nil, fmt.Errorf("clients is not an array")
+	}
+	clients := make([]model.Client, len(clientsAny))
+	for i, c := range clientsAny {
+		cMap, ok := c.(map[string]any)
+		if !ok {
+			continue
+		}
+		jsonBytes, _ := json.Marshal(cMap)
+		json.Unmarshal(jsonBytes, &clients[i])
 	}
 	return clients, nil
 }
@@ -309,6 +354,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	// 中文注释：保存入站信息到数据库 (此时 inbound 对象已包含我们手动设置的 ID)
 	err = tx.Save(inbound).Error
 	if err == nil {
+		s.invalidateSettingsCache(inbound.Id)
 		if len(inbound.ClientStats) == 0 {
 			for _, client := range clients {
 				s.AddClientStat(tx, inbound.Id, &client)
@@ -514,7 +560,11 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 	s.xrayApi.Close()
 
-	return inbound, needRestart, tx.Save(oldInbound).Error
+	err = tx.Save(oldInbound).Error
+	if err == nil {
+		s.invalidateSettingsCache(oldInbound.Id)
+	}
+	return inbound, needRestart, err
 }
 
 func (s *InboundService) updateClientTraffics(tx *gorm.DB, oldInbound *model.Inbound, newInbound *model.Inbound) error {
@@ -690,7 +740,11 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 	}
 	s.xrayApi.Close()
 
-	return needRestart, tx.Save(oldInbound).Error
+	err = tx.Save(oldInbound).Error
+	if err == nil {
+		s.invalidateSettingsCache(oldInbound.Id)
+	}
+	return needRestart, err
 }
 
 func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool, error) {
@@ -778,7 +832,11 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 			s.xrayApi.Close()
 		}
 	}
-	return needRestart, db.Save(oldInbound).Error
+	err = db.Save(oldInbound).Error
+	if err == nil {
+		s.invalidateSettingsCache(oldInbound.Id)
+	}
+	return needRestart, err
 }
 
 func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId string) (bool, error) {
@@ -964,7 +1022,11 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		logger.Debug("Client old email not found")
 		needRestart = true
 	}
-	return needRestart, tx.Save(oldInbound).Error
+	err = tx.Save(oldInbound).Error
+	if err == nil {
+		s.invalidateSettingsCache(oldInbound.Id)
+	}
+	return needRestart, err
 }
 
 func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
@@ -1016,22 +1078,44 @@ func (s *InboundService) addInboundTraffic(tx *gorm.DB, traffics []*xray.Traffic
 		return nil
 	}
 
-	var err error
-
+	// Collect increments per tag
+	tagIncrements := make(map[string]struct {
+		up   int64
+		down int64
+	})
+	var tags []string
 	for _, traffic := range traffics {
 		if traffic.IsInbound {
-			err = tx.Model(&model.Inbound{}).Where("tag = ?", traffic.Tag).
-				Updates(map[string]any{
-					"up":       gorm.Expr("up + ?", traffic.Up),
-					"down":     gorm.Expr("down + ?", traffic.Down),
-					"all_time": gorm.Expr("COALESCE(all_time, 0) + ?", traffic.Up+traffic.Down),
-				}).Error
-			if err != nil {
-				return err
+			if _, exists := tagIncrements[traffic.Tag]; !exists {
+				tags = append(tags, traffic.Tag)
 			}
+			inc := tagIncrements[traffic.Tag]
+			inc.up += traffic.Up
+			inc.down += traffic.Down
+			tagIncrements[traffic.Tag] = inc
 		}
 	}
-	return nil
+
+	if len(tags) == 0 {
+		return nil
+	}
+
+	// Build CASE statements
+	upCases := "CASE tag"
+	downCases := "CASE tag"
+	allTimeCases := "CASE tag"
+	for _, tag := range tags {
+		inc := tagIncrements[tag]
+		upCases += fmt.Sprintf(" WHEN '%s' THEN up + %d", tag, inc.up)
+		downCases += fmt.Sprintf(" WHEN '%s' THEN down + %d", tag, inc.down)
+		allTimeCases += fmt.Sprintf(" WHEN '%s' THEN COALESCE(all_time, 0) + %d", tag, inc.up+inc.down)
+	}
+	upCases += " END"
+	downCases += " END"
+	allTimeCases += " END"
+
+	query := fmt.Sprintf("UPDATE inbounds SET up = %s, down = %s, all_time = %s WHERE tag IN (?)", upCases, downCases, allTimeCases)
+	return tx.Exec(query, tags).Error
 }
 
 func (s *InboundService) addClientTraffic(tx *gorm.DB, traffics []*xray.ClientTraffic) (err error) {
@@ -1504,6 +1588,9 @@ func (s *InboundService) SetClientTelegramUserID(trafficId int, tgId int64) (boo
 	}
 	inbound.Settings = string(modifiedSettings)
 	needRestart, err := s.UpdateInboundClient(inbound, clientId)
+	if err == nil {
+		s.invalidateSettingsCache(inbound.Id)
+	}
 	return needRestart, err
 }
 
@@ -1595,6 +1682,9 @@ func (s *InboundService) ToggleClientEnableByEmail(clientEmail string) (bool, bo
 	if err != nil {
 		return false, needRestart, err
 	}
+	if err == nil {
+		s.invalidateSettingsCache(inbound.Id)
+	}
 
 	return !clientOldEnabled, needRestart, nil
 }
@@ -1655,6 +1745,9 @@ func (s *InboundService) ResetClientIpLimitByEmail(clientEmail string, count int
 	}
 	inbound.Settings = string(modifiedSettings)
 	needRestart, err := s.UpdateInboundClient(inbound, clientId)
+	if err == nil {
+		s.invalidateSettingsCache(inbound.Id)
+	}
 	return needRestart, err
 }
 
@@ -1714,6 +1807,9 @@ func (s *InboundService) ResetClientExpiryTimeByEmail(clientEmail string, expiry
 	}
 	inbound.Settings = string(modifiedSettings)
 	needRestart, err := s.UpdateInboundClient(inbound, clientId)
+	if err == nil {
+		s.invalidateSettingsCache(inbound.Id)
+	}
 	return needRestart, err
 }
 
@@ -2243,6 +2339,9 @@ func (s *InboundService) MigrationRequirements() {
 		}
 	}
 	tx.Save(inbounds)
+	for _, inbound := range inbounds {
+		s.invalidateSettingsCache(inbound.Id)
+	}
 
 	// Remove orphaned traffics
 	tx.Where("inbound_id = 0").Delete(xray.ClientTraffic{})

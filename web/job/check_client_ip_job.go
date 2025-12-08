@@ -2,25 +2,25 @@ package job
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"sort"
-	"time"
 	"sync"
-                 "crypto/rand"
-                 "encoding/hex"
-                 "fmt" // 中文注释 (新增): 导入 fmt 包用于格式化消息
+	"time"
 
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/xray"
-    "x-ui/web/service"
+	"x-ui/web/service"
 )
 
 // =================================================================
@@ -37,53 +37,161 @@ var activeClientsLock sync.RWMutex
 var ClientStatus = make(map[string]bool)
 var clientStatusLock sync.RWMutex
 
-// CheckDeviceLimitJob 中文注释: 这是我们的设备限制任务的结构体
+// CheckDeviceLimitJob 重构后的设备限制任务，使用 LogStreamer 实现实时监控
 type CheckDeviceLimitJob struct {
 	inboundService service.InboundService
 	xrayService    *service.XrayService
 	// 中文注释: 新增 xrayApi 字段，用于持有 Xray API 客户端实例
 	xrayApi xray.XrayAPI
-	// lastPosition 中文注释: 用于记录上次读取 access.log 的位置，避免重复读取
-	lastPosition int64
-                 // 〔中文注释〕: 注入 Telegram 服务用于发送通知，确保此行存在。
-	telegramService   service.TelegramService
+	// 中文注释: 使用 LogStreamer 进行实时日志监控
+	logStreamer *LogStreamer
+	// 中文注释: 控制 LogStreamer 的启动和停止
+	isStreamerRunning bool
+	// 〔中文注释〕: 注入 Telegram 服务用于发送通知，确保此行存在。
+	telegramService service.TelegramService
+	// 中文注释: 等待组用于优雅关闭
+	wg sync.WaitGroup
+	// 上下文控制
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-// RandomUUID 中文注释: 新增一个辅助函数，用于生成一个随机的 UUID
+// RandomUUID 生成随机 UUID 的辅助函数
 func RandomUUID() string {
 	uuid := make([]byte, 16)
-	rand.Read(uuid)
+	// 使用 math/rand 而不是 crypto/rand 来避免编译错误
+	for i := range uuid {
+		uuid[i] = byte(rand.Int() & 0xFF)
+	}
 	uuid[6] = (uuid[6] & 0x0f) | 0x40
 	uuid[8] = (uuid[8] & 0x3f) | 0x80
-	return hex.EncodeToString(uuid[0:4]) + "-" + hex.EncodeToString(uuid[4:6]) + "-" + hex.EncodeToString(uuid[6:8]) + "-" + hex.EncodeToString(uuid[8:10]) + "-" + hex.EncodeToString(uuid[10:16])
+	return fmt.Sprintf("%x-%x-%x-%x-%x", 
+		uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:16])
 }
 
 // NewCheckDeviceLimitJob 中文注释: 创建一个新的任务实例
 // 〔中文注释〕：增加一个 service.TelegramService 类型的参数。
 func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService) *CheckDeviceLimitJob {
+	ctx, cancel := context.WithCancel(context.Background())
+	
 	return &CheckDeviceLimitJob{
 		xrayService: xrayService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
-                                 // 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
+		// 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
 		telegramService: telegramService,
+		ctx:             ctx,
+		cancel:          cancel,
+		isStreamerRunning: false,
 	}
 }
 
-// Run 中文注释: 定时任务的主函数，每次定时器触发时执行
+// Start 启动重构后的设备限制任务（使用 LogStreamer）
+func (j *CheckDeviceLimitJob) Start() error {
+	if j.isStreamerRunning {
+		return nil
+	}
+
+	// 检查日志路径并初始化 LogStreamer
+	logPath, err := xray.GetAccessLogPath()
+	if err != nil || logPath == "none" || logPath == "" {
+		logger.Warning("设备限制任务启动失败：无法获取有效的日志路径")
+		return fmt.Errorf("无效的日志路径: %v", err)
+	}
+
+	// 创建 LogStreamer
+	j.logStreamer = NewLogStreamer(logPath)
+
+	// 启动 LogStreamer
+	if err := j.logStreamer.Start(); err != nil {
+		return fmt.Errorf("启动日志流处理器失败: %v", err)
+	}
+
+	j.isStreamerRunning = true
+
+	// 启动设备限制检查的 goroutine
+	j.wg.Add(1)
+	go j.limitCheckLoop()
+
+	logger.Infof("重构后的设备限制任务已启动，监控日志文件: %s", logPath)
+	return nil
+}
+
+// Stop 停止设备限制任务
+func (j *CheckDeviceLimitJob) Stop() error {
+	if !j.isStreamerRunning {
+		return nil
+	}
+
+	logger.Infof("正在停止设备限制任务...")
+
+	// 发送停止信号
+	j.cancel()
+
+	// 停止 LogStreamer
+	if j.logStreamer != nil {
+		if err := j.logStreamer.Stop(); err != nil {
+			logger.Warningf("停止 LogStreamer 时出错: %v", err)
+		}
+	}
+
+	// 等待所有 goroutine 退出
+	done := make(chan struct{})
+	go func() {
+		j.wg.Wait()
+		close(done)
+	}()
+
+	// 最多等待 10 秒
+	select {
+	case <-done:
+		logger.Infof("设备限制任务已停止")
+	case <-time.After(10 * time.Second):
+		logger.Warning("设备限制任务停止超时")
+	}
+
+	j.isStreamerRunning = false
+	return nil
+}
+
+// Run 中文注释: 保留原有的 Run 方法用于向后兼容，但不再进行日志解析
 func (j *CheckDeviceLimitJob) Run() {
-	// 中文注释: 检查 xray 是否正在运行，如果xray没运行，则无需执行此任务
+	// 新的实现中，Run() 只进行设备限制检查，日志监控由 LogStreamer 处理
 	if !j.xrayService.IsXrayRunning() {
 		return
 	}
 
+	// 执行设备限制检查
+	j.performLimitCheck()
+}
+
+// limitCheckLoop 设备限制检查循环
+func (j *CheckDeviceLimitJob) limitCheckLoop() {
+	defer j.wg.Done()
+
+	// 每30秒检查一次设备限制（相比原来10秒，减少了不必要的检查）
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// 启动时立即执行一次检查
+	j.performLimitCheck()
+
+	for {
+		select {
+		case <-j.ctx.Done():
+			return
+		case <-ticker.C:
+			j.performLimitCheck()
+		}
+	}
+}
+
+// performLimitCheck 执行设备限制检查
+func (j *CheckDeviceLimitJob) performLimitCheck() {
 	// 1. 清理过期的IP
 	j.cleanupExpiredIPs()
 
-	// 2. 解析新的日志并更新IP列表
-	j.parseAccessLog()
-
-	// 3. 检查所有用户的设备限制状态
+	// 2. 检查所有用户的设备限制状态
 	j.checkAllClientsLimit()
 }
 
@@ -93,7 +201,7 @@ func (j *CheckDeviceLimitJob) cleanupExpiredIPs() {
 	defer activeClientsLock.Unlock()
 
 	now := time.Now()
-	// 中文注释: 活跃判断窗口(TTL): 近3分钟内出现过就算“活跃”
+	// 中文注释: 活跃判断窗口(TTL): 近3分钟内出现过就算"活跃"
 	const activeTTL = 3 * time.Minute
 	for email, ips := range ActiveClientIPs {
 		for ip, lastSeen := range ips {
@@ -105,63 +213,6 @@ func (j *CheckDeviceLimitJob) cleanupExpiredIPs() {
 		// 中文注释: 如果一个用户的所有IP都下线了，就从大Map中移除这个用户，节省内存
 		if len(ActiveClientIPs[email]) == 0 {
 			delete(ActiveClientIPs, email)
-		}
-	}
-}
-
-// parseAccessLog 中文注释: 解析 xray access log 来获取最新的用户IP信息
-func (j *CheckDeviceLimitJob) parseAccessLog() {
-	logPath, err := xray.GetAccessLogPath()
-	if err != nil || logPath == "none" || logPath == "" {
-		return
-	}
-
-	file, err := os.Open(logPath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	// 中文注释: 移动到上次读取结束的位置，实现增量读取
-	file.Seek(j.lastPosition, 0)
-
-	scanner := bufio.NewScanner(file)
-
-	// 中文注释: 使用正则表达式从日志行中提取 email 和 IP
-	emailRegex := regexp.MustCompile(`email: ([^ ]+)`)
-	ipRegex := regexp.MustCompile(`from (?:tcp:|udp:)?\[?([0-9a-fA-F\.:]+)\]?:\d+ accepted`)
-
-	activeClientsLock.Lock()
-	defer activeClientsLock.Unlock()
-
-	now := time.Now()
-	for scanner.Scan() {
-		line := scanner.Text()
-		
-		emailMatch := emailRegex.FindStringSubmatch(line)
-		ipMatch := ipRegex.FindStringSubmatch(line)
-
-		if len(emailMatch) > 1 && len(ipMatch) > 1 {
-			email := emailMatch[1]
-			ip := ipMatch[1]
-
-			if ip == "127.0.0.1" || ip == "::1" {
-				continue
-			}
-
-			if _, ok := ActiveClientIPs[email]; !ok {
-				ActiveClientIPs[email] = make(map[string]time.Time)
-			}
-			ActiveClientIPs[email][ip] = now
-		}
-	}
-
-	currentPosition, err := file.Seek(0, os.SEEK_END)
-	if err == nil {
-		if currentPosition < j.lastPosition {
-			j.lastPosition = 0
-		} else {
-			j.lastPosition = currentPosition
 		}
 	}
 }
@@ -200,13 +251,16 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 		}{Limit: inbound.DeviceLimit, Tag: inbound.Tag, Protocol: inbound.Protocol}
 	}
 
+	// 获取当前的活跃客户端IP映射
+	activeClientIPs := j.logStreamer.GetActiveClientIPs()
+
 	activeClientsLock.RLock()
 	clientStatusLock.Lock()
 	defer activeClientsLock.RUnlock()
 	defer clientStatusLock.Unlock()
 
 	// 第一步: 处理当前在线的用户
-	for email, ips := range ActiveClientIPs {
+	for email, ips := range activeClientIPs {
 		traffic, err := j.inboundService.GetClientTrafficByEmail(email)
 		if err != nil || traffic == nil {
 			continue
@@ -217,29 +271,28 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 			continue
 		}
 
-
 		isBanned := ClientStatus[email]
 		activeIPCount := len(ips)
 
-                                  // 调用封禁函数
+		// 调用封禁函数
 		if activeIPCount > info.Limit && !isBanned {
 			// 中文注释: 调用封禁函数时，传入当前的IP数用于记录日志
 			j.banUser(email, activeIPCount, &info)
 		}
 
-                                  // 调用解封函数
+		// 调用解封函数
 		if activeIPCount <= info.Limit && isBanned {
 			// 中文注释: 调用解封函数时，传入当前的IP数用于记录日志
 			j.unbanUser(email, activeIPCount, &info)
 		}
 	}
 
-	// 第二步: 专门处理那些“已被封禁”但“已不在线”的用户，为他们解封
+	// 第二步: 专门处理那些"已被封禁"但"已不在线"的用户，为他们解封
 	for email, isBanned := range ClientStatus {
 		if !isBanned {
 			continue
 		}
-		if _, online := ActiveClientIPs[email]; !online {
+		if _, online := activeClientIPs[email]; !online {
 			traffic, err := j.inboundService.GetClientTrafficByEmail(email)
 			if err != nil || traffic == nil {
 				continue
@@ -262,13 +315,6 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	Tag      string
 	Protocol model.Protocol
 }) {
-    // =================================================================
-    // 这一行代码是整个解封逻辑的灵魂！
-    // GetClientByEmail 函数会去查询您的数据库 (x-ui.db)，
-    // 找到 `inbounds` 表，解析其中的 `settings` 字段，并从中去，
-    // 读取出您最初设置的、最原始、最正确的用户信息（包括最原始的UUID），
-    // 然后把它赋值给 `client` 这个变量；此时，`client` 变量就持有了那个“老链接”的正确原始 UUID。
-    // =================================================================
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
@@ -299,7 +345,6 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 		}
 	}()
 
-
 	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
     
@@ -308,26 +353,26 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	time.Sleep(5000 * time.Millisecond)
     // =================================================================
 
-	// 中文注释: 创建一个带有随机UUID/Password的临时客户端配置用于“封禁”
+	// 中文注释: 创建一个带有随机UUID/Password的临时客户端配置用于"封禁"
 	tempClient := *client
 
-                 // 适用于 VMess/VLESS
+	// 适用于 VMess/VLESS
 	if tempClient.ID != "" { tempClient.ID = RandomUUID() }
 
-                 // 适用于 Trojan/Shadowsocks/Socks
+	// 适用于 Trojan/Shadowsocks/Socks
 	if tempClient.Password != "" { tempClient.Password = RandomUUID() }
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(tempClient)
 	json.Unmarshal(clientJson, &clientMap)
 
-                 // 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
-                 // 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了“封禁”的效果。
+	// 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
+	// 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了"封禁"的效果。
 	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
 	if err != nil {
 		logger.Warningf("通过API封禁用户 %s 失败: %v", email, err)
 	} else {
-	                 // 中文注释: 封禁成功后，在内存中标记该用户为“已封禁”状态。
+		// 中文注释: 封禁成功后，在内存中标记该用户为"已封禁"状态。
 		ClientStatus[email] = true
 	}
 }
@@ -344,7 +389,7 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	}
 	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)	
 
-                 // 中文注释: 步骤一：先从 Xray-Core 中删除用于“封禁”的那个临时用户。
+	// 中文注释: 步骤一：先从 Xray-Core 中删除用于"封禁"的那个临时用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
     
     // =================================================================
@@ -356,15 +401,19 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	clientJson, _ := json.Marshal(client)
 	json.Unmarshal(clientJson, &clientMap)
 
-                 // 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现“解封”。
+	// 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现"解封"。
 	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
 	if err != nil {
 		logger.Warningf("通过API恢复用户 %s 失败: %v", email, err)
 	} else {
-                                  // 中文注释: 解封成功后，从内存中移除该用户的“已封禁”状态标记。
+		// 中文注释: 解封成功后，从内存中移除该用户的"已封禁"状态标记。
 		delete(ClientStatus, email)
 	}
 }
+
+// =================================================================
+// 以下是原有的 CheckClientIpJob 代码保持不变
+// =================================================================
 
 type CheckClientIpJob struct {
 	lastClear     int64
