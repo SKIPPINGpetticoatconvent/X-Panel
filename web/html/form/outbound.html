@@ -428,7 +428,10 @@
         </a-form-item>
         <template v-if="outbound.stream.isTls">
           <a-form-item label="SNI" placeholder="Server Name Indication">
-            <a-input v-model.trim="outbound.stream.tls.serverName"></a-input>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <a-input v-model.trim="outbound.stream.tls.serverName" style="flex: 1;"></a-input>
+              <a-button type="primary" icon="reload" @click="getNewOutboundTLSSNI" title="获取随机SNI">随机获取</a-button>
+            </div>
           </a-form-item>
           <a-form-item label="uTLS">
             <a-select v-model="outbound.stream.tls.fingerprint" :dropdown-class-name="themeSwitcher.currentTheme">
@@ -449,7 +452,10 @@
         <!-- reality settings -->
         <template v-if="outbound.stream.isReality">
           <a-form-item label="SNI">
-            <a-input v-model.trim="outbound.stream.reality.serverName"></a-input>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <a-input v-model.trim="outbound.stream.reality.serverName" style="flex: 1;"></a-input>
+              <a-button type="primary" icon="reload" @click="getNewOutboundRealitySNI" title="获取随机SNI">随机获取</a-button>
+            </div>
           </a-form-item>
           <a-form-item label="uTLS">
             <a-select v-model="outbound.stream.reality.fingerprint" :dropdown-class-name="themeSwitcher.currentTheme">

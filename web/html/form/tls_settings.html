@@ -13,7 +13,10 @@
   <!-- tls settings -->
   <template v-if="inbound.stream.isTls">
     <a-form-item label="SNI" placeholder="Server Name Indication">
-      <a-input v-model.trim="inbound.stream.tls.sni"></a-input>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <a-input v-model.trim="inbound.stream.tls.sni" style="flex: 1;"></a-input>
+        <a-button type="primary" icon="reload" @click="getNewTLSSNI" title="获取随机SNI">随机获取</a-button>
+      </div>
     </a-form-item>
     <a-form-item label="Cipher Suites">
       <a-select v-model="inbound.stream.tls.cipherSuites" :dropdown-class-name="themeSwitcher.currentTheme">

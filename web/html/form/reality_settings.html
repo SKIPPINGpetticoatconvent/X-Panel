@@ -16,7 +16,10 @@
         <a-input v-model.trim="inbound.stream.reality.target"></a-input>
     </a-form-item>
     <a-form-item label='SNI'>
-        <a-input v-model.trim="inbound.stream.reality.serverNames"></a-input>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <a-input v-model.trim="inbound.stream.reality.serverNames" style="flex: 1;"></a-input>
+            <a-button type="primary" icon="reload" @click="getNewSNI" title="获取随机SNI">随机获取</a-button>
+        </div>
     </a-form-item>
     <a-form-item label='Max Time Diff (ms)'>
         <a-input-number v-model.number="inbound.stream.reality.maxTimediff" :min="0"></a-input-number>

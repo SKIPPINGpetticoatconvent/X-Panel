@@ -33,7 +33,7 @@ func NewServerController(g *gin.RouterGroup, serverService service.ServerService
 		lastGetStatusTime: time.Now(),
 		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。
 		//    这样一来，这个 Controller 内部使用的就是我们在 main.go 中创建的那个功能完整的服务了。
-		serverService:  serverService,
+		serverService: serverService,
 	}
 	a.initRouter(g)
 	a.startTask()
@@ -64,6 +64,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/history/load", a.loadHistory)
 	g.POST("/install/subconverter", a.installSubconverter)
 	g.POST("/openPort", a.openPort)
+	g.GET("/getNewSNI", a.getNewSNI)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -340,19 +341,18 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 	jsonObj(c, history, nil)
 }
 
-
 // 〔新增接口〕: 安装 Subconverter
 // 〔中文注释〕: 这个函数是暴露给前端的 API 接口，用于处理安装 Subconverter 的请求。
 func (a *ServerController) installSubconverter(c *gin.Context) {
-    // 〔中文注释〕: 调用服务层中我们刚刚创建的 InstallSubconverter 方法。
-    err := a.serverService.InstallSubconverter()
-    if err != nil {
-        // 〔中文注释〕: 如果 service 层返回了错误，则向前台返回失败的 JSON 消息。
-        jsonMsg(c, "Subconverter 安装指令执行失败", err)
-        return
-    }
-    // 〔中文注释〕: 如果没有错误，则向前台返回成功的 JSON 消息。
-    jsonMsg(c, "Subconverter 安装指令已成功发送", nil)
+	// 〔中文注释〕: 调用服务层中我们刚刚创建的 InstallSubconverter 方法。
+	err := a.serverService.InstallSubconverter()
+	if err != nil {
+		// 〔中文注释〕: 如果 service 层返回了错误，则向前台返回失败的 JSON 消息。
+		jsonMsg(c, "Subconverter 安装指令执行失败", err)
+		return
+	}
+	// 〔中文注释〕: 如果没有错误，则向前台返回成功的 JSON 消息。
+	jsonMsg(c, "Subconverter 安装指令已成功发送", nil)
 }
 
 // 【新增接口实现】: 前端放行端口
@@ -373,4 +373,10 @@ func (a *ServerController) openPort(c *gin.Context) {
 	// 【中文注释】: 3. 因为服务层方法是异步的，不再检查它的 error 返回值。
 	//    直接向前端返回一个成功的消息，告知用户指令已发送。
 	jsonMsg(c, "端口放行指令已成功发送，正在后台执行...", nil)
+}
+
+// getNewSNI 获取一个新的 SNI 域名
+func (a *ServerController) getNewSNI(c *gin.Context) {
+	sni := a.serverService.GetNewSNI()
+	jsonObj(c, map[string]string{"sni": sni}, nil)
 }

@@ -97,7 +97,6 @@ type Tgbot struct {
 	serverService  *ServerService
 	xrayService    *XrayService
 	lastStatus     *Status
-	sniSelector    *SNISelector // SNI 域名选择器，确保不重复
 }
 
 // 【修改后】: GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
@@ -154,10 +153,6 @@ func NewTgBot(
 		xrayService:    xrayService,
 		lastStatus:     lastStatus,
 	}
-
-	// 初始化 SNI 选择器，确保域名不重复
-	realityDests := t.GetRealityDestinations()
-	t.sniSelector = NewSNISelector(realityDests)
 
 	return t
 }
@@ -3365,9 +3360,9 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 		// 如果提供了指定的 SNI，使用它
 		randomDest = targetDest[0]
 	} else {
-		// 使用 SNI 选择器确保不重复
-		if t.sniSelector != nil {
-			randomDest = t.sniSelector.Next()
+		// 使用 ServerService 中的 SNI 选择器
+		if t.serverService != nil {
+			randomDest = t.serverService.GetNewSNI()
 		} else {
 			// 回退到随机选择（防止空指针）
 			randomDest = realityDests[common.RandomInt(len(realityDests))]
@@ -3629,9 +3624,9 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 		// 如果提供了指定的 SNI，使用它
 		randomDest = targetDest[0]
 	} else {
-		// 使用 SNI 选择器确保不重复
-		if t.sniSelector != nil {
-			randomDest = t.sniSelector.Next()
+		// 使用 ServerService 中的 SNI 选择器
+		if t.serverService != nil {
+			randomDest = t.serverService.GetNewSNI()
 		} else {
 			// 回退到随机选择（防止空指针）
 			randomDest = realityDests[common.RandomInt(len(realityDests))]

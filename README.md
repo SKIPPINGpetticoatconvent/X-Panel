@@ -63,7 +63,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 ### 3. 一键配置
 - 面板: `添加入站 > 一键配置`
 - TG: 机器人菜单 `一键配置`
-- **SNI 优化**: 系统会自动轮询使用不同的 SNI 域名，避免重复。详见 [SNI 选择机制](docs/features/sni_selection.md)。
+- **SNI 优化**: 系统会自动轮询使用不同的 SNI 域名，避免重复。无论是在面板还是Telegram Bot中使用一键配置，都会享受同样的SNI优化效果。详见 [SNI 选择机制](docs/features/sni_selection.md)。
 
 ### 4. 证书安装
 - 脚本 `x-ui > 18` (ACME/Certbot/Cloudflare)

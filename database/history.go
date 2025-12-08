@@ -1,16 +1,16 @@
 package database
 
 import (
-	"time"
 	"gorm.io/gorm" // 【中文注释】: 确保 gorm 被导入，以便在函数签名中使用
+	"time"
 )
 
 // LinkHistory GORM aodel for link_history table
 type LinkHistory struct {
-	Id         int       `gorm:"primaryKey"`
-	Type       string    `gorm:"type:varchar(255);not null"`
-	Link       string    `gorm:"type:text;not null"`
-	CreatedAt  time.Time `gorm:"not null"`
+	Id        int       `gorm:"primaryKey"`
+	Type      string    `gorm:"type:varchar(255);not null"`
+	Link      string    `gorm:"type:text;not null"`
+	CreatedAt time.Time `gorm:"not null"`
 }
 
 // AddLinkHistory 在一个事务中添加新链接记录并修剪旧记录。
@@ -52,7 +52,6 @@ func AddLinkHistory(record *LinkHistory) error {
 		return nil
 	})
 }
-
 
 // GetLinkHistory retrieves the 10 most recent link records
 func GetLinkHistory() ([]*LinkHistory, error) {

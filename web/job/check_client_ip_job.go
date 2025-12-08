@@ -19,8 +19,8 @@ import (
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
-	"x-ui/xray"
 	"x-ui/web/service"
+	"x-ui/xray"
 )
 
 // =================================================================
@@ -65,7 +65,7 @@ func RandomUUID() string {
 	}
 	uuid[6] = (uuid[6] & 0x0f) | 0x40
 	uuid[8] = (uuid[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", 
+	return fmt.Sprintf("%x-%x-%x-%x-%x",
 		uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:16])
 }
 
@@ -73,15 +73,15 @@ func RandomUUID() string {
 // 〔中文注释〕：增加一个 service.TelegramService 类型的参数。
 func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService) *CheckDeviceLimitJob {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &CheckDeviceLimitJob{
 		xrayService: xrayService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
 		// 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
-		telegramService: telegramService,
-		ctx:             ctx,
-		cancel:          cancel,
+		telegramService:   telegramService,
+		ctx:               ctx,
+		cancel:            cancel,
 		isStreamerRunning: false,
 	}
 }
@@ -320,7 +320,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 		return
 	}
 	logger.Infof("〔设备限制〕超限：用户 %s. 限制: %d, 当前活跃: %d. 执行封禁掐网。", email, info.Limit, activeIPCount)
-	
+
 	// 〔中文注释〕: 以下是发送 Telegram 通知的核心代码，
 	// 它会调用我们注入的 telegramService 的 SendMessage 方法。
 	go func() {
@@ -347,20 +347,24 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 
 	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
-    
-    // =================================================================
+
+	// =================================================================
 	// 中文注释: 增加 5000 毫秒延时，解决竞态条件问题
 	time.Sleep(5000 * time.Millisecond)
-    // =================================================================
+	// =================================================================
 
 	// 中文注释: 创建一个带有随机UUID/Password的临时客户端配置用于"封禁"
 	tempClient := *client
 
 	// 适用于 VMess/VLESS
-	if tempClient.ID != "" { tempClient.ID = RandomUUID() }
+	if tempClient.ID != "" {
+		tempClient.ID = RandomUUID()
+	}
 
 	// 适用于 Trojan/Shadowsocks/Socks
-	if tempClient.Password != "" { tempClient.Password = RandomUUID() }
+	if tempClient.Password != "" {
+		tempClient.Password = RandomUUID()
+	}
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(tempClient)
@@ -387,15 +391,15 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	if err != nil || client == nil {
 		return
 	}
-	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)	
+	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)
 
 	// 中文注释: 步骤一：先从 Xray-Core 中删除用于"封禁"的那个临时用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
-    
-    // =================================================================
+
+	// =================================================================
 	// 中文注释: 同样增加 5000 毫秒延时，确保解封操作的稳定性
 	time.Sleep(5000 * time.Millisecond)
-    // =================================================================
+	// =================================================================
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(client)

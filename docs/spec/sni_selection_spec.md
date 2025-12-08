@@ -5,11 +5,14 @@
 
 本规格说明旨在设计一个 **SNI 轮询选择器 (SNI Round-Robin Selector)**，确保在给定的 SNI 列表范围内，连续生成的节点尽可能使用不同的域名。
 
+**更新 (Web 集成)**：为了让网页端也能享受到“SNI 不重复”的特性，我们需要将 `SNISelector` 提升为全局共享服务，并提供 API 供前端调用。
+
 ## 2. 核心需求
 *   **全局轮询**：在 Bot 运行期间，维护一个全局的 SNI 使用状态。
 *   **自动重置**：当所有可用 SNI 都被使用过一次后，自动重新开始新的一轮（可选择重新洗牌）。
 *   **线程安全**：支持并发请求（虽然 TG Bot 主要是串行处理消息，但作为服务应保证并发安全）。
 *   **回退机制**：如果列表为空，应有合理的默认行为。
+*   **Web 端集成**：网页端在生成配置（如 Reality/TLS）时，应能获取到下一个不重复的 SNI。
 
 ## 3. 架构设计
 
@@ -136,73 +139,105 @@ func (s *SNISelector) UpdateDomains(newDomains []string) {
 }
 ```
 
-## 2. 集成到 Tgbot
+## 2. 重构：提升 SNISelector 为共享服务
+
+为了让 Web 端和 TG Bot 共享同一个 SNI 状态，我们需要将 `SNISelector` 的生命周期管理移至 `ServerService`。
+
+### 2.1 修改 `ServerService`
+
+```go
+// web/service/server.go
+
+type ServerService struct {
+    // ... existing fields
+    sniSelector *SNISelector // 新增：全局共享的 SNI 选择器
+}
+
+// 初始化 SNISelector
+// 可以在 ServerService 初始化时调用，或者在首次使用时懒加载
+func (s *ServerService) InitSNISelector() {
+    // 获取当前服务器所在国家的 SNI 列表
+    country, _ := s.GetServerLocation()
+    domains := s.GetCountrySNIDomains(country)
+    
+    s.sniSelector = NewSNISelector(domains)
+}
+
+// 获取下一个 SNI (供内部和 Controller 使用)
+func (s *ServerService) GetNextSNI() string {
+    if s.sniSelector == nil {
+        s.InitSNISelector()
+    }
+    return s.sniSelector.Next()
+}
+```
+
+### 2.2 修改 `Tgbot`
+
+`Tgbot` 不再自己维护 `SNISelector`，而是使用 `ServerService` 提供的。
 
 ```go
 // web/service/tgbot.go
 
 type Tgbot struct {
-    // ... existing fields
-    sniSelector *SNISelector // 新增字段
-}
-
-// 初始化
-func NewTgBot(...) *Tgbot {
-    t := &Tgbot{...}
-    
-    // 获取初始域名列表
-    initialDomains := t.GetRealityDestinations() 
-    t.sniSelector = NewSNISelector(initialDomains)
-    
-    return t
-}
-
-// 修改 GetRealityDestinations (可选，或者直接在 build 方法中使用 selector)
-// 建议保持 GetRealityDestinations 原样（作为数据源），
-// 而在 buildRealityInbound 中使用 selector。
-
-// 修改 buildRealityInbound
-func (t *Tgbot) buildRealityInbound(targetDest ...string) (...) {
     // ...
-    
-    var randomDest string
-    if len(targetDest) > 0 && targetDest[0] != "" {
-        randomDest = targetDest[0]
-    } else {
-        // OLD: randomDest = realityDests[common.RandomInt(len(realityDests))]
-        
-        // NEW: 使用选择器
-        // 确保 selector 已初始化（防止空指针）
-        if t.sniSelector == nil {
-             // Fallback logic
-             dests := t.GetRealityDestinations()
-             t.sniSelector = NewSNISelector(dests)
-        }
-        
-        randomDest = t.sniSelector.Next()
-    }
-    
+    serverService *ServerService // 确保已注入
+    // sniSelector *SNISelector // 删除私有成员
+}
+
+// 修改 buildRealityInbound 等方法
+func (t *Tgbot) buildRealityInbound(...) {
+    // ...
+    // 使用 ServerService 获取 SNI
+    randomDest = t.serverService.GetNextSNI()
     // ...
 }
-
-// 同理修改 buildXhttpRealityInbound
 ```
 
-## 3. 测试计划 (TDD Anchors)
+### 2.3 新增 Web API
 
-1.  **`TestSNISelector_Basic`**:
-    *   输入: `["a.com", "b.com"]`
-    *   操作: 连续调用 `Next()` 3次。
-    *   期望: 输出应覆盖 "a.com", "b.com"，第三次调用应返回 "a.com" 或 "b.com" (取决于洗牌后的顺序，但前两次必须不同)。
+在 `ServerController` 中增加一个接口，供前端 JS 调用。
 
-2.  **`TestSNISelector_EmptyInit`**:
-    *   输入: `[]`
-    *   期望: `Next()` 返回默认安全值，不 Panic。
+```go
+// web/controller/server.go
 
-3.  **`TestSNISelector_Concurrency`**:
-    *   操作: 启动 10 个 goroutine 同时调用 `Next()`。
-    *   期望: 无数据竞争 (Data Race)，所有调用成功返回。
+func (a *ServerController) initRouter(g *gin.RouterGroup) {
+    // ...
+    g.GET("/getNewSNI", a.getNewSNI) // 新增接口
+}
 
-4.  **`TestTgbot_Integration`**:
-    *   操作: 模拟调用 `remoteCreateOneClickInbound` 多次。
-    *   期望: 生成的 `Inbound` 配置中，SNI 字段在短时间内不重复。
+// getNewSNI 处理前端请求
+func (a *ServerController) getNewSNI(c *gin.Context) {
+    sni := a.serverService.GetNextSNI()
+    jsonObj(c, sni, nil)
+}
+```
+
+## 3. 前端集成 (JavaScript)
+
+前端在生成 Reality/TLS 配置时，不再随机选择，而是请求后端 API。
+
+```javascript
+// web/assets/js/model/inbound.js (伪代码逻辑)
+
+// 在生成默认配置或点击“随机 SNI”按钮时
+async function fetchNewSNI() {
+    const response = await HttpUtil.get("/server/getNewSNI");
+    if (response.success) {
+        return response.data;
+    }
+    return "www.google.com"; // Fallback
+}
+```
+
+## 4. 测试计划 (TDD Anchors)
+
+1.  **`TestServerService_SNI_Singleton`**:
+    *   验证 `ServerService` 中的 `sniSelector` 是否为单例。
+    *   验证多次调用 `GetNextSNI` 是否按预期轮询。
+
+2.  **`TestTgbot_Uses_Shared_SNI`**:
+    *   验证 `Tgbot` 生成节点时，是否调用了 `ServerService.GetNextSNI`。
+
+3.  **`TestAPI_GetNewSNI`**:
+    *   验证 `/server/getNewSNI` 接口是否返回有效的 SNI 字符串。

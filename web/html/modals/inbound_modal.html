@@ -150,6 +150,35 @@
                 inModal.inbound.stream.reality.mldsa65Seed = msg.obj.seed;
                 inModal.inbound.stream.reality.settings.mldsa65Verify = msg.obj.verify;
             },
+            async getNewSNI() {
+                inModal.loading(true);
+                const msg = await HttpUtil.get('/server/getNewSNI');
+                inModal.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+                inModal.inbound.stream.reality.serverNames = msg.obj;
+            },
+            async getNewTLSSNI() {
+                inModal.loading(true);
+                const msg = await HttpUtil.get('/server/getNewSNI');
+                inModal.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+                inModal.inbound.stream.tls.sni = msg.obj;
+            },
+            async getNewFallbackSNI(index) {
+                inModal.loading(true);
+                const msg = await HttpUtil.get('/server/getNewSNI');
+                inModal.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+                if (inModal.inbound.settings.fallbacks && inModal.inbound.settings.fallbacks[index]) {
+                    inModal.inbound.settings.fallbacks[index].name = msg.obj;
+                }
+            },
             async getNewEchCert() {
                 inModal.loading(true);
                 const msg = await HttpUtil.post('/panel/api/server/getNewEchCert', { sni: inModal.inbound.stream.tls.sni });

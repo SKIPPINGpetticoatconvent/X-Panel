@@ -115,10 +115,10 @@ func TestInboundServiceBulkTrafficUpdates(t *testing.T) {
 	// Add some mock inbound traffic
 	for i := 0; i < 100; i++ {
 		inboundTraffics = append(inboundTraffics, &xray.Traffic{
-			Tag:      "inbound-8080",
+			Tag:       "inbound-8080",
 			IsInbound: true,
-			Up:       int64(i * 1000),
-			Down:     int64(i * 2000),
+			Up:        int64(i * 1000),
+			Down:      int64(i * 2000),
 		})
 	}
 
@@ -148,7 +148,7 @@ func TestInboundServiceBulkTrafficUpdates(t *testing.T) {
 	}
 
 	// Verify calculations
-	expectedInboundUp := int64(100 * 99 * 1000 / 2) // sum of 0 to 99 * 1000
+	expectedInboundUp := int64(100 * 99 * 1000 / 2)   // sum of 0 to 99 * 1000
 	expectedInboundDown := int64(100 * 99 * 2000 / 2) // sum of 0 to 99 * 2000
 	expectedClientUp := int64(50 * 49 * 500 / 2)
 	expectedClientDown := int64(50 * 49 * 1000 / 2)

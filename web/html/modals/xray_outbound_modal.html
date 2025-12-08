@@ -120,6 +120,24 @@
                     outModal.link = '';
                 }
             },
+            async getNewOutboundTLSSNI() {
+                outModal.loading(true);
+                const msg = await HttpUtil.get('/server/getNewSNI');
+                outModal.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+                outModal.outbound.stream.tls.serverName = msg.obj;
+            },
+            async getNewOutboundRealitySNI() {
+                outModal.loading(true);
+                const msg = await HttpUtil.get('/server/getNewSNI');
+                outModal.loading(false);
+                if (!msg.success) {
+                    return;
+                }
+                outModal.outbound.stream.reality.serverName = msg.obj;
+            },
         },
     });
 

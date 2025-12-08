@@ -36,7 +36,7 @@ func initModels() error {
 		&model.InboundClientIps{},
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},
-		&LinkHistory{},   // 把 LinkHistory 表也迁移
+		&LinkHistory{}, // 把 LinkHistory 表也迁移
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
@@ -143,9 +143,9 @@ func InitDB(dbPath string) error {
 	if err != nil {
 		return err
 	}
-	sqlDB.SetMaxOpenConns(25)          // 最大打开连接数
-	sqlDB.SetMaxIdleConns(5)           // 最大空闲连接数
-	sqlDB.SetConnMaxLifetime(5 * time.Minute)  // 连接最大生命周期
+	sqlDB.SetMaxOpenConns(25)                 // 最大打开连接数
+	sqlDB.SetMaxIdleConns(5)                  // 最大空闲连接数
+	sqlDB.SetConnMaxLifetime(5 * time.Minute) // 连接最大生命周期
 
 	// 启用 SQLite WAL 模式优化
 	db.Exec("PRAGMA journal_mode=WAL;")

@@ -44,7 +44,7 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 	// 尝试读取少量数据来判断协议
 	c.firstBuf = make([]byte, 512) // 减小缓冲区大小
 	n, err := c.Conn.Read(c.firstBuf)
-	
+
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			logger.Warning("Read timeout during protocol detection, treating as HTTPS")
@@ -55,17 +55,17 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 		c.isHttps = true
 		return true
 	}
-	
+
 	if n == 0 {
 		// 没有数据，默认视为HTTPS
 		c.isHttps = true
 		return true
 	}
-	
+
 	c.firstBuf = c.firstBuf[:n]
 	c.bufLen = n
 	c.bufStart = 0
-	
+
 	// 检查是否是HTTPS (TLS handshake starts with 0x16 for TLS 1.0-1.2, 0x17 for TLS 1.3)
 	if n >= 1 && (c.firstBuf[0] == 0x16 || c.firstBuf[0] == 0x17) {
 		// 这确实是TLS握手，这是HTTPS连接
@@ -73,12 +73,12 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 		logger.Debug("Detected HTTPS connection via TLS handshake")
 		return true
 	}
-	
+
 	// 尝试解析为HTTP请求
 	reader := bytes.NewReader(c.firstBuf)
 	bufReader := bufio.NewReader(reader)
 	request, err := http.ReadRequest(bufReader)
-	
+
 	if err != nil {
 		// 无法解析为HTTP请求，检查是否是TLS握手（可能有额外数据）
 		if n >= 3 && c.firstBuf[0] == 0x16 {
@@ -86,13 +86,13 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 			logger.Debug("Detected HTTPS connection (TLS protocol)")
 			return true
 		}
-		
+
 		// 无法确定协议，默认为HTTPS避免连接关闭
 		logger.Warning("Unable to determine connection protocol, treating as HTTPS to prevent connection closure")
 		c.isHttps = true
 		return true
 	}
-	
+
 	// 成功解析HTTP请求，发送重定向但不关闭连接
 	c.sendRedirect(request)
 	return true
@@ -109,16 +109,16 @@ func (c *AutoHttpsConn) sendRedirect(request *http.Request) {
 	resp.StatusCode = http.StatusTemporaryRedirect
 	location := fmt.Sprintf("https://%v%v", request.Host, request.RequestURI)
 	resp.Header.Set("Location", location)
-	
+
 	// 设置响应头
 	resp.Header.Set("Connection", "close")
 	resp.Header.Set("Content-Length", "0")
-	
+
 	// 发送重定向响应
 	if err := resp.Write(c.Conn); err != nil {
 		logger.Warning("Failed to send redirect response:", err)
 	}
-	
+
 	// 延迟关闭连接，给客户端时间接收响应 - 增加延迟时间
 	time.Sleep(500 * time.Millisecond)
 	c.Close()
@@ -152,7 +152,7 @@ func (c *AutoHttpsConn) Read(buf []byte) (int, error) {
 	c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	n, err := c.Conn.Read(buf)
 	c.Conn.SetReadDeadline(time.Time{})
-	
+
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			logger.Debug("Read timeout in AutoHttpsConn.Read")
@@ -160,7 +160,7 @@ func (c *AutoHttpsConn) Read(buf []byte) (int, error) {
 		}
 		return n, err
 	}
-	
+
 	return n, nil
 }
 
@@ -168,11 +168,11 @@ func (c *AutoHttpsConn) Write(buf []byte) (int, error) {
 	if c.closed {
 		return 0, io.EOF
 	}
-	
+
 	// 设置写超时 - 增加超时时间提高兼容性
 	c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	defer c.Conn.SetWriteDeadline(time.Time{})
-	
+
 	return c.Conn.Write(buf)
 }
 

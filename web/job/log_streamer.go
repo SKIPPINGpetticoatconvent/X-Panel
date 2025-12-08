@@ -47,10 +47,10 @@ func (ls *LogStreamer) Start() error {
 
 	// 配置 tail 选项
 	config := tail.Config{
-		Follow:    true,  // 跟随文件变化
-		ReOpen:    true,  // 重新打开文件（处理日志轮转）
-		MustExist: false, // 文件不存在时不报错，会等待创建
-		Poll:      true,  // 使用轮询而不是 inotify（更兼容）
+		Follow:    true,                                 // 跟随文件变化
+		ReOpen:    true,                                 // 重新打开文件（处理日志轮转）
+		MustExist: false,                                // 文件不存在时不报错，会等待创建
+		Poll:      true,                                 // 使用轮询而不是 inotify（更兼容）
 		Location:  &tail.SeekInfo{Offset: 0, Whence: 2}, // 从文件末尾开始
 	}
 

@@ -103,6 +103,8 @@ type ServerService struct {
 	// 【新增】IP地理位置缓存
 	cachedCountry    string
 	countryCheckTime time.Time
+	// SNI 域名选择器
+	sniSelector *SNISelector
 }
 
 // 【新增方法】: 用于从外部注入 TelegramService 实例
@@ -1957,4 +1959,21 @@ func (s *ServerService) getDefaultSNIDomains(countryCode string) []string {
 			"meta.com:443",
 		}
 	}
+}
+
+// 初始化 SNI 选择器
+func (s *ServerService) initSNISelector() {
+	// 获取默认的 SNI 域名列表（使用国际通用域名）
+	domains := s.GetCountrySNIDomains("DEFAULT")
+	s.sniSelector = NewSNISelector(domains)
+	logger.Info("SNI selector initialized in ServerService")
+}
+
+// GetNewSNI 获取下一个不重复的 SNI 域名
+func (s *ServerService) GetNewSNI() string {
+	if s.sniSelector == nil {
+		logger.Warning("SNI selector not initialized, initializing now")
+		s.initSNISelector()
+	}
+	return s.sniSelector.Next()
 }

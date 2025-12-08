@@ -13,10 +13,10 @@ import (
 func DomainValidatorMiddleware(domain string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		host := c.Request.Host
-		
+
 		// 清理和标准化主机名处理
 		cleanHost := host
-		
+
 		// 首先尝试使用标准的net.SplitHostPort来分离主机和端口
 		if strings.Contains(host, ":") {
 			// 检查是否是IPv6地址格式 [::1]:port 或 IPv4:port
@@ -37,7 +37,7 @@ func DomainValidatorMiddleware(domain string) gin.HandlerFunc {
 				}
 			}
 		}
-		
+
 		// 对于IPv6地址，确保它是标准格式
 		if strings.Contains(cleanHost, ":") && !strings.HasPrefix(cleanHost, "[") {
 			cleanHost = "[" + cleanHost + "]"

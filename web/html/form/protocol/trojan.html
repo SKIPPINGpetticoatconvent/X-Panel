@@ -30,7 +30,10 @@
     <a-divider :style="{ margin: '0' }"> Fallback [[ index + 1 ]] <a-icon type="delete" @click="() => inbound.settings.delFallback(index)" :style="{ color: 'rgb(255, 77, 79)', cursor: 'pointer' }"></a-icon>
     </a-divider>
     <a-form-item label='SNI'>
-      <a-input v-model="fallback.name"></a-input>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <a-input v-model="fallback.name" style="flex: 1;"></a-input>
+        <a-button type="primary" icon="reload" @click="getNewFallbackSNI(index)" title="获取随机SNI">随机获取</a-button>
+      </div>
     </a-form-item>
     <a-form-item label='ALPN'>
       <a-input v-model="fallback.alpn"></a-input>
