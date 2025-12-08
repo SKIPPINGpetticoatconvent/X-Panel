@@ -25,52 +25,52 @@ import (
 var xrayTemplateConfig string
 
 var defaultValueMap = map[string]string{
-	"xrayTemplateConfig":          xrayTemplateConfig,
-	"webListen":                   "",
-	"webDomain":                   "",
-	"webPort":                     "13688",
-	"webCertFile":                 "",
-	"webKeyFile":                  "",
-	"secret":                      random.Seq(32),
-	"webBasePath":                 "/",
-	"sessionMaxAge":               "360",
-	"pageSize":                    "50",
-	"expireDiff":                  "0",
-	"trafficDiff":                 "0",
-	"remarkModel":                 "-ieo",
-	"timeLocation":                "Local",
-	"tgBotEnable":                 "false",
-	"tgBotToken":                  "",
-	"tgBotProxy":                  "",
-	"tgBotAPIServer":              "",
-	"tgBotChatId":                 "",
-	"tgRunTime":                   "@daily",
-	"tgBotBackup":                 "false",
-	"tgBotLoginNotify":            "true",
-	"tgCpu":                       "80",
-	"tgLang":                      "zh-CN",
-	"twoFactorEnable":             "false",
-	"twoFactorToken":              "",
-	"subEnable":                   "false",
-	"subTitle":                    "",
-	"subListen":                   "",
-	"subPort":                     "13788",
-	"subPath":                     "/sub/",
-	"subDomain":                   "",
-	"subCertFile":                 "",
-	"subKeyFile":                  "",
-	"subUpdates":                  "12",
-	"subEncrypt":                  "true",
-	"subShowInfo":                 "true",
-	"subURI":                      "",
-	"subJsonPath":                 "/json/",
-	"subJsonURI":                  "",
-	"subJsonFragment":             "",
-	"subJsonNoises":               "",
-	"subJsonMux":                  "",
-	"subJsonRules":                "",
-	"datepicker":                  "gregorian",
-	"warp":                        "",
+	"xrayTemplateConfig": xrayTemplateConfig,
+	"webListen":          "",
+	"webDomain":          "",
+	"webPort":            "13688",
+	"webCertFile":        "",
+	"webKeyFile":         "",
+	"secret":             random.Seq(32),
+	"webBasePath":        "/",
+	"sessionMaxAge":      "360",
+	"pageSize":           "50",
+	"expireDiff":         "0",
+	"trafficDiff":        "0",
+	"remarkModel":        "-ieo",
+	"timeLocation":       "Local",
+	"tgBotEnable":        "false",
+	"tgBotToken":         "",
+	"tgBotProxy":         "",
+	"tgBotAPIServer":     "",
+	"tgBotChatId":        "",
+	"tgRunTime":          "@daily",
+	"tgBotBackup":        "false",
+	"tgBotLoginNotify":   "true",
+	"tgCpu":              "80",
+	"tgLang":             "zh-CN",
+	"twoFactorEnable":    "false",
+	"twoFactorToken":     "",
+	"subEnable":          "false",
+	"subTitle":           "",
+	"subListen":          "",
+	"subPort":            "13788",
+	"subPath":            "/sub/",
+	"subDomain":          "",
+	"subCertFile":        "",
+	"subKeyFile":         "",
+	"subUpdates":         "12",
+	"subEncrypt":         "true",
+	"subShowInfo":        "true",
+	"subURI":             "",
+	"subJsonPath":        "/json/",
+	"subJsonURI":         "",
+	"subJsonFragment":    "",
+	"subJsonNoises":      "",
+	"subJsonMux":         "",
+	"subJsonRules":       "",
+	"datepicker":         "gregorian",
+	"warp":               "",
 }
 
 type SettingService struct{}
@@ -262,23 +262,23 @@ func (s *SettingService) ValidateTgBotToken(token string) error {
 	if token == "" {
 		return fmt.Errorf("Telegram bot token cannot be empty")
 	}
-	
+
 	parts := strings.Split(token, ":")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid token format. Expected format: 'bot_id:bot_token'")
 	}
-	
+
 	if len(parts[0]) == 0 || len(parts[1]) == 0 {
 		return fmt.Errorf("both bot ID and token parts must be non-empty")
 	}
-	
+
 	// Validate bot ID is numeric
 	for _, char := range parts[0] {
 		if char < '0' || char > '9' {
 			return fmt.Errorf("bot ID must contain only digits, found: %s", parts[0])
 		}
 	}
-	
+
 	return nil
 }
 
@@ -311,19 +311,19 @@ func (s *SettingService) ValidateTgBotChatId(chatId string) error {
 	if chatId == "" {
 		return fmt.Errorf("Telegram bot chat ID cannot be empty")
 	}
-	
+
 	trimmed := strings.TrimSpace(chatId)
 	if trimmed == "" {
 		return fmt.Errorf("Telegram bot chat ID cannot be empty or whitespace")
 	}
-	
+
 	// Check each chat ID in comma-separated list
 	for i, id := range strings.Split(trimmed, ",") {
 		cleanedID := strings.TrimSpace(id)
 		if cleanedID == "" {
 			return fmt.Errorf("empty chat ID found at position %d", i+1)
 		}
-		
+
 		// Validate chat ID is numeric
 		for j, char := range cleanedID {
 			if char < '0' || char > '9' {
@@ -331,34 +331,34 @@ func (s *SettingService) ValidateTgBotChatId(chatId string) error {
 					cleanedID, i+1, char, j+1)
 			}
 		}
-		
+
 		// Basic range validation (Telegram user IDs are typically positive)
 		if numID, err := strconv.Atoi(cleanedID); err == nil && numID <= 0 {
 			return fmt.Errorf("invalid chat ID '%s': must be a positive number", cleanedID)
 		}
 	}
-	
+
 	return nil
 }
 
 // ValidateTgBotSettings validates all Telegram bot settings
 func (s *SettingService) ValidateTgBotSettings(token, chatId, proxyURL, apiServerURL string) []error {
 	var errors []error
-	
+
 	// Validate token
 	if token != "" {
 		if err := s.ValidateTgBotToken(token); err != nil {
 			errors = append(errors, fmt.Errorf("token validation failed: %v", err))
 		}
 	}
-	
+
 	// Validate chat ID
 	if chatId != "" {
 		if err := s.ValidateTgBotChatId(chatId); err != nil {
 			errors = append(errors, fmt.Errorf("chat ID validation failed: %v", err))
 		}
 	}
-	
+
 	// Validate proxy URL
 	if proxyURL != "" {
 		if !strings.HasPrefix(proxyURL, "socks5://") {
@@ -370,7 +370,7 @@ func (s *SettingService) ValidateTgBotSettings(token, chatId, proxyURL, apiServe
 			}
 		}
 	}
-	
+
 	// Validate API server URL
 	if apiServerURL != "" {
 		if !strings.HasPrefix(apiServerURL, "http") {
@@ -382,7 +382,7 @@ func (s *SettingService) ValidateTgBotSettings(token, chatId, proxyURL, apiServe
 			}
 		}
 	}
-	
+
 	return errors
 }
 
@@ -634,7 +634,7 @@ func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 		chatId, _ := s.GetTgBotChatId()
 		proxy, _ := s.GetTgBotProxy()
 		apiServer, _ := s.GetTgBotAPIServer()
-		
+
 		// Use new validation method if token/chatId are provided in current update
 		if allSetting.TgBotToken != "" {
 			token = allSetting.TgBotToken
@@ -648,7 +648,7 @@ func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 		if allSetting.TgBotAPIServer != "" {
 			apiServer = allSetting.TgBotAPIServer
 		}
-		
+
 		// Validate Telegram bot configuration
 		tgErrors := s.ValidateTgBotSettings(token, chatId, proxy, apiServer)
 		if len(tgErrors) > 0 {
@@ -658,7 +658,7 @@ func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 			}
 			return fmt.Errorf("Telegram bot configuration validation failed: %s", strings.Join(errorMsgs, "; "))
 		}
-		
+
 		logger.Infof("Telegram bot configuration validated successfully")
 	}
 

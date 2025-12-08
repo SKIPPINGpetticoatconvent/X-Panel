@@ -171,6 +171,7 @@ VERSION=v25.10.25 && bash <(curl -Ls "https://raw.githubusercontent.com/SKIPPING
 ![57](./media/57.png)
 #### 6、TG端【一键配置】创建成功之后，二维码和链接地址机器人会发送给你，如下：
 ![58](./media/58.png)
+#### 7、**SNI 优化说明**：一键配置功能现已支持智能 SNI 轮询。当您连续生成多个节点时，系统会自动分配不同的 SNI 域名（直至列表用尽），有效降低被针对的风险。详细机制请参阅 [SNI 域名优选与轮询](docs/features/sni_selection.md)。
 
 ------------
 ## 如何在〔X-Panel 项目〕中进行【抽奖游戏】赢奖品？

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -101,7 +101,7 @@ type ServerService struct {
 	cachedIPv6     string
 	noIPv6         bool
 	// 【新增】IP地理位置缓存
-	cachedCountry  string
+	cachedCountry    string
 	countryCheckTime time.Time
 }
 
@@ -327,7 +327,7 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
-	
+
 	// 添加User-Agent头部以避免被GitHub拒绝
 	req, err := http.NewRequest("GET", XrayURL, nil)
 	if err != nil {
@@ -365,7 +365,7 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 		if !strings.HasPrefix(tagVersion, "v") {
 			continue
 		}
-		
+
 		// 验证版本格式是否正确
 		versionWithoutPrefix := strings.TrimPrefix(tagVersion, "v")
 		tagParts := strings.Split(versionWithoutPrefix, ".")
@@ -383,17 +383,17 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 
 		versions = append(versions, tagVersion)
 	}
-	
+
 	// 如果没有找到版本，返回友好的错误信息
 	if len(versions) == 0 {
 		return nil, fmt.Errorf("未找到任何有效的Xray版本")
 	}
-	
+
 	// 按版本号排序（最新在前）并只返回最新的3个版本
 	if len(versions) > 3 {
 		versions = versions[:3]
 	}
-	
+
 	logger.Infof("成功获取到最新的 %d 个Xray版本", len(versions))
 	return versions, nil
 }
@@ -434,7 +434,7 @@ func detectSystemArchitecture() string {
 		// 其他情况返回系统报告的架构
 		return systemArch
 	}
-	
+
 	// 如果 uname 命令失败，回退到 runtime.GOARCH 检测
 	return runtime.GOARCH
 }
@@ -485,19 +485,19 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 
 	fileName := fmt.Sprintf("Xray-%s-%s.zip", osName, arch)
 	url := fmt.Sprintf("https://github.com/XTLS/Xray-core/releases/download/%s/%s", version, fileName)
-	
+
 	// 使用带超时的HTTP客户端
 	client := &http.Client{
 		Timeout: 120 * time.Second, // 下载需要更长时间
 	}
-	
+
 	// 创建请求并添加User-Agent
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", fmt.Errorf("创建下载请求失败: %v", err)
 	}
 	req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("下载Xray失败: %v", err)
@@ -528,10 +528,10 @@ func (s *ServerService) UpdateXray(version string) error {
 	// 启动异步任务进行Xray版本更新，避免阻塞HTTP请求
 	go func() {
 		logger.Infof("开始异步更新Xray到版本: %s", version)
-		
+
 		// 检查Telegram服务是否可用
 		tgAvailable := s.tgService != nil && s.tgService.IsRunning()
-		
+
 		// 1. 在异步更新任务开始时发送开始通知
 		if tgAvailable {
 			startMessage := fmt.Sprintf("🔄 **开始更新 Xray 版本**\n\n正在更新到版本: `%s`\n\n⏳ 请稍候，这可能需要几分钟时间...", version)
@@ -539,9 +539,9 @@ func (s *ServerService) UpdateXray(version string) error {
 				logger.Warningf("发送Xray更新开始通知失败: %v", err)
 			}
 		}
-		
+
 		var updateErr error
-		
+
 		// 2. Stop xray before doing anything
 		if err := s.StopXrayService(); err != nil {
 			logger.Warning("failed to stop xray before update:", err)
@@ -636,7 +636,7 @@ func (s *ServerService) UpdateXray(version string) error {
 			logger.Infof("Xray版本更新成功: %s", version)
 		}
 	}()
-	
+
 	return nil
 }
 
@@ -907,14 +907,14 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 		client := &http.Client{
 			Timeout: 60 * time.Second, // 60秒超时
 		}
-		
+
 		// 创建请求并添加User-Agent头部
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return common.NewErrorf("创建下载请求失败: %v", err)
 		}
 		req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
-		
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return common.NewErrorf("Failed to download Geofile from %s: %v", url, err)
@@ -1002,7 +1002,7 @@ func (s *ServerService) GetNewX25519Cert() (any, error) {
 
 	keyPair := map[string]any{
 		"privateKey": privateKey,
-		"publicKey": publicKey, // 修复：U+00A0 替换为标准空格
+		"publicKey":  publicKey, // 修复：U+00A0 替换为标准空格
 	}
 
 	return keyPair, nil
@@ -1166,20 +1166,20 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 func (s *ServerService) InstallSubconverter() error {
 	// 〔中文注释〕: 使用一个新的 goroutine 来执行耗时的安装任务，这样 API 可以立即返回
 	go func() {
-        
-        // 【新增功能】：执行端口放行操作
-        var ufwWarning string
-        if ufwErr := s.openSubconverterPorts(); ufwErr != nil {
-            // 不中断流程，只生成警告消息
-            logger.Warningf("自动放行 Subconverter 端口失败: %v", ufwErr)
-            ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
-        }
+
+		// 【新增功能】：执行端口放行操作
+		var ufwWarning string
+		if ufwErr := s.openSubconverterPorts(); ufwErr != nil {
+			// 不中断流程，只生成警告消息
+			logger.Warningf("自动放行 Subconverter 端口失败: %v", ufwErr)
+			ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
+		}
 
 		// 〔中文注释〕: 检查全局的 TgBot 实例是否存在并且正在运行
 		if s.tgService == nil || !s.tgService.IsRunning() {
 			logger.Warning("TgBot 未运行，无法发送【订阅转换】状态通知。")
 			// 即使机器人未运行，安装流程也应继续，只是不发通知
-            ufwWarning = "" // 如果机器人不在线，不发送任何警告/消息
+			ufwWarning = "" // 如果机器人不在线，不发送任何警告/消息
 		}
 
 		// 脚本路径为 /usr/bin/x-ui
@@ -1214,11 +1214,11 @@ func (s *ServerService) InstallSubconverter() error {
 			logger.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
 			return
 		} else {
-            
-            // 【新增逻辑】：如果之前端口放行失败，先发送警告消息
-            if ufwWarning != "" {
-                s.tgService.SendMessage(ufwWarning)
-            }
+
+			// 【新增逻辑】：如果之前端口放行失败，先发送警告消息
+			if ufwWarning != "" {
+				s.tgService.SendMessage(ufwWarning)
+			}
 
 			// 安装成功后，发送通知到 TG 机器人
 			if s.tgService != nil && s.tgService.IsRunning() {
@@ -1310,22 +1310,21 @@ func (s *ServerService) openSubconverterPorts() error {
     exit 0
 	`
 
-    // 使用 /bin/bash -c 执行命令，并捕获输出
+	// 使用 /bin/bash -c 执行命令，并捕获输出
 	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
 	output, err := cmd.CombinedOutput()
 	logOutput := string(output)
-	
+
 	// 记录日志，无论成功与否
 	logger.Infof("执行 Subconverter 端口放行命令结果:\n%s", logOutput)
 
 	if err != nil {
-        // 如果 Shell 命令返回非零退出码，则返回错误
+		// 如果 Shell 命令返回非零退出码，则返回错误
 		return fmt.Errorf("ufw 端口放行失败: %v. 脚本输出: %s", err, logOutput)
 	}
 
 	return nil
 }
-
 
 // 【新增方法实现】: 后台前端开放指定端口
 // OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
@@ -1427,7 +1426,7 @@ func (s *ServerService) RestartPanel() error {
 		logger.Error(errMsg)
 		return fmt.Errorf("%s", errMsg)
 	}
-	
+
 	// 〔中文注释〕: 定义要执行的命令和参数。
 	cmd := exec.Command(scriptPath, "restart")
 
@@ -1498,10 +1497,10 @@ func (s *ServerService) GetServerLocation() (string, error) {
 	if country == "" {
 		country = "Unknown"
 	}
-	
+
 	// 标准化国家代码
 	country = normalizeCountryCode(country)
-	
+
 	// 缓存结果
 	if country != "Unknown" {
 		s.cachedCountry = country
@@ -1516,14 +1515,14 @@ func (s *ServerService) queryLocationAPI(apiURL, serverIP string) string {
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
-	
+
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return ""
 	}
-	
+
 	req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
-	
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return ""
@@ -1572,42 +1571,42 @@ func (s *ServerService) queryLocationAPI(apiURL, serverIP string) string {
 // normalizeCountryCode 标准化国家代码
 func normalizeCountryCode(country string) string {
 	country = strings.TrimSpace(country)
-	
+
 	// 将国家名称映射到ISO代码
 	countryMap := map[string]string{
-		"United States": "US",
-		"United States of America": "US", 
-		"USA": "US",
-		"China": "CN",
-		"CN": "CN",
-		"United Kingdom": "GB",
-		"UK": "GB",
-		"Japan": "JP",
-		"Korea": "KR",
-		"South Korea": "KR",
-		"Germany": "DE",
-		"France": "FR",
-		"Canada": "CA",
-		"Australia": "AU",
-		"Singapore": "SG",
-		"Hong Kong": "HK",
-		"Taiwan": "TW",
-		"Netherlands": "NL",
-		"Sweden": "SE",
-		"Norway": "NO",
-		"Finland": "FI",
-		"Denmark": "DK",
-		"Switzerland": "CH",
-		"Belgium": "BE",
-		"Austria": "AT",
-		"Ireland": "IE",
-		"Portugal": "PT",
-		"Spain": "ES",
-		"Italy": "IT",
-		"Russia": "RU",
-		"India": "IN",
-		"Brazil": "BR",
-		"Mexico": "MX",
+		"United States":            "US",
+		"United States of America": "US",
+		"USA":                      "US",
+		"China":                    "CN",
+		"CN":                       "CN",
+		"United Kingdom":           "GB",
+		"UK":                       "GB",
+		"Japan":                    "JP",
+		"Korea":                    "KR",
+		"South Korea":              "KR",
+		"Germany":                  "DE",
+		"France":                   "FR",
+		"Canada":                   "CA",
+		"Australia":                "AU",
+		"Singapore":                "SG",
+		"Hong Kong":                "HK",
+		"Taiwan":                   "TW",
+		"Netherlands":              "NL",
+		"Sweden":                   "SE",
+		"Norway":                   "NO",
+		"Finland":                  "FI",
+		"Denmark":                  "DK",
+		"Switzerland":              "CH",
+		"Belgium":                  "BE",
+		"Austria":                  "AT",
+		"Ireland":                  "IE",
+		"Portugal":                 "PT",
+		"Spain":                    "ES",
+		"Italy":                    "IT",
+		"Russia":                   "RU",
+		"India":                    "IN",
+		"Brazil":                   "BR",
+		"Mexico":                   "MX",
 	}
 
 	// 检查精确匹配
@@ -1673,7 +1672,7 @@ func (s *ServerService) GetUSASNIDomains() []string {
 		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		// 清理JSON数组格式的引号和逗号
 		// 先清理首尾的引号
 		for strings.HasPrefix(line, `"`) {
@@ -1690,7 +1689,7 @@ func (s *ServerService) GetUSASNIDomains() []string {
 			line = strings.TrimSuffix(line, `,`)
 		}
 		line = strings.TrimSpace(line)
-		
+
 		if line != "" {
 			// 确保格式正确
 			if !strings.Contains(line, ":") {
@@ -1738,10 +1737,10 @@ func (s *ServerService) GetUSASNIDomains() []string {
 func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 	// 将国家代码转换为大写
 	countryCode = strings.ToUpper(countryCode)
-	
+
 	// 构建文件路径 sni/{国家代码}/sni_domains.txt
 	filePath := fmt.Sprintf("sni/%s/sni_domains.txt", countryCode)
-	
+
 	// 读取对应国家的SNI域名文件
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -1749,19 +1748,19 @@ func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 		// 返回对应国家的默认域名列表
 		return s.getDefaultSNIDomains(countryCode)
 	}
-	
+
 	lines := strings.Split(string(data), "\n")
 	// 使用map来实现去重，key为域名，value为true
 	var domainMap = make(map[string]bool)
 	var domains []string
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		// 跳过空行和注释行
 		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		// 清理JSON数组格式的引号和逗号
 		// 先清理首尾的引号
 		for strings.HasPrefix(line, `"`) {
@@ -1778,13 +1777,13 @@ func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 			line = strings.TrimSuffix(line, `,`)
 		}
 		line = strings.TrimSpace(line)
-		
+
 		if line != "" {
 			// 确保格式正确
 			if !strings.Contains(line, ":") {
 				line += ":443"
 			}
-			
+
 			// 去重机制：检查域名是否已存在
 			if !domainMap[line] {
 				domainMap[line] = true
@@ -1792,31 +1791,48 @@ func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 			}
 		}
 	}
-	
-	// 如果没有读取到有效域名，返回对应国家的默认列表
-	if len(domains) == 0 {
-		logger.Warningf("%s SNI文件内容无效，使用默认域名列表", filePath)
-		defaultDomains := s.getDefaultSNIDomains(countryCode)
-		// 对默认域名列表也进行去重
-		return s.removeDuplicatesFromSlice(defaultDomains)
+
+	// 读取默认域名列表
+	defaultDomains := s.getDefaultSNIDomains(countryCode)
+
+	// 合并文件读取的域名和默认域名列表
+	allDomains := append(domains, defaultDomains...)
+
+	// 对合并后的域名列表进行统一去重处理
+	uniqueDomains := s.removeDuplicatesFromSlice(allDomains)
+
+	if len(uniqueDomains) == 0 {
+		logger.Warningf("%s SNI文件和默认列表都为空，使用国际通用域名", filePath)
+		return s.getDefaultSNIDomains("DEFAULT")
 	}
-	
-	logger.Infof("从 %s SNI文件读取到 %d 个去重后的域名", countryCode, len(domains))
-	return domains
+
+	logger.Infof("从 %s SNI文件和默认列表合并后得到 %d 个去重后的域名", countryCode, len(uniqueDomains))
+	return uniqueDomains
 }
 
-// removeDuplicatesFromSlice 从字符串切片中移除重复元素
+// normalizeDomain 标准化域名格式（转小写、去空格）
+func (s *ServerService) normalizeDomain(domain string) string {
+	// 去除首尾空格
+	domain = strings.TrimSpace(domain)
+	// 转换为小写以确保大小写不敏感的域名比较
+	return strings.ToLower(domain)
+}
+
+// removeDuplicatesFromSlice 从字符串切片中移除重复元素（增强版）
 func (s *ServerService) removeDuplicatesFromSlice(slice []string) []string {
 	seen := make(map[string]bool)
 	var result []string
-	
+
 	for _, item := range slice {
-		if !seen[item] {
-			seen[item] = true
-			result = append(result, item)
+		// 标准化域名格式
+		normalizedItem := s.normalizeDomain(item)
+
+		if !seen[normalizedItem] {
+			seen[normalizedItem] = true
+			result = append(result, item) // 保留原始格式
 		}
 	}
-	
+
 	return result
 }
 

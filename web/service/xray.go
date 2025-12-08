@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"runtime"
+	"strconv"
 	"sync"
-    "strconv"
 
 	"x-ui/logger"
-	"x-ui/xray"
 	json_util "x-ui/util/json_util"
+	"x-ui/xray"
 
 	"go.uber.org/atomic"
 )
@@ -30,7 +30,7 @@ type XrayService struct {
 
 // SetXrayAPI 用于从外部注入 XrayAPI 实例
 func (s *XrayService) SetXrayAPI(api xray.XrayAPI) {
-    s.xrayAPI = api
+	s.xrayAPI = api
 }
 
 // IsXrayRunning 检查 Xray 是否正在运行
@@ -49,7 +49,6 @@ func (s *XrayService) GetApiPort() int {
 	}
 	return p.GetAPIPort()
 }
-
 
 func (s *XrayService) GetXrayErr() error {
 	if p == nil {
@@ -111,23 +110,22 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 
-
 	inbounds, err := s.inboundService.GetAllInbounds()
 	if err != nil {
 		return nil, err
 	}
 
 	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值 
+	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值
 	// =================================================================
-    // 创建一个 map 用于存储所有出现过的、不为0的限速值
+	// 创建一个 map 用于存储所有出现过的、不为0的限速值
 	uniqueSpeeds := make(map[int]bool)
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
 		}
-		
-        // 获取该入站下的所有客户端设置
+
+		// 获取该入站下的所有客户端设置
 		dbClients, _ := s.inboundService.GetClients(inbound)
 		for _, dbClient := range dbClients {
 			if dbClient.SpeedLimit > 0 {
@@ -158,7 +156,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	} else {
 		policyLevels = make(map[string]interface{})
 	}
-	
+
 	// 3. 〔重要修改〕: 确保 level 0 策略的完整性，这是让设备限制和默认用户统计生效的关键
 	var level0 map[string]interface{}
 	if l0, ok := policyLevels["0"].(map[string]interface{}); ok {
@@ -177,11 +175,11 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	level0["uplinkOnly"] = 0
 	level0["downlinkOnly"] = 0
 	level0["statsUserUplink"] = true
-	level0["statsUserDownlink"] = true 
+	level0["statsUserDownlink"] = true
 	// 〔新增〕: 增加此关键选项以启用 Xray-core 的在线 IP 统计功能。
 	// 这是让【设备限制】功能正常工作的前提。
 	level0["statsUserOnline"] = true
-	
+
 	// 〔中文注释〕: 将完整配置好的 level 0 写回 policyLevels，确保最终生成的 config.json 是正确的。
 	policyLevels["0"] = level0
 
@@ -190,13 +188,13 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		// 为每个速率创建一个 level，level 的名字就是速率的字符串形式
 		// 例如，速率 1024 KB/s 对应 level "1024"
 		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
-			"downlinkOnly": speed,
-			"uplinkOnly":   speed,
+			"downlinkOnly":      speed,
+			"uplinkOnly":        speed,
 			"handshake":         4,
 			"connIdle":          300,
 			"statsUserUplink":   true,
 			"statsUserDownlink": true,
-			"statsUserOnline": true,
+			"statsUserOnline":   true,
 		}
 	}
 
@@ -209,8 +207,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	xrayConfig.Policy = json_util.RawMessage(policyJSON)
 
 	// =================================================================
-    // 中文注释: 在这里增加日志，打印最终生成的限速策略
-    // =================================================================
+	// 中文注释: 在这里增加日志，打印最终生成的限速策略
+	// =================================================================
 	if len(uniqueSpeeds) > 0 {
 		finalPolicyLog, _ := json.Marshal(policyLevels)
 		logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
@@ -219,9 +217,9 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level，逐个 inbound 构建 inboundConfig
 	// =================================================================
-    // 触发一次空调用以处理可能的残留任务	
-    s.inboundService.AddTraffic(nil, nil) 
-	
+	// 触发一次空调用以处理可能的残留任务
+	s.inboundService.AddTraffic(nil, nil)
+
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
@@ -293,8 +291,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				// 中文注释: 构建干净的 xrayClient（只保留白名单字段）
 				// -----------------------------------------------------------------
 				xrayClient := make(map[string]interface{})
-				if id, ok := c["id"]; ok { xrayClient["id"] = id }
-				if email != "" { xrayClient["email"] = email }
+				if id, ok := c["id"]; ok {
+					xrayClient["id"] = id
+				}
+				if email != "" {
+					xrayClient["email"] = email
+				}
 
 				// 规范化 flow
 				if flow, ok := c["flow"]; ok {
@@ -304,8 +306,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 						xrayClient["flow"] = flow
 					}
 				}
-				if password, ok := c["password"]; ok { xrayClient["password"] = password }
-				if method, ok := c["method"]; ok { xrayClient["method"] = method }
+				if password, ok := c["password"]; ok {
+					xrayClient["password"] = password
+				}
+				if method, ok := c["method"]; ok {
+					xrayClient["method"] = method
+				}
 
 				// ⚠️ security 字段已移除，不再加入到 xrayClient
 
@@ -392,13 +398,12 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			}
 			inboundConfig.StreamSettings = json_util.RawMessage(newStream)
 		}
-		
+
 		xrayConfig.InboundConfigs = append(xrayConfig.InboundConfigs, *inboundConfig)
 	}
 
 	return xrayConfig, nil
 }
-
 
 func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
 	if !s.IsXrayRunning() {
@@ -429,14 +434,13 @@ func (s *XrayService) RestartXray(isForce bool) error {
 		return err
 	}
 
-	  // 【新功能】重启时，将完整配置打印到 Debug 日志以供验证
-    configBytes, jsonErr := json.MarshalIndent(xrayConfig, "", "  ")
-    if jsonErr == nil {
-        logger.Debugf("使用新配置重启 Xray：\n%s", string(configBytes))
-    } else {
-        logger.Warning("无法将 Xray 配置编组以进行日志记录：", jsonErr)
-    }
-
+	// 【新功能】重启时，将完整配置打印到 Debug 日志以供验证
+	configBytes, jsonErr := json.MarshalIndent(xrayConfig, "", "  ")
+	if jsonErr == nil {
+		logger.Debugf("使用新配置重启 Xray：\n%s", string(configBytes))
+	} else {
+		logger.Warning("无法将 Xray 配置编组以进行日志记录：", jsonErr)
+	}
 
 	if s.IsXrayRunning() {
 		if !isForce && p.GetConfig().Equals(xrayConfig) && !isNeedXrayRestart.Load() {

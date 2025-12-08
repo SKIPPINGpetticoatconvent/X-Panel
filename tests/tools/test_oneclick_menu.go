@@ -8,7 +8,7 @@ import (
 
 // 模拟测试函数来验证菜单逻辑
 func testOneClickMenuLogic() {
-	fmt.Println("=== 测试一键配置分层菜单逻辑 ===\n")
+	fmt.Println("=== 测试一键配置分层菜单逻辑 ===")
 	
 	// 测试场景1: 主菜单显示
 	fmt.Println("1. 测试主菜单显示:")
