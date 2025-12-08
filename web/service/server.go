@@ -100,6 +100,9 @@ type ServerService struct {
 	cachedIPv4     string
 	cachedIPv6     string
 	noIPv6         bool
+	// 【新增】IP地理位置缓存
+	cachedCountry  string
+	countryCheckTime time.Time
 }
 
 // 【新增方法】: 用于从外部注入 TelegramService 实例
@@ -1439,4 +1442,477 @@ func (s *ServerService) RestartPanel() error {
 	// 〔中文注释〕: 如果命令成功执行，记录成功的日志。
 	logger.Infof("'%s restart' 命令已成功执行。", scriptPath)
 	return nil
+}
+
+// 【新增方法】: 检测服务器IP地理位置
+func (s *ServerService) GetServerLocation() (string, error) {
+	// 检查缓存，如果1小时内已经检测过，直接返回缓存结果
+	if s.cachedCountry != "" && time.Since(s.countryCheckTime) < time.Hour {
+		return s.cachedCountry, nil
+	}
+
+	// 获取服务器公网IP，尝试多个API
+	var serverIP string
+	ipAPIs := []string{
+		"https://api4.ipify.org",
+		"https://ipv4.icanhazip.com",
+		"https://v4.api.ipinfo.io/ip",
+		"https://ipv4.myexternalip.com/raw",
+	}
+
+	// 首先尝试使用缓存的IP
+	if s.cachedIPv4 != "" && s.cachedIPv4 != "N/A" {
+		serverIP = s.cachedIPv4
+	}
+
+	// 如果缓存中没有IP或IP无效，尝试获取新的IP
+	if serverIP == "" || serverIP == "N/A" {
+		for _, apiURL := range ipAPIs {
+			ip := getPublicIP(apiURL)
+			if ip != "N/A" && ip != "" {
+				serverIP = ip
+				break
+			}
+		}
+	}
+
+	if serverIP == "" || serverIP == "N/A" {
+		return "Unknown", fmt.Errorf("无法获取服务器公网IP，所有API都不可用")
+	}
+
+	// 使用多个地理位置检测API
+	geoAPIs := []string{
+		fmt.Sprintf("https://ipapi.co/%s/json/", serverIP),
+		fmt.Sprintf("https://ip-api.com/json/%s?fields=status,country,message", serverIP),
+	}
+
+	var country string
+	for _, apiURL := range geoAPIs {
+		country = s.queryLocationAPI(apiURL, serverIP)
+		if country != "" && country != "Unknown" {
+			break
+		}
+	}
+
+	// 更新缓存
+	if country == "" {
+		country = "Unknown"
+	}
+	
+	// 标准化国家代码
+	country = normalizeCountryCode(country)
+	
+	// 缓存结果
+	if country != "Unknown" {
+		s.cachedCountry = country
+		s.countryCheckTime = time.Now()
+	}
+
+	return country, nil
+}
+
+// queryLocationAPI 查询地理位置API
+func (s *ServerService) queryLocationAPI(apiURL, serverIP string) string {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return ""
+	}
+	
+	req.Header.Set("User-Agent", "Xray-UI-Panel/1.0")
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+
+	// 解析ipapi.co响应
+	if strings.Contains(apiURL, "ipapi.co") {
+		var response map[string]interface{}
+		if err := json.Unmarshal(body, &response); err == nil {
+			if country, ok := response["country_code"].(string); ok && country != "" {
+				return country
+			}
+			if countryName, ok := response["country"].(string); ok && countryName != "" {
+				return countryName
+			}
+		}
+	}
+
+	// 解析ip-api.com响应
+	if strings.Contains(apiURL, "ip-api.com") {
+		var response struct {
+			Status  string `json:"status"`
+			Country string `json:"country"`
+			Message string `json:"message"`
+		}
+		if err := json.Unmarshal(body, &response); err == nil {
+			if response.Status == "success" && response.Country != "" {
+				return response.Country
+			}
+		}
+	}
+
+	return ""
+}
+
+// normalizeCountryCode 标准化国家代码
+func normalizeCountryCode(country string) string {
+	country = strings.TrimSpace(country)
+	
+	// 将国家名称映射到ISO代码
+	countryMap := map[string]string{
+		"United States": "US",
+		"United States of America": "US", 
+		"USA": "US",
+		"China": "CN",
+		"CN": "CN",
+		"United Kingdom": "GB",
+		"UK": "GB",
+		"Japan": "JP",
+		"Korea": "KR",
+		"South Korea": "KR",
+		"Germany": "DE",
+		"France": "FR",
+		"Canada": "CA",
+		"Australia": "AU",
+		"Singapore": "SG",
+		"Hong Kong": "HK",
+		"Taiwan": "TW",
+		"Netherlands": "NL",
+		"Sweden": "SE",
+		"Norway": "NO",
+		"Finland": "FI",
+		"Denmark": "DK",
+		"Switzerland": "CH",
+		"Belgium": "BE",
+		"Austria": "AT",
+		"Ireland": "IE",
+		"Portugal": "PT",
+		"Spain": "ES",
+		"Italy": "IT",
+		"Russia": "RU",
+		"India": "IN",
+		"Brazil": "BR",
+		"Mexico": "MX",
+	}
+
+	// 检查精确匹配
+	if normalized, exists := countryMap[country]; exists {
+		return normalized
+	}
+
+	// 检查不区分大小写的匹配
+	for key, value := range countryMap {
+		if strings.EqualFold(strings.ToLower(country), strings.ToLower(key)) {
+			return value
+		}
+	}
+
+	// 如果已经是标准的国家代码，直接返回
+	if len(country) == 2 {
+		return strings.ToUpper(country)
+	}
+
+	return "Unknown"
+}
+
+// 【新增方法】: 获取USA-SNI域名列表
+func (s *ServerService) GetUSASNIDomains() []string {
+	// 从sni/USA/sni_domains.txt文件读取域名列表
+	data, err := os.ReadFile("sni/USA/sni_domains.txt")
+	if err != nil {
+		logger.Warning("读取sni/USA/sni_domains.txt文件失败，使用默认域名列表")
+		// 返回默认的美国域名列表
+		return []string{
+			"www.amazon.com:443",
+			"www.google.com:443",
+			"www.microsoft.com:443",
+			"www.netflix.com:443",
+			"www.apple.com:443",
+			"www.facebook.com:443",
+			"www.instagram.com:443",
+			"www.youtube.com:443",
+			"www.twitter.com:443",
+			"www.linkedin.com:443",
+			"www.reddit.com:443",
+			"www.twitch.tv:443",
+			"www.ebay.com:443",
+			"www.paypal.com:443",
+			"www.dropbox.com:443",
+			"www.salesforce.com:443",
+			"www.adobe.com:443",
+			"www.uber.com:443",
+			"www.airbnb.com:443",
+			"www.spotify.com:443",
+			"www.whatsapp.com:443",
+			"www.zoom.us:443",
+			"www.shopify.com:443",
+			"www.slack.com:443",
+		}
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var domains []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// 跳过空行和注释行
+		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
+			continue
+		}
+		
+		// 清理JSON数组格式的引号和逗号
+		// 先清理首尾的引号
+		for strings.HasPrefix(line, `"`) {
+			line = strings.TrimPrefix(line, `"`)
+		}
+		for strings.HasSuffix(line, `"`) {
+			line = strings.TrimSuffix(line, `"`)
+		}
+		// 再清理首尾的逗号
+		for strings.HasPrefix(line, `,`) {
+			line = strings.TrimPrefix(line, `,`)
+		}
+		for strings.HasSuffix(line, `,`) {
+			line = strings.TrimSuffix(line, `,`)
+		}
+		line = strings.TrimSpace(line)
+		
+		if line != "" {
+			// 确保格式正确
+			if !strings.Contains(line, ":") {
+				line += ":443"
+			}
+			domains = append(domains, line)
+		}
+	}
+
+	// 如果没有读取到有效域名，返回默认列表
+	if len(domains) == 0 {
+		logger.Warning("sni/USA/sni_domains.txt文件内容无效，使用默认域名列表")
+		return []string{
+			"www.amazon.com:443",
+			"www.google.com:443",
+			"www.microsoft.com:443",
+			"www.netflix.com:443",
+			"www.apple.com:443",
+			"www.facebook.com:443",
+			"www.instagram.com:443",
+			"www.youtube.com:443",
+			"www.twitter.com:443",
+			"www.linkedin.com:443",
+			"www.reddit.com:443",
+			"www.twitch.tv:443",
+			"www.ebay.com:443",
+			"www.paypal.com:443",
+			"www.dropbox.com:443",
+			"www.salesforce.com:443",
+			"www.adobe.com:443",
+			"www.uber.com:443",
+			"www.airbnb.com:443",
+			"www.spotify.com:443",
+			"www.whatsapp.com:443",
+			"www.zoom.us:443",
+			"www.shopify.com:443",
+			"www.slack.com:443",
+		}
+	}
+
+	return domains
+}
+
+// 【新增方法】: 获取指定国家的SNI域名列表
+func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
+	// 将国家代码转换为大写
+	countryCode = strings.ToUpper(countryCode)
+	
+	// 构建文件路径 sni/{国家代码}/sni_domains.txt
+	filePath := fmt.Sprintf("sni/%s/sni_domains.txt", countryCode)
+	
+	// 读取对应国家的SNI域名文件
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		logger.Warningf("读取%s SNI文件失败: %v，使用默认域名列表", filePath, err)
+		// 返回对应国家的默认域名列表
+		return s.getDefaultSNIDomains(countryCode)
+	}
+	
+	lines := strings.Split(string(data), "\n")
+	var domains []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// 跳过空行和注释行
+		if line == "" || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
+			continue
+		}
+		
+		// 清理JSON数组格式的引号和逗号
+		// 先清理首尾的引号
+		for strings.HasPrefix(line, `"`) {
+			line = strings.TrimPrefix(line, `"`)
+		}
+		for strings.HasSuffix(line, `"`) {
+			line = strings.TrimSuffix(line, `"`)
+		}
+		// 再清理首尾的逗号
+		for strings.HasPrefix(line, `,`) {
+			line = strings.TrimPrefix(line, `,`)
+		}
+		for strings.HasSuffix(line, `,`) {
+			line = strings.TrimSuffix(line, `,`)
+		}
+		line = strings.TrimSpace(line)
+		
+		if line != "" {
+			// 确保格式正确
+			if !strings.Contains(line, ":") {
+				line += ":443"
+			}
+			domains = append(domains, line)
+		}
+	}
+	
+	// 如果没有读取到有效域名，返回对应国家的默认列表
+	if len(domains) == 0 {
+		logger.Warningf("%s SNI文件内容无效，使用默认域名列表", filePath)
+		return s.getDefaultSNIDomains(countryCode)
+	}
+	
+	return domains
+}
+
+// getDefaultSNIDomains 获取默认的SNI域名列表
+func (s *ServerService) getDefaultSNIDomains(countryCode string) []string {
+	// 根据国家代码返回默认的SNI域名列表
+	switch countryCode {
+	case "US":
+		return []string{
+			"www.amazon.com:443",
+			"www.google.com:443",
+			"www.microsoft.com:443",
+			"www.netflix.com:443",
+			"www.apple.com:443",
+			"www.facebook.com:443",
+			"www.instagram.com:443",
+			"www.youtube.com:443",
+			"www.twitter.com:443",
+			"www.linkedin.com:443",
+			"www.reddit.com:443",
+			"www.twitch.tv:443",
+			"www.ebay.com:443",
+			"www.paypal.com:443",
+			"www.dropbox.com:443",
+			"www.salesforce.com:443",
+			"www.adobe.com:443",
+			"www.uber.com:443",
+			"www.airbnb.com:443",
+			"www.spotify.com:443",
+			"www.whatsapp.com:443",
+			"www.zoom.us:443",
+			"www.shopify.com:443",
+			"www.slack.com:443",
+		}
+	case "CN":
+		return []string{
+			"www.baidu.com:443",
+			"www.qq.com:443",
+			"www.weibo.com:443",
+			"www.taobao.com:443",
+			"www.tmall.com:443",
+			"www.jd.com:443",
+			"www.sohu.com:443",
+			"www.sina.com.cn:443",
+			"www.163.com:443",
+			"www.youku.com:443",
+			"www.iqiyi.com:443",
+			"www.cctv.com:443",
+			"www.xinhuanet.com:443",
+			"www.china.com:443",
+			"www.ifeng.com:443",
+			"www.people.com.cn:443",
+			"www.gmw.cn:443",
+			"www.tianyancha.com:443",
+			"www.douyin.com:443",
+			"www.pinduoduo.com:443",
+			"www.meituan.com:443",
+			"www.dianping.com:443",
+			"www.aiqiyi.com:443",
+		}
+	case "JP":
+		return []string{
+			"www.rakuten.co.jp:443",
+			"www.amazon.co.jp:443",
+			"www.yahoo.co.jp:443",
+			"www.nikkei.com:443",
+			"www.asahi.com:443",
+			"www.yomiuri.co.jp:443",
+			"www.mainichi.jp:443",
+			"www.nhk.or.jp:443",
+			"www.japanpost.jp:443",
+			"www.nintendo.co.jp:443",
+			"www.sony.co.jp:443",
+			"www.toyota.co.jp:443",
+			"www.honda.co.jp:443",
+			"www.mitsubishi.com:443",
+			"www.panasonic.com:443",
+			"www.toshiba.com:443",
+			"www.fujitsu.com:443",
+			"www.hitachi.com:443",
+			"www.recruit.co.jp:443",
+			"www.linecorp.com:443",
+			"www.softbank.co.jp:443",
+			"www.kddi.com:443",
+			"www.ntt.com:443",
+		}
+	case "UK", "GB":
+		return []string{
+			"www.bbc.com:443",
+			"www.theguardian.com:443",
+			"www.reuters.com:443",
+			"www.dailymail.co.uk:443",
+			"www.express.co.uk:443",
+			"www.telegraph.co.uk:443",
+			"www.ft.com:443",
+			"www.gov.uk:443",
+			"www.nhs.uk:443",
+			"www.bbc.co.uk:443",
+			"www.channel4.com:443",
+			"www.itv.com:443",
+			"www.sky.com:443",
+			"www.vodafone.co.uk:443",
+			"www.bt.com:443",
+			"www.tesco.com:443",
+			"www.sainsburys.co.uk:443",
+			"www.asda.com:443",
+			"www.marksandspencer.com:443",
+			"www.johnlewis.com:443",
+			"www.next.co.uk:443",
+			"www.debenhams.com:443",
+			"www.boat.co.uk:443",
+			"www.londonstockexchange.com:443",
+		}
+	default:
+		// 默认返回国际通用域名
+		return []string{
+			"tesla.com:443",
+			"sega.com:443",
+			"apple.com:443",
+			"icloud.com:443",
+			"lovelive-anime.jp:443",
+			"meta.com:443",
+		}
+	}
 }

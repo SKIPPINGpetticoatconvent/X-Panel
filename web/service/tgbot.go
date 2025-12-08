@@ -100,8 +100,23 @@ type Tgbot struct {
 	lastStatus     *Status
 }
 
-// 【新增】: GetRealityDestinations 方法 - 提供统一的 SNI 域名列表
+// 【修改后】: GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
 func (t *Tgbot) GetRealityDestinations() []string {
+	// 检查服务器地理位置，并使用对应的SNI域名列表
+	if t.serverService != nil {
+		country, err := t.serverService.GetServerLocation()
+		if err == nil && country != "Unknown" {
+			// 获取对应国家的SNI域名列表
+			countryDomains := t.serverService.GetCountrySNIDomains(country)
+			if len(countryDomains) > 0 {
+				logger.Infof("检测到服务器IP位于%s，使用%s-SNI域名列表（%d个域名）", country, country, len(countryDomains))
+				return countryDomains
+			}
+		}
+		logger.Infof("服务器地理位置: %s，使用默认Reality域名列表", country)
+	}
+	
+	// 默认 Reality 域名列表（国际通用）
 	return []string{
 		"tesla.com:443",
 		"sega.com:443",
