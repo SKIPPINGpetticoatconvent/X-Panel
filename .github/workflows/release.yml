@@ -87,6 +87,7 @@ jobs:
           cp xui-release x-ui/
           cp x-ui.service x-ui/
           cp x-ui.sh x-ui/
+          cp -r sni x-ui/
           mv x-ui/xui-release x-ui/x-ui
           mkdir x-ui/bin
           cd x-ui/bin
@@ -199,6 +200,10 @@ jobs:
           # 〔中文注释〕: 创建 bin 目录存放依赖文件
           mkdir x-ui\bin
           cd x-ui\bin
+
+          # 〔中文注释〕: 【新增】复制 sni 目录及其内容到 x-ui 文件夹
+          Copy-Item -Path ..\sni -Destination . -Recurse
+          cd ..
 
           # 〔中文注释〕: 下载 Windows 版本的 Xray-core 依赖
           # 注意：这里的 Xray 版本号 (v25.10.15) 我沿用了你 Linux 脚本中的版本，你可以根据需要修改
