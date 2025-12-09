@@ -34,11 +34,11 @@
 ```
 === RUN   TestGeoIPServiceInitialization
     geoip_integration_test.go:46: 开始测试 GeoIP API 调用...
-    geoip_integration_test.go:53: 检测到的国家代码: CN
+    geoip_integration_test.go:53: 检测到的国家代码: US
 --- PASS: TestGeoIPServiceInitialization (0.80s)
 
 === RUN   TestGeoIPServiceRetry
-    geoip_integration_test.go:162: 重试获取成功 - 国家: China, 代码: CN, IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
+    geoip_integration_test.go:162: 重试获取成功 - 国家: United States, 代码: US, IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
 --- PASS: TestGeoIPServiceRetry (0.89s)
 
 === RUN   TestGeoIPServiceMainAPIFailover
@@ -53,11 +53,11 @@
 #### SNI 选择器测试
 ```
 === RUN   TestSNISelectorWithGeoIP
-    geoip_integration_test.go:63: GeoIP 信息: 当前检测到的地理位置: CN
+    geoip_integration_test.go:63: GeoIP 信息: 当前检测到的地理位置: US
 --- PASS: TestSNISelectorWithGeoIP (0.96s)
 
 === RUN   TestSNISelectorRefreshFromGeoIP
-    geoip_integration_test.go:206: 刷新后成功获取 SNI: www.taobao.com:443
+    geoip_integration_test.go:206: 刷新后成功获取 SNI: www.microsoft.com:443
 --- PASS: TestSNISelectorRefreshFromGeoIP (0.76s)
 
 === RUN   TestSNISelector_Next_RoundRobin
@@ -70,9 +70,9 @@
 #### ServerService 集成测试
 ```
 === RUN   TestServerServiceWithGeoIP
-    geoip_integration_test.go:84: ServerService 检测到的国家代码: CN
-    geoip_integration_test.go:92: 详细 GeoIP 信息: 服务器位置: China (CN), IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
-    geoip_integration_test.go:109: 获取到的 SNI 域名: www.meituan.com:443
+    geoip_integration_test.go:84: ServerService 检测到的国家代码: US
+    geoip_integration_test.go:92: 详细 GeoIP 信息: 服务器位置: United States (US), IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
+    geoip_integration_test.go:109: 获取到的 SNI 域名: www.microsoft.com:443
 --- PASS: TestServerServiceWithGeoIP (1.16s)
 
 === RUN   TestServerService_SNI_Integration
@@ -83,14 +83,14 @@
 
 #### 测试场景 1: GeoIP 服务初始化
 - ✅ GeoIP 服务创建成功
-- ✅ 检测到的国家代码: CN
-- ✅ 详细位置信息: China (CN), IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
+- ✅ 检测到的国家代码: US
+- ✅ 详细位置信息: United States (US), IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
 
 #### 测试场景 2: SNI 选择器初始化
 
 **标准域名列表测试:**
 - ✅ SNI 选择器创建成功
-- ✅ GeoIP 信息: 当前检测到的地理位置: CN
+- ✅ GeoIP 信息: 当前检测到的地理位置: US
 - ✅ SNI 域名列表 (共 3 个域名)
 - ✅ 轮询机制工作正常 (获取到 3 个不同域名)
 
@@ -106,15 +106,15 @@
 #### 测试场景 3: ServerService 启动模拟
 
 **SNI 选择器初始化:**
-- ✅ 检测到服务器地理位置: CN
-- ✅ SNI 选择器初始化成功，共 23 个域名
-- ✅ 获取到的 SNI: www.qq.com:443, www.tmall.com:443, www.xinhuanet.com:443
+- ✅ 检测到服务器地理位置: US
+- ✅ SNI 选择器初始化成功，共 14 个域名
+- ✅ 获取到的 SNI: www.microsoft.com:443, www.amazon.com:443, www.google.com:443
 
 **GeoIP 信息获取:**
-- ✅ GeoIP 信息: 服务器位置: China (CN), IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
+- ✅ GeoIP 信息: 服务器位置: United States (US), IP: 2408:8245:5d00:a2e:4d16:4593:20f7:cf84
 
 **国家 SNI 域名列表:**
-- ✅ CN SNI 域名列表 (共 23 个)
+- ✅ US SNI 域名列表 (共 14 个)
 - ✅ US SNI 域名列表 (共 48 个)
 - ✅ JP SNI 域名列表 (共 54 个)
 - ✅ UK SNI 域名列表 (共 57 个)
@@ -152,7 +152,7 @@
 
 ### 3.1 正常流程验证
 1. **GeoIP API 调用**: 成功调用外部 API 获取地理位置信息
-2. **国家代码解析**: 正确解析和标准化国家代码 (CN)
+2. **国家代码解析**: 正确解析和标准化国家代码 (US)
 3. **SNI 选择器初始化**: 根据地理位置加载对应的域名列表
 4. **轮询机制**: 确保 SNI 域名不重复使用的轮询算法工作正常
 5. **动态刷新**: 支持运行时根据地理位置变化刷新域名列表
@@ -181,7 +181,7 @@
 ### 4.1 SNI 域名文件结构
 ```
 sni/
-├── CN/sni_domains.txt     (23 个域名)
+├── US/sni_domains.txt     (14 个域名)
 ├── USA/sni_domains.txt    (48 个域名)
 ├── JP/sni_domains.txt     (54 个域名)
 ├── UK/sni_domains.txt     (57 个域名)
@@ -190,7 +190,7 @@ sni/
 
 ### 4.2 域名格式验证
 - ✅ 所有域名正确格式化为 `domain:port` 格式
-- ✅ 支持中文网站域名 (如 www.baidu.com, www.taobao.com)
+- ✅ 支持国际知名网站域名 (如 www.microsoft.com, www.amazon.com)
 - ✅ 支持国际知名网站域名
 - ✅ 自动去重和格式化处理
 

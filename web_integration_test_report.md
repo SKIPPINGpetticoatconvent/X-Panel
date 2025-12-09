@@ -84,7 +84,7 @@ func (a *ServerController) getNewSNI(c *gin.Context) {
 
 ### 1. SNI 域名获取 ✅
 - 默认域名列表正常加载
-- 按国家获取域名列表功能正常（US、CN、JP、UK等）
+- 按国家获取域名列表功能正常（US、JP、UK等）
 - 支持文件读取和默认回退机制
 
 ### 2. 域名格式验证 ✅

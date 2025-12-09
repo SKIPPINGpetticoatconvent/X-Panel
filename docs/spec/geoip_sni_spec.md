@@ -9,7 +9,7 @@
 ### 2.1 GeoIP 服务
 *   **主要 API 源**: 使用 `https://api.myip.la/en?json` 获取当前服务器的公网 IP 信息。
 *   **备用 API 源**: 使用 `https://api.ip.sb/geoip` 作为备用地理位置查询服务。
-*   **数据提取**: 解析 JSON 响应，提取 `country_code` 字段（例如 "US", "JP", "CN"）。
+*   **数据提取**: 解析 JSON 响应，提取 `country_code` 字段（例如 "US", "JP"）。
 *   **隐私与安全**: 仅使用公开 API，不发送任何敏感数据。API URL 可配置，但默认指向 MyIP.la 和 IP.sb。
 *   **容错与回退**:
     *   设置合理的超时时间（例如 10 秒）。
@@ -58,8 +58,6 @@ sni/
 ├── US/
 │   └── sni_domains.txt
 ├── JP/
-│   └── sni_domains.txt
-├── CN/
 │   └── sni_domains.txt
 └── ...
 ```

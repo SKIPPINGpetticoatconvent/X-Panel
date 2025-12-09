@@ -90,28 +90,50 @@ func TestServerService_initSNISelector(t *testing.T) {
 	}
 }
 
-// TestServerService_GetUSASNIDomains 测试获取美国 SNI 域名列表
-func TestServerService_GetUSASNIDomains(t *testing.T) {
+// TestServerService_readSNIDomainsFromFile 测试从文件读取SNI域名
+func TestServerService_readSNIDomainsFromFile(t *testing.T) {
 	serverService := &ServerService{}
 	
-	// 获取美国域名列表
-	domains := serverService.GetUSASNIDomains()
+	// 测试从US文件读取域名（在测试环境中可能不存在文件）
+	domains, err := serverService.readSNIDomainsFromFile("US")
 	
-	// 验证返回结果不为空
-	if len(domains) == 0 {
-		t.Error("GetUSASNIDomains() 返回空列表")
+	// 检查是否有错误（文件可能不存在）
+	if err != nil {
+		// 在测试环境中文件可能不存在，这是预期的
+		if strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "cannot find the file") {
+			t.Logf("预期错误：SNI文件不存在: %v", err)
+		} else {
+			t.Errorf("读取US SNI文件时出现意外错误: %v", err)
+		}
+	} else {
+		// 如果文件存在，验证域名格式
+		if len(domains) == 0 {
+			t.Error("从US文件读取到空域名列表")
+		}
+		
+		// 验证域名格式
+		for _, domain := range domains {
+			if !strings.Contains(domain, ":") {
+				t.Errorf("域名应该包含端口号，格式为 domain:port，但得到: %s", domain)
+			}
+			// 验证域名不为空
+			parts := strings.Split(domain, ":")
+			if len(parts) != 2 || parts[0] == "" {
+				t.Errorf("域名格式无效: %s", domain)
+			}
+		}
 	}
 	
-	// 验证域名格式
-	for _, domain := range domains {
-		if !strings.Contains(domain, ":") {
-			t.Errorf("美国域名应该包含端口号，格式为 domain:port，但得到: %s", domain)
-		}
-		// 验证域名不为空
-		parts := strings.Split(domain, ":")
-		if len(parts) != 2 || parts[0] == "" {
-			t.Errorf("美国域名格式无效: %s", domain)
-		}
+	// 测试读取不存在的文件（应该返回错误）
+	_, err = serverService.readSNIDomainsFromFile("NONEXISTENT")
+	if err == nil {
+		t.Error("读取不存在的文件应该返回错误")
+	}
+	
+	// 验证错误消息包含文件路径
+	expectedPath := "sni/NONEXISTENT/sni_domains.txt"
+	if !strings.Contains(err.Error(), expectedPath) {
+		t.Errorf("错误消息应该包含文件路径 %s，但实际错误: %v", expectedPath, err)
 	}
 }
 
