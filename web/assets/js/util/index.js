@@ -987,11 +987,7 @@ class RealityUtil {
             // 添加原始域名: walmart.com
             serverNames.push(domain);
 
-            // 添加 www 域名: www.walmart.com
-            // 注意：对于多级子域名 (api.walmart.com)，这里也会生成 www.api.walmart.com，
-            // 虽然不一定常用，但在 Reality 配置中通常是安全的或者是为了伪装。
-            // 核心目标是避免 www.www.
-            serverNames.push(`www.${domain}`);
+
         }
 
         return serverNames;
