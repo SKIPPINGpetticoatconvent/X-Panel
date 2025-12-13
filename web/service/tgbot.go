@@ -583,7 +583,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在启动 Xray 更新任务...")
 				t.SendMsgToTgbot(chatId, fmt.Sprintf("🚀 正在更新 Xray 到版本 %s，更新任务已在后台启动...", version))
 				go func() {
-					err := t.serverService.UpdateXray(version)
+					err := t.serverService.UpdateXrayAsync(version)
 					if err != nil {
 						t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ Xray 更新失败: %v", err))
 					} else {
@@ -1765,7 +1765,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 指令已发送")
 		t.SendMsgToTgbot(chatId, "【订阅转换】模块正在后台安装，大约需要1-2分钟，完成后将再次通知您。")
-		err := t.serverService.InstallSubconverter()
+		err := t.serverService.InstallSubconverterAsync()
 		if err != nil {
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("发送安装指令失败: %v", err))
 		}
@@ -1797,7 +1797,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 		// 〔中文注释〕: 在后台协程中执行重启，避免阻塞机器人
 		go func() {
-			err := t.serverService.RestartPanel()
+			err := t.serverService.RestartPanelAsync()
 			// 〔中文注释〕: 等待20秒，让面板有足够的时间重启
 			time.Sleep(20 * time.Second)
 			if err != nil {
@@ -1850,7 +1850,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在启动 Xray 更新任务...")
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("🚀 正在更新 Xray 到版本 %s，更新任务已在后台启动...", version))
 			go func() {
-				err := t.serverService.UpdateXray(version)
+				err := t.serverService.UpdateXrayAsync(version)
 				if err != nil {
 					t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ Xray 更新失败: %v", err))
 				} else {
@@ -2182,7 +2182,7 @@ func (t *Tgbot) prepareServerUsageInfo() string {
 	info, ipv4, ipv6 := "", "", ""
 
 	// get latest status of server
-	t.lastStatus = t.serverService.GetStatus(t.lastStatus)
+	t.lastStatus = t.serverService.GetSystemStatus(t.lastStatus)
 	onlines := p.GetOnlineClients()
 
 	info += t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname)
@@ -3329,7 +3329,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	if err != nil {
 		return nil, "", fmt.Errorf("获取 Reality 密钥对失败: %v", err)
 	}
-	uuidMsg, err := t.serverService.GetNewUUID()
+	uuidMsg, err := t.serverService.GetNewUUIDAsync()
 	if err != nil {
 		return nil, "", fmt.Errorf("获取 UUID 失败: %v", err)
 	}
@@ -3447,7 +3447,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	if err != nil {
 		return nil, "", fmt.Errorf("获取 VLESS 加密配置失败: %v", err)
 	}
-	uuidMsg, err := t.serverService.GetNewUUID()
+	uuidMsg, err := t.serverService.GetNewUUIDAsync()
 	if err != nil {
 		return nil, "", fmt.Errorf("获取 UUID 失败: %v", err)
 	}
@@ -3596,7 +3596,7 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	if err != nil {
 		return nil, "", fmt.Errorf("获取 Reality 密钥对失败: %v", err)
 	}
-	uuidMsg, err := t.serverService.GetNewUUID()
+	uuidMsg, err := t.serverService.GetNewUUIDAsync()
 	if err != nil {
 		return nil, "", fmt.Errorf("获取 UUID 失败: %v", err)
 	}
@@ -4124,7 +4124,7 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 // 【新增函数】: 发送 Xray 版本选项给用户
 func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 	// 获取 Xray 版本列表
-	versions, err := t.serverService.GetXrayVersions()
+	versions, err := t.serverService.GetXrayVersionsAsync()
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 获取 Xray 版本列表失败: %v", err))
 		return
