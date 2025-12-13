@@ -32,8 +32,8 @@ func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, er
 			continue
 		}
 
-		// 清理JSON数组格式的引号和逗号
-		// 先清理首尾的引号
+		// 【修复】清理JSON数组格式的引号和逗号（增强版）
+		// 先清理首尾的引号（多次循环确保清理干净）
 		for strings.HasPrefix(line, `"`) {
 			line = strings.TrimPrefix(line, `"`)
 		}
@@ -47,7 +47,15 @@ func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, er
 		for strings.HasSuffix(line, `,`) {
 			line = strings.TrimSuffix(line, `,`)
 		}
+		// 【新增】清理可能的转义引号和其他特殊字符
+		line = strings.ReplaceAll(line, `\"`, `"`)  // 清理转义引号
+		line = strings.ReplaceAll(line, `""`, `"`) // 清理双引号
 		line = strings.TrimSpace(line)
+		// 【修复】最终验证：确保没有多余引号
+		if strings.HasPrefix(line, `"`) || strings.HasSuffix(line, `"`) {
+			logger.Warningf("域名清理后仍包含引号，将跳过此行: %s", line)
+			continue
+		}
 
 		if line != "" {
 			// 确保格式正确
@@ -209,8 +217,8 @@ func (s *ServerService) RefreshSNIFromGeoIP() {
 	logger.Info("SNI域名列表已根据地理位置刷新")
 }
 
-// GenerateEnhancedServerNames 根据传入的域名生成增强的 ServerNames 列表
-// 这个方法从 Tgbot 迁移过来，确保后端和 TG Bot 使用相同的逻辑（修复版）
+// 【修复】GenerateEnhancedServerNames 根据传入的域名生成增强的 ServerNames 列表
+// 这个方法从 Tgbot 迁移过来，确保后端和 TG Bot 使用相同的逻辑（修复基础域名缺失问题）
 func (s *ServerService) GenerateEnhancedServerNames(domain string) []string {
 	// 为指定的域名生成多个常见的子域名变体
 	var serverNames []string
@@ -222,6 +230,8 @@ func (s *ServerService) GenerateEnhancedServerNames(domain string) []string {
 	baseDomain := domain
 	if strings.HasPrefix(domain, "www.") {
 		baseDomain = strings.TrimPrefix(domain, "www.")
+		// 【关键修复】添加基础域名（之前缺失这一步）
+		serverNames = append(serverNames, baseDomain)
 	}
 
 	// 添加常见的 www 子域名
