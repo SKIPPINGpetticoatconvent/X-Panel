@@ -61,7 +61,7 @@ func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, er
 		return nil, fmt.Errorf("SNI文件 %s 中没有有效域名", filePath)
 	}
 
-	logger.Infof("从 %到 %d 个s 文件成功读取SNI域名", filePath, len(domains))
+	logger.Infof("从文件 %s 成功读取SNI域名，共 %d 个", filePath, len(domains))
 	return domains, nil
 }
 

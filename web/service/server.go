@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
+
+	"x-ui/database"
 )
 
 type ProcessState string
@@ -231,3 +234,86 @@ func (s *ServerService) CheckPortAvailability(port string) (bool, error) {
 	// 此方法由 server_network.go 模块提供具体实现
 	return false, fmt.Errorf("方法已迁移到 server_network.go 模块")
 }
+
+// GetStatus 获取系统状态
+func (s *ServerService) GetStatus(lastStatus *Status) *Status {
+	return s.GetSystemStatus(lastStatus)
+}
+
+// GetXrayVersions 获取Xray版本列表
+func (s *ServerService) GetXrayVersions() ([]string, error) {
+	return s.GetXrayVersionsAsync()
+}
+
+// UpdateXray 更新Xray版本
+func (s *ServerService) UpdateXray(version string) error {
+	return s.UpdateXrayAsync(version)
+}
+
+// UpdateGeofile 更新地理位置规则文件
+func (s *ServerService) UpdateGeofile(fileName string) error {
+	return s.UpdateGeofileAsync(fileName)
+}
+
+// StopXrayService 停止Xray服务
+func (s *ServerService) StopXrayService() error {
+	return s.StopXrayServiceAsync()
+}
+
+// RestartXrayService 重启Xray服务
+func (s *ServerService) RestartXrayService() error {
+	return s.RestartXrayServiceAsync()
+}
+
+// GetLogs 获取系统日志
+func (s *ServerService) GetLogs(count string, level string, syslog string) []string {
+	return s.GetLogsAsync(count, level, syslog)
+}
+
+// GetXrayLogs 获取Xray日志
+func (s *ServerService) GetXrayLogs(
+	count string,
+	filter string,
+	showDirect string,
+	showBlocked string,
+	showProxy string,
+	freedoms []string,
+	blackholes []string) []string {
+	return s.GetXrayLogsAsync(count, filter, showDirect, showBlocked, showProxy, freedoms, blackholes)
+}
+
+// GetDb 获取数据库文件
+func (s *ServerService) GetDb() ([]byte, error) {
+	return s.GetDbAsync()
+}
+
+// ImportDB 导入数据库文件
+func (s *ServerService) ImportDB(file multipart.File) error {
+	return s.ImportDBAsync(file)
+}
+
+// GetNewUUID 生成新的UUID
+func (s *ServerService) GetNewUUID() (map[string]string, error) {
+	return s.GetNewUUIDAsync()
+}
+
+// SaveLinkHistory 保存链接历史记录
+func (s *ServerService) SaveLinkHistory(historyType, link string) error {
+	return s.SaveLinkHistoryAsync(historyType, link)
+}
+
+// LoadLinkHistory 加载链接历史记录
+func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
+	return s.LoadLinkHistoryAsync()
+}
+
+// InstallSubconverter 安装Subconverter
+func (s *ServerService) InstallSubconverter() error {
+	return s.InstallSubconverterAsync()
+}
+
+// OpenPort 开放端口
+func (s *ServerService) OpenPort(port string) {
+	s.OpenPortAsync(port)
+}
+
