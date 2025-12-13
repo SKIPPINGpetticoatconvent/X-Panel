@@ -210,13 +210,19 @@ func (s *ServerService) RefreshSNIFromGeoIP() {
 }
 
 // GenerateEnhancedServerNames 根据传入的域名生成增强的 ServerNames 列表
-// 这个方法从 Tgbot 迁移过来，确保后端和 TG Bot 使用相同的逻辑
+// 这个方法从 Tgbot 迁移过来，确保后端和 TG Bot 使用相同的逻辑（修复版）
 func (s *ServerService) GenerateEnhancedServerNames(domain string) []string {
 	// 为指定的域名生成多个常见的子域名变体
 	var serverNames []string
 
 	// 添加主域名
 	serverNames = append(serverNames, domain)
+
+	// 【修复】提取基础域名，避免在www.前缀前添加子域名
+	baseDomain := domain
+	if strings.HasPrefix(domain, "www.") {
+		baseDomain = strings.TrimPrefix(domain, "www.")
+	}
 
 	// 添加常见的 www 子域名
 	if !strings.HasPrefix(domain, "www.") {
@@ -242,8 +248,8 @@ func (s *ServerService) GenerateEnhancedServerNames(domain string) []string {
 	case strings.Contains(domain, "sega.com"):
 		serverNames = append(serverNames, "www.sega.com", "games.sega.com", "support.sega.com")
 	default:
-		// 通用子域名（适用于大多数网站）
-		serverNames = append(serverNames, "api."+domain, "cdn."+domain, "support."+domain)
+		// 【修复】在基础域名上添加通用子域名
+		serverNames = append(serverNames, "api."+baseDomain, "cdn."+baseDomain, "support."+baseDomain)
 	}
 
 	// 去重并限制数量（避免过长）

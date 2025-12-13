@@ -3987,13 +3987,19 @@ func (t *Tgbot) generateShortIds() []string {
 	return shortIds
 }
 
-// 【新增】: 增强的 serverNames 数组生成函数
+// 【新增】: 增强的 serverNames 数组生成函数（修复版）
 func (t *Tgbot) generateEnhancedServerNames(domain string) []string {
 	// 为指定的域名生成多个常见的子域名变体
 	var serverNames []string
 	
 	// 添加主域名
 	serverNames = append(serverNames, domain)
+	
+	// 【修复】提取基础域名，避免在www.前缀前添加子域名
+	baseDomain := domain
+	if strings.HasPrefix(domain, "www.") {
+		baseDomain = strings.TrimPrefix(domain, "www.")
+	}
 	
 	// 添加常见的 www 子域名
 	if !strings.HasPrefix(domain, "www.") {
@@ -4019,8 +4025,8 @@ func (t *Tgbot) generateEnhancedServerNames(domain string) []string {
 	case strings.Contains(domain, "sega.com"):
 		serverNames = append(serverNames, "www.sega.com", "games.sega.com", "support.sega.com")
 	default:
-		// 通用子域名（适用于大多数网站）
-		serverNames = append(serverNames, "api."+domain, "cdn."+domain, "support."+domain)
+		// 【修复】在基础域名上添加通用子域名
+		serverNames = append(serverNames, "api."+baseDomain, "cdn."+baseDomain, "support."+baseDomain)
 	}
 	
 	// 去重并限制数量（避免过长）
