@@ -99,6 +99,45 @@ type Tgbot struct {
 	lastStatus     *Status
 }
 
+// GenerateRealityServerNames 根据输入的 host 生成合理的 SNI 列表
+// 输入: host (例如 "www.walmart.com:443", "google.com")
+// 输出: []string (例如 ["www.walmart.com", "walmart.com"], ["google.com", "www.google.com"])
+func GenerateRealityServerNames(host string) []string {
+	// 1. 去除端口
+	domain := host
+	if strings.Contains(host, ":") {
+		domain = strings.Split(host, ":")[0]
+	}
+
+	// 2. 初始化结果列表
+	serverNames := make([]string, 0, 2)
+
+	// 3. 判断是否以 www. 开头
+	if strings.HasPrefix(domain, "www.") {
+		// 情况 A: 输入 www.walmart.com
+		// 添加原始域名: www.walmart.com
+		serverNames = append(serverNames, domain)
+
+		// 添加根域名: walmart.com
+		rootDomain := strings.TrimPrefix(domain, "www.")
+		if rootDomain != "" {
+			serverNames = append(serverNames, rootDomain)
+		}
+	} else {
+		// 情况 B: 输入 walmart.com
+		// 添加原始域名: walmart.com
+		serverNames = append(serverNames, domain)
+
+		// 添加 www 域名: www.walmart.com
+		// 注意：对于多级子域名 (api.walmart.com)，这里也会生成 www.api.walmart.com，
+		// 虽然不一定常用，但在 Reality 配置中通常是安全的或者是为了伪装。
+		// 核心目标是避免 www.www.
+		serverNames = append(serverNames, "www."+domain)
+	}
+
+	return serverNames
+}
+
 // 【修改后】: GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
 func (t *Tgbot) GetRealityDestinations() []string {
 	// 检查服务器地理位置，并使用对应的SNI域名列表
@@ -3368,7 +3407,9 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 			randomDest = realityDests[common.RandomInt(len(realityDests))]
 		}
 	}
-	randomSni := strings.Split(randomDest, ":")[0]
+	
+	// 使用新的 GenerateRealityServerNames 函数生成 SNI 列表
+	serverNamesList := GenerateRealityServerNames(randomDest)
 	shortIds := t.generateShortIds()
 
 	// Settings (clients + decryption + fallbacks)
@@ -3392,7 +3433,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 			"show":        false,      // 前端 show: false
 			"target":      randomDest, // e.g. "apple.com:443"
 			"xver":        0,
-			"serverNames": []string{randomSni, "www." + randomSni},
+			"serverNames": serverNamesList, // 使用新的 GenerateRealityServerNames 函数
 			// 注意：realitySettings.settings 是一个对象（map），不是数组
 			"settings": map[string]any{
 				"publicKey":     publicKey,
@@ -3632,7 +3673,9 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 			randomDest = realityDests[common.RandomInt(len(realityDests))]
 		}
 	}
-	randomSni := strings.Split(randomDest, ":")[0]
+	
+	// 使用新的 GenerateRealityServerNames 函数生成 SNI 列表
+	serverNamesList := GenerateRealityServerNames(randomDest)
 	shortIds := t.generateShortIds()
 
 	settings, _ := json.Marshal(map[string]any{
@@ -3655,7 +3698,7 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 			"show":         false,
 			"target":       randomDest,
 			"xver":         0,
-			"serverNames":  []string{randomSni, "www." + randomSni},
+			"serverNames":  serverNamesList, // 使用新的 GenerateRealityServerNames 函数
 			"privateKey":   privateKey,
 			"maxClientVer": "",
 			"minClientVer": "",
