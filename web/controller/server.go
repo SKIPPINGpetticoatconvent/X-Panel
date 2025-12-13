@@ -65,6 +65,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/install/subconverter", a.installSubconverter)
 	g.POST("/openPort", a.openPort)
 	g.GET("/getNewSNI", a.getNewSNI)
+	g.GET("/getRandomRealitySNI", a.getRandomRealitySNI)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -379,4 +380,10 @@ func (a *ServerController) openPort(c *gin.Context) {
 func (a *ServerController) getNewSNI(c *gin.Context) {
 	sni := a.serverService.GetNewSNI()
 	jsonObj(c, map[string]string{"sni": sni}, nil)
+}
+
+// getRandomRealitySNI 获取一个随机的 Reality SNI 信息
+func (a *ServerController) getRandomRealitySNI(c *gin.Context) {
+	target, domain := a.serverService.GetRandomRealitySNI()
+	jsonObj(c, map[string]string{"target": target, "domain": domain}, nil)
 }

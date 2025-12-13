@@ -976,25 +976,7 @@
                 ],
             // 【中文注释】: 新增数据属性，用于存储“一键配置”模态框中选择的预设值
             oneClickPreset: 'vless_reality',
-            // 【中文注释】: 新增Reality SNI的备选列表，用于随机选择
-            realityDestinations: [
-                'tesla.com:443',
-                'sega.com:443',
-                'apple.com:443',
-                'icloud.com:443',
-                'lovelive-anime.jp:443',
-                'meta.com:443',
-                'google.com:443',
-                'youtube.com:443',
-                'microsoft.com:443',
-                'cloudflare.com:443',
-                'facebook.com:443',
-                'instagram.com:443',
-                'netflix.com:443',
-                'spotify.com:443',
-                'adobe.com:443',
-                'dropbox.com:443',
-            ],
+            // 【重构后】: 已移除硬编码的域名列表，现在通过后端 API 获取
         },
 		
         mounted() {
@@ -1356,8 +1338,9 @@ async openPort(port) {
                        this.$message.warning(`**注意：** 自动放行端口 ${port} 失败，请务必手动到您的 **VPS 防火墙**（例如 ufw、security group）放行该端口，否则入站将无法连接。`);
                     }
         
-	                // 【中文注释】: 从预设列表中随机选择一个SNI
-                    const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
+	                // 【重构后】: 使用通用的 SNI 生成函数
+	                const sniResult = await RealityUtil.generateRealityServerNames();
+	                const randomDest = sniResult.target;
           
                     // 从 randomDest (例如 'microsoft.com:443') 中提取出域名 ('microsoft.com')
                     const randomSni = randomDest.split(':')[0];
@@ -1395,7 +1378,18 @@ async openPort(port) {
                                 show: false,
                                 target: randomDest,
                                 xver: 0,
-                                serverNames: [ randomSni, `www.${randomSni}` ],
+                                // 【修复】: 使用智能的 SNI 生成逻辑，避免 www.www. 前缀
+                                serverNames: (function() {
+                                    // 检查是否以 www. 开头
+                                    if (randomSni.startsWith('www.')) {
+                                        // 情况 A: 输入 www.oracle.com -> ["www.oracle.com", "oracle.com"]
+                                        const rootDomain = randomSni.substring(4); // 去除 www.
+                                        return [randomSni, rootDomain];
+                                    } else {
+                                        // 情况 B: 输入 oracle.com -> ["oracle.com", "www.oracle.com"]
+                                        return [randomSni, `www.${randomSni}`];
+                                    }
+                                })(),
 								settings: {
                                     publicKey: publicKey,
                                     spiderX: "/",
@@ -1621,9 +1615,10 @@ async openPort(port) {
                         this.$message.warning(`**注意：** 自动放行端口 ${port} 失败，请务必手动到您的 **VPS 防火墙**放行该端口，否则入站将无法连接。`);
                     }
         
-                    // 【中文注释】: 随机选择 SNI 和 Short ID
-                    const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
-                    const randomSni = randomDest.split(':')[0];
+                    // 【重构后】: 使用通用的 SNI 生成函数
+                    const sniResult = await RealityUtil.generateRealityServerNames();
+                    const randomDest = sniResult.target;
+                    const randomSni = sniResult.domain;
                     const shortIds = this.generateShortIds();
                     const linkSid = shortIds[Math.floor(Math.random() * shortIds.length)];
 
@@ -1658,7 +1653,18 @@ async openPort(port) {
                                 show: false,
                                 target: randomDest,
                                 xver: 0,
-                                serverNames: [randomSni, `www.${randomSni}`],
+                                // 【修复】: 使用智能的 SNI 生成逻辑，避免 www.www. 前缀
+                                serverNames: (function() {
+                                    // 检查是否以 www. 开头
+                                    if (randomSni.startsWith('www.')) {
+                                        // 情况 A: 输入 www.oracle.com -> ["www.oracle.com", "oracle.com"]
+                                        const rootDomain = randomSni.substring(4); // 去除 www.
+                                        return [randomSni, rootDomain];
+                                    } else {
+                                        // 情况 B: 输入 oracle.com -> ["oracle.com", "www.oracle.com"]
+                                        return [randomSni, `www.${randomSni}`];
+                                    }
+                                })(),
                                 privateKey: privateKey,
                                 maxClientVer: "",
                                 minClientVer: "",

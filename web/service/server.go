@@ -1634,7 +1634,7 @@ func normalizeCountryCode(country string) string {
 
 // readSNIDomainsFromFile 通用函数：从指定国家的SNI文件读取域名列表
 func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, error) {
-	filePath := fmt.Sprintf("sni/%s/sni_domains.txt", countryCode)
+	filePath := filepath.Join(config.GetSNIFolderPath(), countryCode, "sni_domains.txt")
 	
 	// 读取SNI域名文件
 	data, err := os.ReadFile(filePath)
@@ -1815,6 +1815,26 @@ func (s *ServerService) GetNewSNI() string {
 		s.initSNISelector()
 	}
 	return s.sniSelector.Next()
+}
+
+// GetRandomRealitySNI 获取一个随机的 Reality SNI 信息，返回 target 和 domain
+func (s *ServerService) GetRandomRealitySNI() (string, string) {
+	if s.sniSelector == nil {
+		logger.Warning("SNI selector not initialized, initializing now")
+		s.initSNISelector()
+	}
+
+	// 获取下一个 SNI 域名
+	sni := s.sniSelector.Next()
+
+	// 解析 SNI 域名，提取 domain 部分
+	domain := sni
+	if strings.Contains(sni, ":") {
+		domain = strings.Split(sni, ":")[0]
+	}
+
+	// 返回 target (完整 SNI) 和 domain (域名部分)
+	return sni, domain
 }
 
 // RefreshSNIFromGeoIP 根据地理位置刷新 SNI 域名列表

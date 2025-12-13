@@ -954,3 +954,61 @@ class FileManager {
         link.remove();
     }
 }
+
+class RealityUtil {
+    /**
+     * 根据输入的 host 生成合理的 SNI 列表
+     * @param {string} host - 例如 "www.walmart.com:443", "google.com"
+     * @returns {string[]} 例如 ["www.walmart.com", "walmart.com"], ["google.com", "www.google.com"]
+     */
+    static generateRealityServerNames(host) {
+        // 1. 去除端口
+        let domain = host;
+        if (host.includes(":")) {
+            domain = host.split(":")[0];
+        }
+
+        // 2. 初始化结果列表
+        const serverNames = [];
+
+        // 3. 判断是否以 www. 开头
+        if (domain.startsWith("www.")) {
+            // 情况 A: 输入 www.walmart.com
+            // 添加原始域名: www.walmart.com
+            serverNames.push(domain);
+
+            // 添加根域名: walmart.com
+            const rootDomain = domain.substring(4); // 去除 www.
+            if (rootDomain !== "") {
+                serverNames.push(rootDomain);
+            }
+        } else {
+            // 情况 B: 输入 walmart.com
+            // 添加原始域名: walmart.com
+            serverNames.push(domain);
+
+            // 添加 www 域名: www.walmart.com
+            // 注意：对于多级子域名 (api.walmart.com)，这里也会生成 www.api.walmart.com，
+            // 虽然不一定常用，但在 Reality 配置中通常是安全的或者是为了伪装。
+            // 核心目标是避免 www.www.
+            serverNames.push(`www.${domain}`);
+        }
+
+        return serverNames;
+    }
+
+    /**
+     * 生成 Reality SNI 信息，包含目标地址和域名
+     * @returns {Promise<{target: string, domain: string}>} 返回包含 target 和 domain 的对象
+     */
+    static async generateRealityServerNames() {
+        // 调用后端 API 获取随机 SNI
+        const msg = await HttpUtil.get('/panel/api/server/getRandomRealitySNI');
+        if (!msg.success || !msg.obj) {
+            throw new Error('无法从后端获取 Reality SNI 信息');
+        }
+
+        const { target, domain } = msg.obj;
+        return { target, domain };
+    }
+}

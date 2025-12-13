@@ -100,6 +100,14 @@ func GetLogFolder() string {
 	return "/var/log"
 }
 
+func GetSNIFolderPath() string {
+	sniFolderPath := os.Getenv("XUI_SNI_FOLDER")
+	if sniFolderPath == "" {
+		sniFolderPath = filepath.Join(getBaseDir(), "sni")
+	}
+	return sniFolderPath
+}
+
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
