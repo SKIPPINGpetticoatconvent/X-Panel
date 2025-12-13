@@ -298,12 +298,25 @@ func (a *InboundController) resetAllClientTraffics(c *gin.Context) {
 }
 
 func (a *InboundController) importInbound(c *gin.Context) {
+	data := c.PostForm("data")
+	if data == "" {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), fmt.Errorf("no data provided"))
+		return
+	}
+
 	inbound := &model.Inbound{}
-	err := json.Unmarshal([]byte(c.PostForm("data")), inbound)
+	err := json.Unmarshal([]byte(data), inbound)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}
+
+	// 验证反序列化后的数据结构和字段
+	if err := a.validateInboundData(inbound); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+
 	user := session.GetLoginUser(c)
 	inbound.Id = 0
 	inbound.UserId = user.Id
@@ -324,6 +337,70 @@ func (a *InboundController) importInbound(c *gin.Context) {
 	if err == nil && needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+}
+
+// validateInboundData 验证入站数据的结构和字段
+func (a *InboundController) validateInboundData(inbound *model.Inbound) error {
+	// 验证端口号
+	if inbound.Port < 1 || inbound.Port > 65535 {
+		return fmt.Errorf("invalid port number: %d, must be between 1 and 65535", inbound.Port)
+	}
+
+	// 验证协议
+	validProtocols := map[model.Protocol]bool{
+		model.VMESS:       true,
+		model.VLESS:       true,
+		model.Tunnel:      true,
+		model.HTTP:        true,
+		model.Trojan:      true,
+		model.Shadowsocks: true,
+		model.Socks:       true,
+		model.WireGuard:   true,
+	}
+	if !validProtocols[inbound.Protocol] {
+		return fmt.Errorf("invalid protocol: %s", inbound.Protocol)
+	}
+
+	// 验证 Settings 是否为有效的 JSON
+	if inbound.Settings != "" {
+		var settings map[string]interface{}
+		if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+			return fmt.Errorf("invalid settings JSON: %v", err)
+		}
+	}
+
+	// 验证 StreamSettings 是否为有效的 JSON
+	if inbound.StreamSettings != "" {
+		var streamSettings map[string]interface{}
+		if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+			return fmt.Errorf("invalid streamSettings JSON: %v", err)
+		}
+	}
+
+	// 验证 Sniffing 是否为有效的 JSON（如果提供）
+	if inbound.Sniffing != "" {
+		var sniffing map[string]interface{}
+		if err := json.Unmarshal([]byte(inbound.Sniffing), &sniffing); err != nil {
+			return fmt.Errorf("invalid sniffing JSON: %v", err)
+		}
+	}
+
+	// 验证流量限制
+	if inbound.Up < 0 || inbound.Down < 0 || inbound.Total < 0 {
+		return fmt.Errorf("traffic limits cannot be negative")
+	}
+
+	// 验证设备限制
+	if inbound.DeviceLimit < 0 {
+		return fmt.Errorf("device limit cannot be negative")
+	}
+
+	// 验证备注长度（防止过长）
+	if len(inbound.Remark) > 500 {
+		return fmt.Errorf("remark too long, maximum 500 characters")
+	}
+
+	return nil
 }
 
 func (a *InboundController) delDepletedClients(c *gin.Context) {

@@ -1337,85 +1337,128 @@ func (s *ServerService) openSubconverterPorts() error {
 func (s *ServerService) OpenPort(port string) {
 	// 〔中文注释〕: 启动一个新的协程来处理耗时任务，这样 HTTP 请求可以立刻返回。
 	go func() {
-		// 1. 将 port string 转换为 int
+		// 1. 验证端口号：必须是数字，且在有效范围内 (1-65535)
 		portInt, err := strconv.Atoi(port)
-		if err != nil {
-			// 〔中文注释〕: 在后台任务中，如果出错，我们只能记录日志，因为无法再返回给前端。
-			logger.Errorf("端口号格式错误，无法转换为数字: %s", port)
+		if err != nil || portInt < 1 || portInt > 65535 {
+			logger.Errorf("端口号无效，必须是 1-65535 之间的数字: %s", port)
 			return
 		}
 
-		// 2. 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
-		// 【中文注释】: 此处同样增加了默认端口的定义和放行逻辑。
-		shellCommand := fmt.Sprintf(`
-		PORT_TO_OPEN=%d
-		# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
-		DEFAULT_PORTS="22 80 443 13688 8443"
-		
-		echo "正在为入站配置自动检查并放行端口..."
+		// 2. 定义默认端口列表
+		defaultPorts := []string{"22", "80", "443", "13688", "8443"}
 
-		# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
-		if ! command -v ufw &>/dev/null; then
-			echo "ufw 防火墙未安装，正在安装..."
-			# 使用绝对路径执行 apt-get，避免 PATH 问题
-			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
-		fi
+		logger.Infof("开始为端口 %s 配置防火墙规则", port)
 
-		# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
-		echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
-		for p in $DEFAULT_PORTS; do
-			if ! ufw status | grep -qw "$p/tcp"; then
-				echo "端口 $p/tcp 未放行，正在添加规则..."
-				ufw allow $p/tcp >/dev/null
-				if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
-			else
-				echo "端口 $p/tcp 规则已存在，跳过。"
-			fi
-		done
-		echo "✅ 基础服务端口检查完毕。"
-
-		# 3. 放行前端指定的端口 (TCP/UDP)
-		echo "正在检查【入站配置】并放行指定端口 $PORT_TO_OPEN..."
-		if ! ufw status | grep -qw "$PORT_TO_OPEN"; then
-			echo "正在执行 ufw allow $PORT_TO_OPEN..."
-			ufw allow $PORT_TO_OPEN >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
-		else
-			echo "端口 $PORT_TO_OPEN 规则已存在，跳过。"
-		fi
-
-		# 4. 检查/激活防火墙
-		if ! ufw status | grep -q "Status: active"; then
-			echo "ufw 状态：未激活。正在尝试激活..."
-			ufw --force enable
-			if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
-		fi
-		echo "✅ 端口 $PORT_TO_OPEN 及所有基础端口已成功放行/检查。"
-		`, portInt) // 使用转换后的 portInt
-
-		// 3. 使用 exec.CommandContext 运行命令
-		// 添加 70 秒超时，防止命令挂起导致 HTTP 连接断开
-		ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
-		defer cancel() // 确保 context 在函数退出时被取消
-
-		cmd := exec.CommandContext(ctx, "/bin/bash", "-c", shellCommand)
-
-		// 4. 捕获命令的输出
-		output, err := cmd.CombinedOutput()
-
-		// 5. 记录日志，以便诊断
-		logOutput := strings.TrimSpace(string(output))
-		logger.Infof("执行 ufw 端口放行命令（端口 %s）结果：\n%s", port, logOutput)
-
-		// 〔中文注释〕: 这里的错误处理现在只用于在后台记录日志。
-		if err != nil {
-			errorMsg := fmt.Sprintf("后台执行端口 %s 自动放行失败。错误: %v", port, err)
-			logger.Error(errorMsg)
-			// 〔可选〕: 未来可以在这里加入 Telegram 机器人通知等功能，来通知管理员任务失败。
+		// 3. 检查/安装 ufw
+		if err := s.checkAndInstallUFW(); err != nil {
+			logger.Errorf("ufw 检查/安装失败: %v", err)
+			return
 		}
+
+		// 4. 放行默认端口
+		for _, p := range defaultPorts {
+			if err := s.allowPortIfNotExists(p); err != nil {
+				logger.Errorf("放行默认端口 %s 失败: %v", p, err)
+				// 继续处理其他端口
+			}
+		}
+
+		// 5. 放行指定的端口
+		if err := s.allowPortIfNotExists(port); err != nil {
+			logger.Errorf("放行指定端口 %s 失败: %v", port, err)
+			return
+		}
+
+		// 6. 确保防火墙激活
+		if err := s.ensureUFWActive(); err != nil {
+			logger.Errorf("激活防火墙失败: %v", err)
+			return
+		}
+
+		logger.Infof("端口 %s 及所有基础端口已成功放行/检查", port)
 	}()
+}
+
+// checkAndInstallUFW 检查 ufw 是否存在，如果不存在则安装
+func (s *ServerService) checkAndInstallUFW() error {
+	// 检查 ufw 是否存在
+	cmd := exec.Command("which", "ufw")
+	if err := cmd.Run(); err == nil {
+		return nil // ufw 已存在
+	}
+
+	logger.Info("ufw 未安装，正在安装...")
+
+	// 更新包列表
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd = exec.CommandContext(ctx, "apt-get", "update", "-qq")
+	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("apt-get update 失败: %v, 输出: %s", err, string(output))
+	}
+
+	// 安装 ufw
+	cmd = exec.CommandContext(ctx, "apt-get", "install", "-y", "-qq", "ufw")
+	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("apt-get install ufw 失败: %v, 输出: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// allowPortIfNotExists 检查端口是否已放行，如果未放行则添加规则
+func (s *ServerService) allowPortIfNotExists(port string) error {
+	// 获取当前 ufw 状态
+	cmd := exec.Command("ufw", "status")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("获取 ufw 状态失败: %v", err)
+	}
+
+	// 检查端口是否已放行
+	statusStr := string(output)
+	if strings.Contains(statusStr, port+"/tcp") || strings.Contains(statusStr, port) {
+		logger.Infof("端口 %s 已放行，跳过", port)
+		return nil
+	}
+
+	// 放行端口
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd = exec.CommandContext(ctx, "ufw", "allow", port)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("ufw allow %s 失败: %v, 输出: %s", port, err, string(output))
+	}
+
+	logger.Infof("端口 %s 放行成功", port)
+	return nil
+}
+
+// ensureUFWActive 确保 ufw 防火墙已激活
+func (s *ServerService) ensureUFWActive() error {
+	// 检查 ufw 状态
+	cmd := exec.Command("ufw", "status")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("获取 ufw 状态失败: %v", err)
+	}
+
+	if strings.Contains(string(output), "Status: active") {
+		return nil // 已激活
+	}
+
+	// 激活防火墙
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd = exec.CommandContext(ctx, "ufw", "--force", "enable")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("ufw enable 失败: %v, 输出: %s", err, string(output))
+	}
+
+	logger.Info("ufw 防火墙已激活")
+	return nil
 }
 
 // 〔中文注释〕: 【新增函数】 - 重启面板服务
