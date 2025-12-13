@@ -170,6 +170,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// handshake 和 connIdle 是激活 Xray 连接统计的前提，
 	// uplinkOnly 和 downlinkOnly 设置为 0 代表不限速，这是 level 0 用户的默认行为。
 	// statsUserUplink 和 statsUserDownlink 确保用户的流量能够被统计。
+	// bufferSize 性能优化参数，改善内存使用效率
 	level0["handshake"] = 4
 	level0["connIdle"] = 300
 	level0["uplinkOnly"] = 0
@@ -179,6 +180,9 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// 〔新增〕: 增加此关键选项以启用 Xray-core 的在线 IP 统计功能。
 	// 这是让【设备限制】功能正常工作的前提。
 	level0["statsUserOnline"] = true
+	// 〔修复〕: 添加官方推荐的 bufferSize 性能优化参数
+	// 10240 字节的缓冲区大小，提供良好的性能与内存平衡
+	level0["bufferSize"] = 10240
 
 	// 〔中文注释〕: 将完整配置好的 level 0 写回 policyLevels，确保最终生成的 config.json 是正确的。
 	policyLevels["0"] = level0
@@ -388,7 +392,20 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 				delete(tlsSettings, "settings")
 			}
 			if realitySettings, ok := stream["realitySettings"].(map[string]interface{}); ok {
-				delete(realitySettings, "settings")
+				// 〔修复〕: Reality settings 中可能包含必要的配置字段（publicKey、shortId、spiderX等）
+				// 直接删除 settings 可能会移除这些重要信息，需要选择性清理
+				if nestedSettings, ok := realitySettings["settings"].(map[string]interface{}); ok {
+					// 如果存在嵌套的 settings，将其关键字段提升到顶层
+					for key, value := range nestedSettings {
+						// 保留 Reality 需要的关键字段
+						if key == "publicKey" || key == "shortId" || key == "spiderX" || 
+						   key == "serverName" || key == "fingerprint" || key == "show" {
+							realitySettings[key] = value
+						}
+					}
+					// 删除嵌套的 settings 对象
+					delete(realitySettings, "settings")
+				}
 			}
 			delete(stream, "externalProxy")
 

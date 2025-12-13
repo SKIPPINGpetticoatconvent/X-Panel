@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"x-ui/web/global"
@@ -377,6 +378,15 @@ func (a *ServerController) openPort(c *gin.Context) {
 
 // getNewSNI 获取一个新的 SNI 域名
 func (a *ServerController) getNewSNI(c *gin.Context) {
+	// 获取主SNI
 	sni := a.serverService.GetNewSNI()
-	jsonObj(c, map[string]string{"sni": sni}, nil)
+	
+	// 生成增强的 serverNames 列表（主域名 + 子域名 + 通用子域名）
+	enhancedServerNames := a.serverService.GenerateEnhancedServerNames(sni)
+	
+	// 将列表转换为逗号分隔的字符串
+	serverNamesStr := strings.Join(enhancedServerNames, ",")
+	
+	// 返回结果，保持与原有数据结构兼容
+	jsonObj(c, serverNamesStr, nil)
 }

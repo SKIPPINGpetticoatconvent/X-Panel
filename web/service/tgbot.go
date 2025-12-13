@@ -3323,7 +3323,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	t.SendMsgToTgbot(chatId, usageMessage)
 }
 
-// 【新增函数】: 构建 Reality 配置对象 (1:1 复刻自 inbounds.html)
+// 【修复后】: 构建 Reality 配置对象 (增强版)
 func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, string, error) {
 	keyPairMsg, err := t.serverService.GetNewX25519Cert()
 	if err != nil {
@@ -3353,22 +3353,29 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	// 按照要求格式：inbound-端口号
 	tag := fmt.Sprintf("inbound-%d", port)
 
-	// 使用统一的 SNI 域名列表
-	realityDests := t.GetRealityDestinations()
+	// 统一的 SNI 域名选择逻辑：优先使用 ServerService
 	var randomDest string
 	if len(targetDest) > 0 && targetDest[0] != "" {
 		// 如果提供了指定的 SNI，使用它
 		randomDest = targetDest[0]
 	} else {
-		// 使用 ServerService 中的 SNI 选择器
+		// 使用 ServerService 中的 SNI 选择器（保持一致性）
 		if t.serverService != nil {
 			randomDest = t.serverService.GetNewSNI()
 		} else {
-			// 回退到随机选择（防止空指针）
-			randomDest = realityDests[common.RandomInt(len(realityDests))]
+			// 回退机制：使用 GetRealityDestinations 的随机选择
+			realityDests := t.GetRealityDestinations()
+			if len(realityDests) > 0 {
+				randomDest = realityDests[common.RandomInt(len(realityDests))]
+			} else {
+				// 最终回退：使用安全的默认域名
+				randomDest = "apple.com:443"
+			}
 		}
 	}
 	randomSni := strings.Split(randomDest, ":")[0]
+	// 增强的 serverNames 数组生成
+	serverNames := t.generateEnhancedServerNames(randomSni)
 	shortIds := t.generateShortIds()
 
 	// Settings (clients + decryption + fallbacks)
@@ -3392,7 +3399,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 			"show":        false,      // 前端 show: false
 			"target":      randomDest, // e.g. "apple.com:443"
 			"xver":        0,
-			"serverNames": []string{randomSni, "www." + randomSni},
+			"serverNames": serverNames,
 			// 注意：realitySettings.settings 是一个对象（map），不是数组
 			"settings": map[string]any{
 				"publicKey":     publicKey,
@@ -3617,22 +3624,29 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 
 	tag := fmt.Sprintf("inbound-%d", port)
 
-	// 使用统一的 SNI 域名列表
-	realityDests := t.GetRealityDestinations()
+	// 统一的 SNI 域名选择逻辑：优先使用 ServerService
 	var randomDest string
 	if len(targetDest) > 0 && targetDest[0] != "" {
 		// 如果提供了指定的 SNI，使用它
 		randomDest = targetDest[0]
 	} else {
-		// 使用 ServerService 中的 SNI 选择器
+		// 使用 ServerService 中的 SNI 选择器（保持一致性）
 		if t.serverService != nil {
 			randomDest = t.serverService.GetNewSNI()
 		} else {
-			// 回退到随机选择（防止空指针）
-			randomDest = realityDests[common.RandomInt(len(realityDests))]
+			// 回退机制：使用 GetRealityDestinations 的随机选择
+			realityDests := t.GetRealityDestinations()
+			if len(realityDests) > 0 {
+				randomDest = realityDests[common.RandomInt(len(realityDests))]
+			} else {
+				// 最终回退：使用安全的默认域名
+				randomDest = "apple.com:443"
+			}
 		}
 	}
 	randomSni := strings.Split(randomDest, ":")[0]
+	// 增强的 serverNames 数组生成
+	serverNames := t.generateEnhancedServerNames(randomSni)
 	shortIds := t.generateShortIds()
 
 	settings, _ := json.Marshal(map[string]any{
@@ -3655,7 +3669,7 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 			"show":         false,
 			"target":       randomDest,
 			"xver":         0,
-			"serverNames":  []string{randomSni, "www." + randomSni},
+			"serverNames":  serverNames,
 			"privateKey":   privateKey,
 			"maxClientVer": "",
 			"minClientVer": "",
@@ -3971,6 +3985,69 @@ func (t *Tgbot) generateShortIds() []string {
 		shortIds[i] = t.randomString(length, chars)
 	}
 	return shortIds
+}
+
+// 【新增】: 增强的 serverNames 数组生成函数
+func (t *Tgbot) generateEnhancedServerNames(domain string) []string {
+	// 为指定的域名生成多个常见的子域名变体
+	var serverNames []string
+	
+	// 添加主域名
+	serverNames = append(serverNames, domain)
+	
+	// 添加常见的 www 子域名
+	if !strings.HasPrefix(domain, "www.") {
+		serverNames = append(serverNames, "www."+domain)
+	}
+	
+	// 根据域名类型添加特定的子域名
+	switch {
+	case strings.Contains(domain, "apple.com") || strings.Contains(domain, "icloud.com"):
+		serverNames = append(serverNames, "developer.apple.com", "store.apple.com", "www.icloud.com")
+	case strings.Contains(domain, "google.com"):
+		serverNames = append(serverNames, "www.google.com", "accounts.google.com", "play.google.com")
+	case strings.Contains(domain, "microsoft.com"):
+		serverNames = append(serverNames, "www.microsoft.com", "account.microsoft.com", "dev.microsoft.com")
+	case strings.Contains(domain, "amazon.com"):
+		serverNames = append(serverNames, "www.amazon.com", "smile.amazon.com", "sellercentral.amazon.com")
+	case strings.Contains(domain, "github.com"):
+		serverNames = append(serverNames, "www.github.com", "api.github.com", "docs.github.com")
+	case strings.Contains(domain, "meta.com"):
+		serverNames = append(serverNames, "www.meta.com", "developers.meta.com", "about.fb.com")
+	case strings.Contains(domain, "tesla.com"):
+		serverNames = append(serverNames, "www.tesla.com", "shop.tesla.com", "service.tesla.com")
+	case strings.Contains(domain, "sega.com"):
+		serverNames = append(serverNames, "www.sega.com", "games.sega.com", "support.sega.com")
+	default:
+		// 通用子域名（适用于大多数网站）
+		serverNames = append(serverNames, "api."+domain, "cdn."+domain, "support."+domain)
+	}
+	
+	// 去重并限制数量（避免过长）
+	return t.removeDuplicateStrings(serverNames)[:min(len(serverNames), 8)]
+}
+
+// 【新增】: 字符串数组去重
+func (t *Tgbot) removeDuplicateStrings(strings []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	
+	for _, str := range strings {
+		if !seen[str] {
+			seen[str] = true
+			result = append(result, str)
+		}
+	}
+	
+	return result
+}
+
+// 【辅助函数】: min 函数实现
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // 【新增辅助函数】: 随机字符串生成器

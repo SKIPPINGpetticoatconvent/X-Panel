@@ -13,6 +13,7 @@ import (
 
 // readSNIDomainsFromFile 通用函数：从指定国家的SNI文件读取域名列表
 func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, error) {
+	// 修复文件路径问题：使用相对路径适配工作目录
 	filePath := fmt.Sprintf("sni/%s/sni_domains.txt", countryCode)
 	
 	// 读取SNI域名文件
@@ -181,7 +182,7 @@ func (s *ServerService) initSNISelector() {
 	countryCode := s.geoIPService.GetCountryCode()
 	logger.Infof("检测到服务器地理位置: %s", countryCode)
 
-	// 获取对应国家的 SNI 域名列表
+	// 获取对应国家的SNI域名列表
 	domains := s.GetCountrySNIDomains(countryCode)
 	s.sniSelector = NewSNISelectorWithGeoIP(domains, s.geoIPService)
 	logger.Infof("SNI selector initialized with %s domains (%d domains)", countryCode, len(domains))
@@ -206,4 +207,49 @@ func (s *ServerService) RefreshSNIFromGeoIP() {
 	// 使用 SNISelector 的刷新方法
 	s.sniSelector.RefreshDomainsFromGeoIP(s)
 	logger.Info("SNI域名列表已根据地理位置刷新")
+}
+
+// GenerateEnhancedServerNames 根据传入的域名生成增强的 ServerNames 列表
+// 这个方法从 Tgbot 迁移过来，确保后端和 TG Bot 使用相同的逻辑
+func (s *ServerService) GenerateEnhancedServerNames(domain string) []string {
+	// 为指定的域名生成多个常见的子域名变体
+	var serverNames []string
+
+	// 添加主域名
+	serverNames = append(serverNames, domain)
+
+	// 添加常见的 www 子域名
+	if !strings.HasPrefix(domain, "www.") {
+		serverNames = append(serverNames, "www."+domain)
+	}
+
+	// 根据域名类型添加特定的子域名
+	switch {
+	case strings.Contains(domain, "apple.com") || strings.Contains(domain, "icloud.com"):
+		serverNames = append(serverNames, "developer.apple.com", "store.apple.com", "www.icloud.com")
+	case strings.Contains(domain, "google.com"):
+		serverNames = append(serverNames, "www.google.com", "accounts.google.com", "play.google.com")
+	case strings.Contains(domain, "microsoft.com"):
+		serverNames = append(serverNames, "www.microsoft.com", "account.microsoft.com", "dev.microsoft.com")
+	case strings.Contains(domain, "amazon.com"):
+		serverNames = append(serverNames, "www.amazon.com", "smile.amazon.com", "sellercentral.amazon.com")
+	case strings.Contains(domain, "github.com"):
+		serverNames = append(serverNames, "www.github.com", "api.github.com", "docs.github.com")
+	case strings.Contains(domain, "meta.com"):
+		serverNames = append(serverNames, "www.meta.com", "developers.meta.com", "about.fb.com")
+	case strings.Contains(domain, "tesla.com"):
+		serverNames = append(serverNames, "www.tesla.com", "shop.tesla.com", "service.tesla.com")
+	case strings.Contains(domain, "sega.com"):
+		serverNames = append(serverNames, "www.sega.com", "games.sega.com", "support.sega.com")
+	default:
+		// 通用子域名（适用于大多数网站）
+		serverNames = append(serverNames, "api."+domain, "cdn."+domain, "support."+domain)
+	}
+
+	// 去重并限制数量（避免过长）
+	result := s.removeDuplicatesFromSlice(serverNames)
+	if len(result) > 8 {
+		return result[:8]
+	}
+	return result
 }
