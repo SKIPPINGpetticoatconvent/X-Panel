@@ -1345,7 +1345,7 @@ func (s *ServerService) OpenPort(port string) {
 		}
 
 		// 2. 定义默认端口列表
-		defaultPorts := []string{"22", "80", "443", "13688", "8443"}
+		defaultPorts := []string{"22", "80", "443", "13688"}
 
 		logger.Infof("开始为端口 %s 配置防火墙规则", port)
 
@@ -1625,34 +1625,34 @@ func normalizeCountryCode(country string) string {
 		"United States of America": "US",
 		"USA":                      "US",
 
-		"United Kingdom":           "GB",
-		"UK":                       "GB",
-		"Japan":                    "JP",
-		"Korea":                    "KR",
-		"South Korea":              "KR",
-		"Germany":                  "DE",
-		"France":                   "FR",
-		"Canada":                   "CA",
-		"Australia":                "AU",
-		"Singapore":                "SG",
-		"Hong Kong":                "HK",
-		"Taiwan":                   "TW",
-		"Netherlands":              "NL",
-		"Sweden":                   "SE",
-		"Norway":                   "NO",
-		"Finland":                  "FI",
-		"Denmark":                  "DK",
-		"Switzerland":              "CH",
-		"Belgium":                  "BE",
-		"Austria":                  "AT",
-		"Ireland":                  "IE",
-		"Portugal":                 "PT",
-		"Spain":                    "ES",
-		"Italy":                    "IT",
-		"Russia":                   "RU",
-		"India":                    "IN",
-		"Brazil":                   "BR",
-		"Mexico":                   "MX",
+		"United Kingdom": "GB",
+		"UK":             "GB",
+		"Japan":          "JP",
+		"Korea":          "KR",
+		"South Korea":    "KR",
+		"Germany":        "DE",
+		"France":         "FR",
+		"Canada":         "CA",
+		"Australia":      "AU",
+		"Singapore":      "SG",
+		"Hong Kong":      "HK",
+		"Taiwan":         "TW",
+		"Netherlands":    "NL",
+		"Sweden":         "SE",
+		"Norway":         "NO",
+		"Finland":        "FI",
+		"Denmark":        "DK",
+		"Switzerland":    "CH",
+		"Belgium":        "BE",
+		"Austria":        "AT",
+		"Ireland":        "IE",
+		"Portugal":       "PT",
+		"Spain":          "ES",
+		"Italy":          "IT",
+		"Russia":         "RU",
+		"India":          "IN",
+		"Brazil":         "BR",
+		"Mexico":         "MX",
 	}
 
 	// 检查精确匹配
@@ -1678,7 +1678,7 @@ func normalizeCountryCode(country string) string {
 // readSNIDomainsFromFile 通用函数：从指定国家的SNI文件读取域名列表
 func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, error) {
 	filePath := filepath.Join(config.GetSNIFolderPath(), countryCode, "sni_domains.txt")
-	
+
 	// 读取SNI域名文件
 	data, err := os.ReadFile(filePath)
 	if err != nil {
