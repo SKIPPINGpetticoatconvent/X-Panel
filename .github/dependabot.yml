@@ -1,8 +1,21 @@
 version: 2
 updates:
-  # 只更新 Go 依赖
+  # Go 依赖更新
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "monthly"
+      day: "monday"
     open-pull-requests-limit: 3
+    # 忽略主版本更新,只更新次版本和补丁
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions 更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+    open-pull-requests-limit: 2
