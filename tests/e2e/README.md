@@ -20,10 +20,28 @@
 在项目根目录执行以下命令运行 E2E 测试：
 
 ```bash
+# 运行所有 E2E 测试
 go test -v ./tests/e2e/...
+
+# 运行基础功能测试
+go test -v -run TestPodmanE2E ./tests/e2e/
+
+# 运行性能测试
+go test -v -run TestPodmanE2EPerformance ./tests/e2e/
+
+# 运行错误处理测试
+go test -v -run TestPodmanE2EErrorHandling ./tests/e2e/
+
+# 运行 Telegram 测试
+go test -v -run TestTelegramE2E ./tests/e2e/
+
+# 运行特定测试用时分析
+go test -v -bench=. -run=^$ ./tests/e2e/
 ```
 
 ### 测试流程
+
+#### 基础E2E测试 (TestPodmanE2E)
 
 测试将执行以下步骤：
 
@@ -31,8 +49,41 @@ go test -v ./tests/e2e/...
 2. **构建镜像**：使用当前 Dockerfile 构建 Docker 镜像 `x-panel-e2e:latest`
 3. **启动容器**：在后台启动 X-Panel 容器，映射端口 13688
 4. **健康检查**：等待服务启动并响应 HTTP 请求（最多等待 30 秒）
-5. **功能验证**：验证 Web 面板是否可以正常访问
+5. **功能验证**：
+   - 用户登录
+   - 服务器状态检查
+   - 设置管理
+   - SNI功能测试
+   - 入站管理（添加、更新、删除）
+   - 客户端管理（添加、流量查询、重置流量）
+   - 备份功能测试
 6. **清理环境**：测试完成后自动清理测试容器
+
+#### 性能测试 (TestPodmanE2EPerformance)
+
+验证系统性能指标：
+
+- Docker镜像构建时间
+- 服务启动时间
+- API响应时间（服务器状态、入站列表）
+- 性能断言和阈值检查
+
+#### 错误处理测试 (TestPodmanE2EErrorHandling)
+
+验证错误场景的处理：
+
+- 无效登录凭据
+- 删除不存在的资源
+- 无效的输入数据
+- API错误响应
+
+#### Telegram E2E测试
+
+验证Telegram Bot集成功能：
+
+- Telegram配置验证
+- 备份到Telegram功能
+- 消息格式验证
 
 ### 预期输出
 

@@ -120,13 +120,217 @@ func (c *Client) checkResponse(resp *http.Response) error {
 	return nil
 }
 
+// GetInbounds 获取入站列表
+func (c *Client) GetInbounds() ([]map[string]interface{}, error) {
+	apiURL := c.baseURL + "/panel/api/inbounds/list"
+	resp, err := c.http.Get(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Success bool                   `json:"success"`
+		Msg     string                 `json:"msg"`
+		Obj     []map[string]interface{} `json:"obj"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("parse error: %v, body: %s", err, string(body))
+	}
+
+	if !result.Success {
+		return nil, fmt.Errorf("api error: %s", result.Msg)
+	}
+	return result.Obj, nil
+}
+
+// UpdateInbound 更新入站
+func (c *Client) UpdateInbound(id int, inbound map[string]interface{}) error {
+	apiURL := fmt.Sprintf("%s/panel/api/inbounds/update/%d", c.baseURL, id)
+	jsonData, err := json.Marshal(inbound)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.http.Post(apiURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return c.checkResponse(resp)
+}
+
+// AddInboundClient 添加客户端
+func (c *Client) AddInboundClient(inbound map[string]interface{}) (int, error) {
+	apiURL := c.baseURL + "/panel/api/inbounds/addClient"
+	jsonData, err := json.Marshal(inbound)
+	if err != nil {
+		return 0, err
+	}
+
+	resp, err := c.http.Post(apiURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Success bool                   `json:"success"`
+		Msg     string                 `json:"msg"`
+		Obj     map[string]interface{} `json:"obj"`
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	if err := json.Unmarshal(body, &result); err != nil {
+		return 0, fmt.Errorf("parse error: %v, body: %s", err, string(body))
+	}
+
+	if !result.Success {
+		return 0, fmt.Errorf("api error: %s", result.Msg)
+	}
+
+	if idFloat, ok := result.Obj["id"].(float64); ok {
+		return int(idFloat), nil
+	}
+	return 0, fmt.Errorf("invalid id in response")
+}
+
+// GetClientTraffics 获取客户端流量
+func (c *Client) GetClientTraffics(email string) (map[string]interface{}, error) {
+	apiURL := fmt.Sprintf("%s/panel/api/inbounds/getClientTraffics/%s", c.baseURL, email)
+	resp, err := c.http.Get(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Success bool                   `json:"success"`
+		Msg     string                 `json:"msg"`
+		Obj     map[string]interface{} `json:"obj"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("parse error: %v, body: %s", err, string(body))
+	}
+
+	if !result.Success {
+		return nil, fmt.Errorf("api error: %s", result.Msg)
+	}
+	return result.Obj, nil
+}
+
+// ResetClientTraffic 重置客户端流量
+func (c *Client) ResetClientTraffic(id int, email string) error {
+	apiURL := fmt.Sprintf("%s/panel/api/inbounds/%d/resetClientTraffic/%s", c.baseURL, id, email)
+	resp, err := c.http.Post(apiURL, "application/json", nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return c.checkResponse(resp)
+}
+
+// GetServerStatus 获取服务器状态
+func (c *Client) GetServerStatus() (map[string]interface{}, error) {
+	apiURL := c.baseURL + "/panel/api/server/status"
+	resp, err := c.http.Get(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("parse error: %v, body: %s", err, string(body))
+	}
+	return result, nil
+}
+
+// GetSettings 获取设置
+func (c *Client) GetSettings() (map[string]interface{}, error) {
+	apiURL := c.baseURL + "/panel/api/setting/all"
+	resp, err := c.http.Post(apiURL, "application/json", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Success bool                   `json:"success"`
+		Msg     string                 `json:"msg"`
+		Obj     map[string]interface{} `json:"obj"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("parse error: %v, body: %s", err, string(body))
+	}
+
+	if !result.Success {
+		return nil, fmt.Errorf("api error: %s", result.Msg)
+	}
+	return result.Obj, nil
+}
+
+// UpdateSettings 更新设置
+func (c *Client) UpdateSettings(settings map[string]interface{}) error {
+	apiURL := c.baseURL + "/panel/api/setting/update"
+	jsonData, err := json.Marshal(settings)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.http.Post(apiURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return c.checkResponse(resp)
+}
+
+// GetNewSNI 获取新的SNI
+func (c *Client) GetNewSNI() (string, error) {
+	apiURL := c.baseURL + "/panel/api/server/getNewSNI"
+	resp, err := c.http.Get(apiURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		Sni string `json:"sni"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("parse error: %v, body: %s", err, string(body))
+	}
+	return result.Sni, nil
+}
+
+// BackupToTgBot 备份到Telegram Bot
+func (c *Client) BackupToTgBot() error {
+	apiURL := c.baseURL + "/panel/api/backuptotgbot"
+	resp, err := c.http.Get(apiURL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return c.checkResponse(resp)
+}
+
 func TestPodmanE2E(t *testing.T) {
 	// 1. 清理旧环境
 	runCommand(t, "podman", "rm", "-f", containerName)
 
 	// 2. 构建镜像
 	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "podman", "build", "-t", imageName, ".")
+	runCommand(t, "podman", "build", "-t", imageName, "../..")
 
 	// 3. 启动容器
 	t.Logf("Starting container: %s...", containerName)
@@ -156,14 +360,55 @@ func TestPodmanE2E(t *testing.T) {
 		t.Fatalf("Failed to create client: %v", err)
 	}
 
-	// 5.1 登录
-	t.Log("Attempting to login...")
+	// 5.1 登录测试
+	t.Log("Testing login functionality...")
 	if err := client.Login(username, password); err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
 	t.Log("Login successful")
 
-	// 5.2 添加入站
+	// 5.2 服务器状态测试
+	t.Log("Testing server status...")
+	status, err := client.GetServerStatus()
+	if err != nil {
+		t.Fatalf("Get server status failed: %v", err)
+	}
+	t.Logf("Server status retrieved: %v", status)
+
+	// 5.3 设置管理测试
+	t.Log("Testing settings management...")
+	_, err = client.GetSettings()
+	if err != nil {
+		t.Fatalf("Get settings failed: %v", err)
+	}
+	t.Logf("Settings retrieved successfully")
+
+	// 更新设置测试（可选，谨慎操作）
+	// 注意：这里不实际更新设置以避免影响其他测试
+
+	// 5.4 SNI 功能测试
+	t.Log("Testing SNI functionality...")
+	sni, err := client.GetNewSNI()
+	if err != nil {
+		t.Fatalf("Get new SNI failed: %v", err)
+	}
+	if sni == "" {
+		t.Fatalf("SNI should not be empty")
+	}
+	t.Logf("New SNI retrieved: %s", sni)
+
+	// 5.5 入站管理测试
+	t.Log("Testing inbound management...")
+
+	// 获取初始入站列表
+	initialInbounds, err := client.GetInbounds()
+	if err != nil {
+		t.Fatalf("Get inbounds failed: %v", err)
+	}
+	initialCount := len(initialInbounds)
+	t.Logf("Initial inbounds count: %d", initialCount)
+
+	// 添加入站
 	t.Log("Adding new inbound...")
 	vmessSettings := `{"clients": [{"id": "505f1194-a603-46d6-896f-29d93a635831", "alterId": 0}], "disableInsecureEncryption": false}`
 	streamSettings := `{"network": "tcp", "security": "none", "tcpSettings": {}}`
@@ -181,20 +426,269 @@ func TestPodmanE2E(t *testing.T) {
 		"sniffing":       "{}",
 	}
 
-	id, err := client.AddInbound(inbound)
+	inboundID, err := client.AddInbound(inbound)
 	if err != nil {
 		t.Fatalf("Add inbound failed: %v", err)
 	}
-	t.Logf("Inbound added successfully, ID: %d", id)
+	t.Logf("Inbound added successfully, ID: %d", inboundID)
 
-	// 5.3 删除入站
-	t.Logf("Deleting inbound ID: %d...", id)
-	if err := client.DelInbound(id); err != nil {
+	// 验证入站已添加
+	inboundsAfterAdd, err := client.GetInbounds()
+	if err != nil {
+		t.Fatalf("Get inbounds after add failed: %v", err)
+	}
+	if len(inboundsAfterAdd) != initialCount+1 {
+		t.Fatalf("Expected %d inbounds, got %d", initialCount+1, len(inboundsAfterAdd))
+	}
+	t.Logf("Inbound count after add: %d", len(inboundsAfterAdd))
+
+	// 更新入站
+	t.Logf("Updating inbound ID: %d...", inboundID)
+	inbound["remark"] = "e2e-test-vmess-updated-" + time.Now().Format("150405")
+	if err := client.UpdateInbound(inboundID, inbound); err != nil {
+		t.Fatalf("Update inbound failed: %v", err)
+	}
+	t.Log("Inbound updated successfully")
+
+	// 5.6 客户端管理测试
+	t.Log("Testing client management...")
+
+	// 添加客户端
+	clientData := map[string]interface{}{
+		"id": inboundID,
+		"settings": `{
+			"clients": [
+				{
+					"id": "505f1194-a603-46d6-896f-29d93a635831",
+					"alterId": 0,
+					"email": "test-client@example.com"
+				}
+			]
+		}`,
+	}
+
+	clientID, err := client.AddInboundClient(clientData)
+	if err != nil {
+		t.Fatalf("Add inbound client failed: %v", err)
+	}
+	t.Logf("Client added successfully, ID: %d", clientID)
+
+	// 获取客户端流量
+	traffics, err := client.GetClientTraffics("test-client@example.com")
+	if err != nil {
+		t.Fatalf("Get client traffics failed: %v", err)
+	}
+	t.Logf("Client traffics retrieved: %v", traffics)
+
+	// 重置客户端流量
+	if err := client.ResetClientTraffic(inboundID, "test-client@example.com"); err != nil {
+		t.Fatalf("Reset client traffic failed: %v", err)
+	}
+	t.Log("Client traffic reset successfully")
+
+	// 5.7 备份功能测试
+	t.Log("Testing backup functionality...")
+	// 注意：备份到Telegram可能需要配置，这里只测试API调用
+	if err := client.BackupToTgBot(); err != nil {
+		// 备份可能因为未配置Telegram而失败，这是正常的
+		t.Logf("Backup to TgBot (expected to fail without config): %v", err)
+	} else {
+		t.Log("Backup to TgBot successful")
+	}
+
+	// 5.8 清理测试数据
+	t.Log("Cleaning up test data...")
+
+	// 删除入站
+	t.Logf("Deleting inbound ID: %d...", inboundID)
+	if err := client.DelInbound(inboundID); err != nil {
 		t.Fatalf("Delete inbound failed: %v", err)
 	}
 	t.Log("Inbound deleted successfully")
 
+	// 验证入站已删除
+	finalInbounds, err := client.GetInbounds()
+	if err != nil {
+		t.Fatalf("Get inbounds after delete failed: %v", err)
+	}
+	if len(finalInbounds) != initialCount {
+		t.Fatalf("Expected %d inbounds after cleanup, got %d", initialCount, len(finalInbounds))
+	}
+	t.Logf("Final inbounds count: %d", len(finalInbounds))
+
 	t.Log("E2E Test Passed Successfully!")
+}
+
+// TestPodmanE2EPerformance 性能测试
+func TestPodmanE2EPerformance(t *testing.T) {
+	// 1. 清理旧环境
+	runCommand(t, "podman", "rm", "-f", containerName)
+
+	// 2. 构建镜像
+	t.Logf("Building Docker image: %s...", imageName)
+	startTime := time.Now()
+	runCommand(t, "podman", "build", "-t", imageName, "../..")
+	buildTime := time.Since(startTime)
+	t.Logf("Build time: %v", buildTime)
+
+	// 3. 启动容器
+	t.Logf("Starting container: %s...", containerName)
+	runCommand(t, "podman", "run", "-d",
+		"--name", containerName,
+		"-p", fmt.Sprintf("%s:13688", hostPort),
+		imageName,
+	)
+
+	defer func() {
+		t.Logf("Cleaning up container: %s...", containerName)
+		runCommand(t, "podman", "rm", "-f", containerName)
+	}()
+
+	// 4. 健康检查
+	t.Logf("Waiting for service to be ready at %s...", baseURL)
+	startupStart := time.Now()
+	if err := waitForService(baseURL); err != nil {
+		logs := runCommand(t, "podman", "logs", containerName)
+		t.Logf("Container Logs:\n%s", logs)
+		t.Fatalf("Service failed to start: %v", err)
+	}
+	startupTime := time.Since(startupStart)
+	t.Logf("Service startup time: %v", startupTime)
+
+	// 5. API性能测试
+	client, err := NewClient(baseURL)
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	// 登录
+	if err := client.Login(username, password); err != nil {
+		t.Fatalf("Login failed: %v", err)
+	}
+
+	// 测试多个API调用的性能
+	t.Log("Testing API performance...")
+
+	// 测试获取服务器状态的性能
+	statusStart := time.Now()
+	for i := 0; i < 10; i++ {
+		_, err := client.GetServerStatus()
+		if err != nil {
+			t.Fatalf("Get server status failed on iteration %d: %v", i, err)
+		}
+	}
+	statusTime := time.Since(statusStart)
+	avgStatusTime := statusTime / 10
+	t.Logf("Average server status response time: %v", avgStatusTime)
+
+	// 测试入站列表性能
+	inboundsStart := time.Now()
+	for i := 0; i < 10; i++ {
+		_, err := client.GetInbounds()
+		if err != nil {
+			t.Fatalf("Get inbounds failed on iteration %d: %v", i, err)
+		}
+	}
+	inboundsTime := time.Since(inboundsStart)
+	avgInboundsTime := inboundsTime / 10
+	t.Logf("Average inbounds list response time: %v", avgInboundsTime)
+
+	// 性能断言
+	if avgStatusTime > 500*time.Millisecond {
+		t.Errorf("Server status response too slow: %v (should be < 500ms)", avgStatusTime)
+	}
+	if avgInboundsTime > 1*time.Second {
+		t.Errorf("Inbounds list response too slow: %v (should be < 1s)", avgInboundsTime)
+	}
+
+	t.Log("Performance Test Passed Successfully!")
+}
+
+// TestPodmanE2EErrorHandling 错误处理测试
+func TestPodmanE2EErrorHandling(t *testing.T) {
+	// 1. 清理旧环境
+	runCommand(t, "podman", "rm", "-f", containerName)
+
+	// 2. 构建镜像
+	t.Logf("Building Docker image: %s...", imageName)
+	runCommand(t, "podman", "build", "-t", imageName, "../..")
+
+	// 3. 启动容器
+	t.Logf("Starting container: %s...", containerName)
+	runCommand(t, "podman", "run", "-d",
+		"--name", containerName,
+		"-p", fmt.Sprintf("%s:13688", hostPort),
+		imageName,
+	)
+
+	defer func() {
+		t.Logf("Cleaning up container: %s...", containerName)
+		runCommand(t, "podman", "rm", "-f", containerName)
+	}()
+
+	// 4. 健康检查
+	t.Logf("Waiting for service to be ready at %s...", baseURL)
+	if err := waitForService(baseURL); err != nil {
+		logs := runCommand(t, "podman", "logs", containerName)
+		t.Logf("Container Logs:\n%s", logs)
+		t.Fatalf("Service failed to start: %v", err)
+	}
+
+	// 5. 错误处理测试
+	client, err := NewClient(baseURL)
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	t.Log("Testing error handling...")
+
+	// 测试无效登录
+	t.Log("Testing invalid login...")
+	invalidClient, _ := NewClient(baseURL)
+	if err := invalidClient.Login("invalid", "invalid"); err == nil {
+		t.Error("Expected login to fail with invalid credentials")
+	} else {
+		t.Logf("Invalid login correctly failed: %v", err)
+	}
+
+	// 先登录获取有效session
+	if err := client.Login(username, password); err != nil {
+		t.Fatalf("Login failed: %v", err)
+	}
+
+	// 测试删除不存在的入站
+	t.Log("Testing delete non-existent inbound...")
+	if err := client.DelInbound(99999); err == nil {
+		t.Error("Expected delete non-existent inbound to fail")
+	} else {
+		t.Logf("Delete non-existent inbound correctly failed: %v", err)
+	}
+
+	// 测试获取不存在的客户端流量
+	t.Log("Testing get traffic for non-existent client...")
+	_, err = client.GetClientTraffics("nonexistent@example.com")
+	if err == nil {
+		t.Error("Expected get traffic for non-existent client to fail")
+	} else {
+		t.Logf("Get traffic for non-existent client correctly failed: %v", err)
+	}
+
+	// 测试无效的入站数据
+	t.Log("Testing invalid inbound data...")
+	invalidInbound := map[string]interface{}{
+		"enable":   true,
+		"remark":   "test",
+		"port":     -1, // 无效端口
+		"protocol": "invalid_protocol",
+	}
+	_, err = client.AddInbound(invalidInbound)
+	if err == nil {
+		t.Error("Expected add inbound with invalid data to fail")
+	} else {
+		t.Logf("Add inbound with invalid data correctly failed: %v", err)
+	}
+
+	t.Log("Error Handling Test Passed Successfully!")
 }
 
 func runCommand(t *testing.T, name string, args ...string) string {
