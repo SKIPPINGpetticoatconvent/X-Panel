@@ -1865,6 +1865,13 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		return
+	case "copy_all_links":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📋 正在生成所有客户端链接...")
+		err := t.copyAllLinks(chatId)
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 生成链接失败: %v", err))
+		}
+		return
 	}
 }
 
@@ -2051,6 +2058,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.allClients")).WithCallbackData(t.encodeQuery("get_inbounds")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
 		),
 		// 【一键配置】和【订阅转换】按钮的回调数据
 		tu.InlineKeyboardRow(
@@ -3849,6 +3859,51 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 		uuid, domain, inbound.Port, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
+// 【新增辅助函数】: 生成 Reality 链接（支持指定客户端）
+func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client model.Client) (string, error) {
+	uuid := client.ID
+
+	var streamSettings map[string]any
+	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
+	serverNames := realitySettings["serverNames"].([]interface{})
+	sni := serverNames[0].(string)
+
+	// publicKey 在 realitySettings 下的 settings 子对象中
+	settingsMap, ok := realitySettings["settings"].(map[string]interface{})
+	if !ok {
+		return "", errors.New("realitySettings中缺少settings子对象")
+	}
+	publicKey, ok := settingsMap["publicKey"].(string)
+	if !ok {
+		// 再次检查，以防结构有变，但主要依赖 settingsMap
+		return "", errors.New("publicKey字段缺失或格式错误 (可能在settings子对象中)")
+	}
+
+	shortIdsInterface := realitySettings["shortIds"].([]interface{})
+	// 确保 shortIdsInterface 不为空，否则可能 panic
+	if len(shortIdsInterface) == 0 {
+		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+	}
+	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+
+	domain, err := t.getDomain()
+	if err != nil {
+		return "", err
+	}
+
+	// ---------------------- URL 编码 ----------------------
+	// 必须对查询参数的值（pbk, sni, sid）
+	// Go 标准库中的 net/url.QueryEscape 会处理 Base64 字符串中的 + / 等字符。
+	escapedPublicKey := url.QueryEscape(publicKey)
+	escapedSni := url.QueryEscape(sni)
+	escapedSid := url.QueryEscape(sid)
+	escapedRemark := url.QueryEscape(inbound.Remark)
+
+	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
+		uuid, domain, inbound.Port, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
+}
+
 // 【新增辅助函数】: 生成 TLS 链接
 func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
@@ -3873,6 +3928,29 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 		uuid, domain, inbound.Port, encryption, sni, inbound.Remark, inbound.Remark), nil
 }
 
+// 【新增辅助函数】: 生成 TLS 链接（支持指定客户端）
+func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.Client) (string, error) {
+	uuid := client.ID
+
+	var settings map[string]any
+	json.Unmarshal([]byte(inbound.Settings), &settings)
+	encryption := settings["encryption"].(string)
+
+	var streamSettings map[string]any
+	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	tlsSettings := streamSettings["tlsSettings"].(map[string]interface{})
+	sni := tlsSettings["serverName"].(string)
+
+	domain, err := t.getDomain()
+	if err != nil {
+		return "", err
+	}
+
+	// 链接格式简化，根据您的前端代码，xhttp 未在链接中体现 path
+	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s&flow=xtls-rprx-vision#%s-%s",
+		uuid, domain, inbound.Port, encryption, sni, inbound.Remark, inbound.Remark), nil
+}
+
 // 生成 VLESS + XHTTP + Reality 链接的函数
 func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
@@ -3880,6 +3958,46 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 	clients, _ := settings["clients"].([]interface{})
 	client := clients[0].(map[string]interface{})
 	uuid := client["id"].(string)
+
+	var streamSettings map[string]any
+	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+
+	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
+	serverNames := realitySettings["serverNames"].([]interface{})
+	sni := serverNames[0].(string)
+
+	settingsMap, _ := realitySettings["settings"].(map[string]interface{})
+	publicKey, _ := settingsMap["publicKey"].(string)
+
+	shortIdsInterface, _ := realitySettings["shortIds"].([]interface{})
+	if len(shortIdsInterface) == 0 {
+		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+	}
+	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+
+	xhttpSettings, _ := streamSettings["xhttpSettings"].(map[string]interface{})
+	path := xhttpSettings["path"].(string)
+
+	domain, err := t.getDomain()
+	if err != nil {
+		return "", err
+	}
+
+	// 【中文注释】: 对所有URL查询参数进行编码
+	escapedPath := url.QueryEscape(path)
+	escapedPublicKey := url.QueryEscape(publicKey)
+	escapedSni := url.QueryEscape(sni)
+	escapedSid := url.QueryEscape(sid)
+	escapedRemark := url.QueryEscape(inbound.Remark)
+
+	// 【中文注释】: 严格按照最新格式构建链接
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
+		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
+}
+
+// 【新增辅助函数】: 生成 VLESS + XHTTP + Reality 链接（支持指定客户端）
+func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, client model.Client) (string, error) {
+	uuid := client.ID
 
 	var streamSettings map[string]any
 	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
@@ -4158,4 +4276,182 @@ func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 
 	// 发送版本选择消息
 	t.SendMsgToTgbot(chatId, "🚀 **Xray 版本管理**\n\n请选择要更新的版本：", keyboard)
+}
+
+// 【新增方法】: 批量复制所有入站的客户端链接
+func (t *Tgbot) copyAllLinks(chatId int64) error {
+	t.SendMsgToTgbot(chatId, "📋 正在生成所有入站的客户端链接，请稍候...")
+
+	// 获取所有入站
+	inbounds, err := t.inboundService.GetAllInbounds()
+	if err != nil {
+		return fmt.Errorf("获取入站列表失败: %v", err)
+	}
+
+	if len(inbounds) == 0 {
+		return fmt.Errorf("没有找到任何入站")
+	}
+
+	var allLinks []string
+	var errorCount int
+
+	// 遍历每个入站
+	for _, inbound := range inbounds {
+		if !inbound.Enable {
+			continue // 跳过禁用的入站
+		}
+
+		// 获取该入站的所有客户端
+		clients, err := t.inboundService.GetClients(inbound)
+		if err != nil {
+			logger.Warningf("获取入站 %d 的客户端失败: %v", inbound.Id, err)
+			errorCount++
+			continue
+		}
+
+		if len(clients) == 0 {
+			continue // 跳过没有客户端的入站
+		}
+
+		// 添加入站标题
+		allLinks = append(allLinks, fmt.Sprintf("--- %s (%s) ---", inbound.Remark, inbound.Protocol))
+
+		// 遍历每个客户端并生成链接
+		for _, client := range clients {
+			if !client.Enable {
+				continue // 跳过禁用的客户端
+			}
+
+			var link string
+			var linkErr error
+
+			// 根据协议类型生成链接
+			var streamSettings map[string]any
+			if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+				logger.Warningf("解析入站 %d 的 StreamSettings 失败: %v", inbound.Id, err)
+				continue
+			}
+
+			if security, ok := streamSettings["security"].(string); ok {
+				if security == "reality" {
+					if network, ok := streamSettings["network"].(string); ok && network == "xhttp" {
+						link, linkErr = t.generateXhttpRealityLinkWithClient(inbound, client)
+					} else {
+						link, linkErr = t.generateRealityLinkWithClient(inbound, client)
+					}
+				} else if security == "tls" {
+					link, linkErr = t.generateTlsLinkWithClient(inbound, client)
+				} else {
+					// 对于其他协议，尝试生成通用链接
+					link, linkErr = t.generateGenericLink(inbound, client)
+				}
+			} else {
+				linkErr = fmt.Errorf("未知的 security 类型")
+			}
+
+			if linkErr != nil {
+				logger.Warningf("为入站 %d 客户端 %s 生成链接失败: %v", inbound.Id, client.Email, linkErr)
+				allLinks = append(allLinks, fmt.Sprintf("# 错误: %s - %v", client.Email, linkErr))
+				errorCount++
+			} else {
+				// 添加客户端信息注释
+				comment := ""
+				if client.Comment != "" {
+					comment = fmt.Sprintf(" (%s)", client.Comment)
+				}
+				allLinks = append(allLinks, fmt.Sprintf("# %s%s", client.Email, comment))
+				allLinks = append(allLinks, link)
+			}
+		}
+
+		allLinks = append(allLinks, "") // 添加空行分隔
+	}
+
+	// 如果没有生成任何链接
+	if len(allLinks) == 0 {
+		return fmt.Errorf("没有找到可用的链接")
+	}
+
+	// 添加统计信息
+	allLinks = append(allLinks, fmt.Sprintf("--- 统计 ---"))
+	allLinks = append(allLinks, fmt.Sprintf("总共生成了 %d 个入站的链接", len(inbounds)))
+	if errorCount > 0 {
+		allLinks = append(allLinks, fmt.Sprintf("其中 %d 个链接生成失败", errorCount))
+	}
+
+	// 将所有链接合并为单个字符串
+	allLinksText := strings.Join(allLinks, "\n")
+
+	// 检查消息长度，如果超过限制则分段发送
+	const maxMessageLength = 4000 // Telegram 消息限制
+	if len(allLinksText) <= maxMessageLength {
+		t.SendMsgToTgbot(chatId, allLinksText)
+	} else {
+		// 分段发送
+		lines := strings.Split(allLinksText, "\n")
+		var currentMessage strings.Builder
+		
+		for _, line := range lines {
+			if currentMessage.Len()+len(line)+1 > maxMessageLength {
+				// 发送当前段落
+				if currentMessage.Len() > 0 {
+					t.SendMsgToTgbot(chatId, currentMessage.String())
+				}
+				// 开始新段落
+				currentMessage.Reset()
+			}
+			
+			if currentMessage.Len() > 0 {
+				currentMessage.WriteString("\n")
+			}
+			currentMessage.WriteString(line)
+		}
+		
+		// 发送最后一段
+		if currentMessage.Len() > 0 {
+			t.SendMsgToTgbot(chatId, currentMessage.String())
+		}
+	}
+
+	return nil
+}
+
+// 【新增辅助函数】: 生成通用协议链接（VMess, VLESS, Trojan, ShadowSocks）
+func (t *Tgbot) generateGenericLink(inbound *model.Inbound, client model.Client) (string, error) {
+	domain, err := t.getDomain()
+	if err != nil {
+		return "", err
+	}
+
+	switch inbound.Protocol {
+	case model.VMESS:
+		// VMess 链接格式
+		return fmt.Sprintf("vmess://%s@%s:%d?network=tcp&security=none#%s-%s",
+			client.ID, domain, inbound.Port, client.Email, inbound.Remark), nil
+
+	case model.VLESS:
+		// VLESS 链接格式（无加密）
+		flow := ""
+		if client.Flow != "" {
+			flow = "&flow=" + client.Flow
+		}
+		return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none%s#%s-%s",
+			client.ID, domain, inbound.Port, flow, client.Email, inbound.Remark), nil
+
+	case model.Trojan:
+		// Trojan 链接格式
+		return fmt.Sprintf("trojan://%s@%s:%d#%s-%s",
+			client.Password, domain, inbound.Port, client.Email, inbound.Remark), nil
+
+	case model.Shadowsocks:
+		// ShadowSocks 链接格式
+		if client.Security == "" {
+			client.Security = "aes-256-gcm" // 默认加密方式
+		}
+		return fmt.Sprintf("ss://%s@%s:%d#%s-%s",
+			client.Security, domain, inbound.Port, client.Email, inbound.Remark), nil
+
+	default:
+		return "", fmt.Errorf("不支持的协议类型: %s", inbound.Protocol)
+	}
 }
