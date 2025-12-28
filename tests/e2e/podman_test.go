@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -689,6 +690,229 @@ func TestPodmanE2EErrorHandling(t *testing.T) {
 	}
 
 	t.Log("Error Handling Test Passed Successfully!")
+}
+
+// TestPodmanE2EBackupRestore 备份恢复E2E测试
+func TestPodmanE2EBackupRestore(t *testing.T) {
+	// 1. 清理旧环境
+	runCommand(t, "podman", "rm", "-f", containerName)
+
+	// 2. 构建镜像
+	t.Logf("Building Docker image: %s...", imageName)
+	runCommand(t, "podman", "build", "-t", imageName, "../..")
+
+	// 3. 启动容器
+	t.Logf("Starting container: %s...", containerName)
+	runCommand(t, "podman", "run", "-d",
+		"--name", containerName,
+		"-p", fmt.Sprintf("%s:13688", hostPort),
+		imageName,
+	)
+
+	defer func() {
+		t.Logf("Cleaning up container: %s...", containerName)
+		runCommand(t, "podman", "rm", "-f", containerName)
+	}()
+
+	// 4. 健康检查
+	t.Logf("Waiting for service to be ready at %s...", baseURL)
+	if err := waitForService(baseURL); err != nil {
+		logs := runCommand(t, "podman", "logs", containerName)
+		t.Logf("Container Logs:\n%s", logs)
+		t.Fatalf("Service failed to start: %v", err)
+	}
+
+	// 5. 备份恢复测试
+	client, err := NewClient(baseURL)
+	if err != nil {
+		t.Fatalf("Failed to create client: %v", err)
+	}
+
+	// 登录
+	if err := client.Login(username, password); err != nil {
+		t.Fatalf("Login failed: %v", err)
+	}
+
+	t.Log("Testing database backup and restore...")
+
+	// 5.1 创建测试数据
+	t.Log("Creating test data...")
+
+	// 添加测试入站
+	testInbound := map[string]interface{}{
+		"enable":         true,
+		"remark":         "backup-test-inbound",
+		"listen":         "",
+		"port":           30000,
+		"protocol":       "vmess",
+		"up":             0,
+		"down":           0,
+		"total":          0,
+		"settings":       `{"clients": [{"id": "test-id-123", "alterId": 0}], "disableInsecureEncryption": false}`,
+		"streamSettings": `{"network": "tcp", "security": "none", "tcpSettings": {}}`,
+		"sniffing":       "{}",
+	}
+
+	inboundID, err := client.AddInbound(testInbound)
+	if err != nil {
+		t.Fatalf("Failed to create test inbound: %v", err)
+	}
+	t.Logf("Test inbound created with ID: %d", inboundID)
+
+	// 验证入站创建成功
+	inbounds, err := client.GetInbounds()
+	if err != nil {
+		t.Fatalf("Failed to get inbounds: %v", err)
+	}
+
+	found := false
+	for _, inbound := range inbounds {
+		if id, ok := inbound["id"].(float64); ok && int(id) == inboundID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("Test inbound not found in inbounds list")
+	}
+
+	// 5.2 执行数据库备份
+	t.Log("Performing database backup...")
+	backupURL := baseURL + "/panel/api/server/getDb"
+	resp, err := client.http.Get(backupURL)
+	if err != nil {
+		t.Fatalf("Failed to download database backup: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Backup download failed with status: %d", resp.StatusCode)
+	}
+
+	// 读取备份数据
+	backupData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read backup data: %v", err)
+	}
+
+	if len(backupData) == 0 {
+		t.Fatalf("Backup data is empty")
+	}
+	t.Logf("Database backup successful, size: %d bytes", len(backupData))
+
+	// 5.3 模拟数据丢失（删除测试入站）
+	t.Log("Simulating data loss by deleting test inbound...")
+	if err := client.DelInbound(inboundID); err != nil {
+		t.Fatalf("Failed to delete test inbound: %v", err)
+	}
+
+	// 验证入站已删除
+	inboundsAfterDelete, err := client.GetInbounds()
+	if err != nil {
+		t.Fatalf("Failed to get inbounds after delete: %v", err)
+	}
+
+	deleted := true
+	for _, inbound := range inboundsAfterDelete {
+		if id, ok := inbound["id"].(float64); ok && int(id) == inboundID {
+			deleted = false
+			break
+		}
+	}
+	if !deleted {
+		t.Fatalf("Test inbound was not deleted")
+	}
+	t.Log("Test inbound successfully deleted")
+
+	// 5.4 执行数据库恢复
+	t.Log("Performing database restore...")
+	restoreURL := baseURL + "/panel/api/server/importDB"
+
+	// 创建multipart表单
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	fw, err := w.CreateFormFile("db", "x-ui.db")
+	if err != nil {
+		t.Fatalf("Failed to create form file: %v", err)
+	}
+	if _, err := fw.Write(backupData); err != nil {
+		t.Fatalf("Failed to write backup data to form: %v", err)
+	}
+	w.Close()
+
+	req, err := http.NewRequest("POST", restoreURL, &b)
+	if err != nil {
+		t.Fatalf("Failed to create restore request: %v", err)
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+
+	// 使用已登录的客户端发送请求
+	resp, err = client.http.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to send restore request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var restoreResult struct {
+		Success bool   `json:"success"`
+		Msg     string `json:"msg"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&restoreResult); err != nil {
+		t.Fatalf("Failed to decode restore response: %v", err)
+	}
+
+	if !restoreResult.Success {
+		t.Fatalf("Database restore failed: %s", restoreResult.Msg)
+	}
+	t.Log("Database restore successful")
+
+	// 等待服务重启
+	t.Log("Waiting for service to restart after restore...")
+	time.Sleep(3 * time.Second) // 等待重启
+
+	// 重新等待服务就绪
+	if err := waitForService(baseURL); err != nil {
+		t.Fatalf("Service failed to restart after restore: %v", err)
+	}
+
+	// 重新登录
+	client, err = NewClient(baseURL)
+	if err != nil {
+		t.Fatalf("Failed to recreate client: %v", err)
+	}
+	if err := client.Login(username, password); err != nil {
+		t.Fatalf("Login failed after restore: %v", err)
+	}
+
+	// 5.5 验证数据恢复
+	t.Log("Verifying data restoration...")
+	inboundsAfterRestore, err := client.GetInbounds()
+	if err != nil {
+		t.Fatalf("Failed to get inbounds after restore: %v", err)
+	}
+
+	restored := false
+	for _, inbound := range inboundsAfterRestore {
+		if id, ok := inbound["id"].(float64); ok && int(id) == inboundID {
+			if remark, ok := inbound["remark"].(string); ok && remark == "backup-test-inbound" {
+				restored = true
+				break
+			}
+		}
+	}
+
+	if !restored {
+		t.Fatalf("Test inbound was not restored after database restore")
+	}
+	t.Log("Data restoration verified successfully")
+
+	// 清理测试数据
+	t.Log("Cleaning up test data...")
+	if err := client.DelInbound(inboundID); err != nil {
+		t.Logf("Warning: Failed to clean up test inbound: %v", err)
+	}
+
+	t.Log("Backup and Restore E2E Test Passed Successfully!")
 }
 
 func runCommand(t *testing.T, name string, args ...string) string {

@@ -32,6 +32,9 @@ go test -v -run TestPodmanE2EPerformance ./tests/e2e/
 # 运行错误处理测试
 go test -v -run TestPodmanE2EErrorHandling ./tests/e2e/
 
+# 运行备份恢复测试
+go test -v -run TestPodmanE2EBackupRestore ./tests/e2e/
+
 # 运行 Telegram 测试
 go test -v -run TestTelegramE2E ./tests/e2e/
 
@@ -84,6 +87,16 @@ go test -v -bench=. -run=^$ ./tests/e2e/
 - Telegram配置验证
 - 备份到Telegram功能
 - 消息格式验证
+
+#### 备份恢复E2E测试 (TestPodmanE2EBackupRestore)
+
+验证数据库备份和恢复功能：
+
+- 创建测试数据
+- 执行数据库备份
+- 模拟数据丢失
+- 执行数据库恢复
+- 验证数据完整性
 
 ### 预期输出
 
