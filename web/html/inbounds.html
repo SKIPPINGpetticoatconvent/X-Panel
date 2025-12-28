@@ -2509,9 +2509,25 @@ async openPort(port) {
             exportAllLinks() {
                 let copyText = [];
                 for (const dbInbound of this.dbInbounds) {
-                    copyText.push(dbInbound.genInboundLinks(this.remarkModel));
+                    // 只获取纯链接，去除所有格式化文本
+                    const inbound = dbInbound.toInbound();
+                    if (inbound.clients) {
+                        inbound.clients.forEach((client) => {
+                            this.genAllLinks(dbInbound.remark, this.remarkModel, client).forEach((l) => {
+                                copyText.push(l.link);
+                            });
+                        });
+                    } else {
+                        if (inbound.protocol == Protocols.SHADOWSOCKS && !inbound.isSSMultiUser) {
+                            copyText.push(inbound.genSSLink(inbound.genAddr(), inbound.port, "same", dbInbound.remark));
+                        } else if (inbound.protocol == Protocols.WIREGUARD) {
+                            inbound.settings.peers.forEach((p, index) => {
+                                copyText.push(inbound.getWireguardLink(inbound.genAddr(), inbound.port, dbInbound.remark + this.remarkModel.charAt(0) + (index + 1), index));
+                            });
+                        }
+                    }
                 }
-                txtModal.show('{{ i18n "pages.inbounds.export"}}', copyText.join('\r\n'), 'All-Inbounds');
+                txtModal.show('{{ i18n "pages.inbounds.export"}}', copyText.join('\r\n'), 'All-Inbounds-Links');
             },
             copy(dbInboundId) {
               dbInbound = this.dbInbounds.find(row => row.id === dbInboundId);

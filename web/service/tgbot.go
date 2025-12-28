@@ -4280,7 +4280,7 @@ func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 
 // 【新增方法】: 批量复制所有入站的客户端链接
 func (t *Tgbot) copyAllLinks(chatId int64) error {
-	t.SendMsgToTgbot(chatId, "📋 正在生成所有入站的客户端链接，请稍候...")
+	t.SendMsgToTgbot(chatId, "📋 正在生成纯链接列表，请稍候...")
 
 	// 获取所有入站
 	inbounds, err := t.inboundService.GetAllInbounds()
@@ -4313,10 +4313,7 @@ func (t *Tgbot) copyAllLinks(chatId int64) error {
 			continue // 跳过没有客户端的入站
 		}
 
-		// 添加入站标题
-		allLinks = append(allLinks, fmt.Sprintf("--- %s (%s) ---", inbound.Remark, inbound.Protocol))
-
-		// 遍历每个客户端并生成链接
+			// 遍历每个客户端并生成链接
 		for _, client := range clients {
 			if !client.Enable {
 				continue // 跳过禁用的客户端
@@ -4351,32 +4348,17 @@ func (t *Tgbot) copyAllLinks(chatId int64) error {
 
 			if linkErr != nil {
 				logger.Warningf("为入站 %d 客户端 %s 生成链接失败: %v", inbound.Id, client.Email, linkErr)
-				allLinks = append(allLinks, fmt.Sprintf("# 错误: %s - %v", client.Email, linkErr))
 				errorCount++
 			} else {
-				// 添加客户端信息注释
-				comment := ""
-				if client.Comment != "" {
-					comment = fmt.Sprintf(" (%s)", client.Comment)
-				}
-				allLinks = append(allLinks, fmt.Sprintf("# %s%s", client.Email, comment))
+				// 只添加链接本身
 				allLinks = append(allLinks, link)
 			}
 		}
-
-		allLinks = append(allLinks, "") // 添加空行分隔
 	}
 
 	// 如果没有生成任何链接
 	if len(allLinks) == 0 {
 		return fmt.Errorf("没有找到可用的链接")
-	}
-
-	// 添加统计信息
-	allLinks = append(allLinks, fmt.Sprintf("--- 统计 ---"))
-	allLinks = append(allLinks, fmt.Sprintf("总共生成了 %d 个入站的链接", len(inbounds)))
-	if errorCount > 0 {
-		allLinks = append(allLinks, fmt.Sprintf("其中 %d 个链接生成失败", errorCount))
 	}
 
 	// 将所有链接合并为单个字符串
