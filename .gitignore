@@ -43,4 +43,3 @@ docker-compose.override.yml
 
 test_scripts
 test_suite
-tests
