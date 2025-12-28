@@ -37,9 +37,16 @@ X-Panel项目现在包含以下测试类型：
 
 ### 现有测试类型
 
-5. **性能稳定性测试** (`tests/performance_stability_test.go`)
-6. **端到端测试** (`tests/e2e/`)
-7. **集成测试** (`web/service/*_test.go`)
+5. **安全测试** (`tests/security_test.go`)
+   - SQL注入防护
+   - XSS攻击防护
+   - CSRF保护验证
+   - 输入验证测试
+   - 安全头检查
+
+6. **性能稳定性测试** (`tests/performance_stability_test.go`)
+7. **端到端测试** (`tests/e2e/`)
+8. **集成测试** (`web/service/*_test.go`)
 
 ## 🚀 快速开始
 
@@ -89,6 +96,7 @@ go test -race -v ./...
 ```
 tests/
 ├── README.md                          # 本文档
+├── security_test.go                   # 安全测试
 ├── integration/
 │   └── comprehensive_test.go         # 综合测试运行器
 ├── performance_stability_test.go      # 性能稳定性测试
@@ -110,6 +118,41 @@ web/
 ```
 
 ## 🧪 详细测试说明
+
+### 安全测试
+
+**测试文件**: `tests/security_test.go`
+
+**测试内容**:
+- `TestSQLInjection` - SQL注入攻击防护测试
+  - 备注字段SQL注入测试
+  - 邮箱字段SQL注入测试
+- `TestXSS` - 跨站脚本攻击防护测试
+  - 备注字段XSS payload测试
+  - HTML响应转义测试
+- `TestCSRF` - 跨站请求伪造防护测试
+  - 缺少CSRF令牌的请求测试
+  - Referer头检查测试
+- `TestInputValidation` - 输入验证测试
+  - 端口号验证
+  - 协议验证
+  - 备注长度验证
+  - 流量限制验证
+  - JSON格式验证
+- `TestSecurityHeaders` - 安全头测试
+  - X-Content-Type-Options
+  - X-Frame-Options
+  - X-XSS-Protection
+  - Content-Security-Policy
+
+**运行方法**:
+```bash
+go test -v ./tests/ -run TestSQLInjection
+go test -v ./tests/ -run TestXSS
+go test -v ./tests/ -run TestCSRF
+go test -v ./tests/ -run TestInputValidation
+go test -v ./tests/ -run TestSecurityHeaders
+```
 
 ### Web界面功能测试
 
@@ -281,14 +324,21 @@ go test -bench=BenchmarkInboundController_ValidateInboundData -benchmem
 ### 运行安全测试
 
 ```bash
-# 运行安全相关测试
-go test -v ./... -run "Security\|Auth\|Permission"
+# 运行所有安全测试
+go test -v ./tests/ -run "TestSQLInjection|TestXSS|TestCSRF|TestInputValidation|TestSecurityHeaders"
+
+# 运行特定安全测试
+go test -v ./tests/ -run TestSQLInjection
+go test -v ./tests/ -run TestXSS
+go test -v ./tests/ -run TestCSRF
+go test -v ./tests/ -run TestInputValidation
+go test -v ./tests/ -run TestSecurityHeaders
 
 # 运行并发安全测试
-go test -race -v ./...
+go test -race -v ./tests/
 
-# 运行所有安全测试
-go test -v -race ./...
+# 运行安全相关测试（包括其他模块）
+go test -v ./... -run "Security\|Auth\|Permission"
 ```
 
 ## 🐛 故障排除
