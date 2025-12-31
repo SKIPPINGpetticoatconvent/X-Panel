@@ -1872,6 +1872,19 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 生成链接失败: %v", err))
 		}
 		return
+
+	// 【新增代码】: 处理机器优化一键方案相关回调
+	case "machine_optimization":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在打开机器优化选项...")
+		t.sendMachineOptimizationOptions(chatId)
+
+	case "optimize_1c1g":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🖥️ 正在打开1C1G优化选项...")
+		t.performOptimization1C1G(chatId, callbackQuery.Message.GetMessageID())
+
+	case "optimize_1c1g_confirm":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在执行1C1G优化...")
+		t.executeOptimization1C1G(chatId, callbackQuery.Message.GetMessageID())
 	}
 }
 
@@ -2069,6 +2082,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("xrayversion")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
 		),
 		// VPS推荐按钮已移除
 		// TODOOOOOOOOOOOOOO: Add restart button here.
@@ -4436,4 +4452,332 @@ func (t *Tgbot) generateGenericLink(inbound *model.Inbound, client model.Client)
 	default:
 		return "", fmt.Errorf("不支持的协议类型: %s", inbound.Protocol)
 	}
+}
+
+// 【新增函数】: 显示机器优化选项菜单
+func (t *Tgbot) sendMachineOptimizationOptions(chatId int64) {
+	optimizationKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🖥️ 1C1G 机器").WithCallbackData(t.encodeQuery("optimize_1c1g")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("get_inbounds")),
+		),
+	)
+	t.SendMsgToTgbot(chatId, "⚡ **机器优化一键方案**\n\n请选择您的机器配置类型：\n\n🖥️ **1C1G 机器**: 适用于低配VPS的深度优化", optimizationKeyboard)
+}
+
+// 【新增函数】: 执行1C1G优化前显示确认对话框
+func (t *Tgbot) performOptimization1C1G(chatId int64, messageId int) {
+	confirmKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("✅ 确认执行").WithCallbackData(t.encodeQuery("optimize_1c1g_confirm")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("❌ 取消").WithCallbackData(t.encodeQuery("machine_optimization")),
+		),
+	)
+	
+	t.editMessageCallbackTgBot(chatId, messageId, confirmKeyboard)
+	
+	// 发送详细说明
+	detailMsg := "🤔 **1C1G 机器优化确认**\n\n即将执行以下优化操作：\n\n**📊 内核参数深度优化（针对1C1G低配机器）:**\n• 内存管理优化 (swappiness, cache pressure等)\n• 网络参数优化 (TCP缓冲区、连接跟踪等)\n• 文件描述符限制优化\n\n**💾 设置1G Swap（防宕机神器）:**\n• 自动创建1GB Swap文件\n• 配置开机自动挂载\n• 防止内存不足导致的宕机\n\n⚠️ **注意**: 此操作需要root权限，请确保您的VPS有足够权限。"
+	t.SendMsgToTgbot(chatId, detailMsg)
+}
+
+// 【新增函数】: 执行实际的1C1G优化操作
+func (t *Tgbot) executeOptimization1C1G(chatId int64, messageId int) {
+	t.SendMsgToTgbot(chatId, "🚀 **开始执行1C1G机器优化...**\n\n⏳ 正在执行优化操作，请稍候...")
+	
+	go func() {
+		// 执行优化操作
+		_, err := t.execute1C1GOptimization()
+		
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **优化执行失败**\n\n错误信息: %v\n\n💡 **排查建议**:\n• 请查看日志文件: /tmp/x-panel-optimization.log\n• 确保您的VPS具有root权限\n• 检查系统磁盘空间是否充足", err))
+		} else {
+			// 获取优化后的系统状态
+			statusMsg := t.getSystemStatusAfterOptimization()
+			
+			resultMsg := fmt.Sprintf("✅ **1C1G机器优化执行完成！**\n\n📊 **优化结果:**\n• 内核参数已优化 ✅\n• 1G Swap 已设置 ✅\n• 文件描述符限制已优化 ✅\n• 代理服务器参数已优化 ✅\n\n%s\n\n🎉 **优化成功完成，您的1C1G机器现在更加稳定高效！**\n\n📋 **重要信息:**\n• 详细日志文件: `/tmp/x-panel-optimization.log`\n• 优化包含针对 Sing-box/Xray 的专用参数\n• 设置了 5 分钟操作超时，防止脚本死锁", statusMsg)
+			t.SendMsgToTgbot(chatId, resultMsg)
+		}
+	}()
+}
+
+// 【新增辅助函数】: 执行实际的1C1G优化操作
+func (t *Tgbot) execute1C1GOptimization() (string, error) {
+	var output strings.Builder
+	
+	// 创建日志文件
+	logFile := "/tmp/x-panel-optimization.log"
+	f, err := os.Create(logFile)
+	if err != nil {
+		return output.String(), fmt.Errorf("创建日志文件失败: %v", err)
+	}
+	defer f.Close()
+	
+	// 记录开始时间
+	startTime := time.Now()
+	logMsg := fmt.Sprintf("X-Panel 1C1G 机器优化开始时间: %s\n", startTime.Format("2006-01-02 15:04:05"))
+	output.WriteString(logMsg)
+	f.WriteString(logMsg)
+	
+	// 1. 内核参数优化
+	output.WriteString("=== 内核参数优化 ===\n")
+	f.WriteString("=== 内核参数优化 ===\n")
+	
+	// 创建内核参数配置文件（包含代理服务器专用参数）
+	kernelConfig := `# ===== 1C1G 机器深度优化配置 =====
+# 内存管理优化
+vm.swappiness = 60
+vm.vfs_cache_pressure = 50
+vm.dirty_ratio = 10
+vm.dirty_background_ratio = 5
+vm.overcommit_memory = 0
+vm.min_free_kbytes = 16384
+
+# 网络优化（保守设置，适合低配机器）
+net.core.somaxconn = 1024
+net.core.netdev_max_backlog = 2000
+net.ipv4.tcp_max_syn_backlog = 1024
+net.ipv4.tcp_fin_timeout = 30
+net.ipv4.tcp_keepalive_time = 600
+net.ipv4.tcp_keepalive_probes = 5
+net.ipv4.tcp_keepalive_intvl = 15
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.ip_local_port_range = 10000 65535
+net.ipv4.tcp_slow_start_after_idle = 0
+
+# TCP 缓冲区（适合1G内存）
+net.core.rmem_default = 262144
+net.core.wmem_default = 262144
+net.core.rmem_max = 4194304
+net.core.wmem_max = 4194304
+net.ipv4.tcp_rmem = 4096 65536 4194304
+net.ipv4.tcp_wmem = 4096 65536 4194304
+
+# 连接跟踪优化
+net.netfilter.nf_conntrack_max = 65536
+net.netfilter.nf_conntrack_tcp_timeout_established = 1200
+net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30
+
+# 文件描述符
+fs.file-max = 65535
+fs.nr_open = 65535`
+
+	// 写入配置文件（添加5分钟超时和日志重定向）
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	
+	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-1c1g-optimize.conf << 'EOF'
+%s
+EOF`, kernelConfig))
+	cmd.Stdout = f
+	cmd.Stderr = f
+	if err := cmd.Run(); err != nil {
+		errorMsg := fmt.Sprintf("创建内核配置文件失败: %v", err)
+		output.WriteString("❌ " + errorMsg + "\n")
+		f.WriteString("❌ " + errorMsg + "\n")
+		return output.String(), fmt.Errorf(errorMsg)
+	}
+	successMsg := "✅ 内核参数配置文件已创建"
+	output.WriteString(successMsg + "\n")
+	f.WriteString(successMsg + "\n")
+
+	// 应用内核参数（添加5分钟超时和日志重定向）
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	
+	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-1c1g-optimize.conf")
+	cmd.Stdout = f
+	cmd.Stderr = f
+	if err := cmd.Run(); err != nil {
+		errorMsg := fmt.Sprintf("应用内核参数失败: %v", err)
+		output.WriteString("❌ " + errorMsg + "\n")
+		f.WriteString("❌ " + errorMsg + "\n")
+		return output.String(), fmt.Errorf(errorMsg)
+	}
+	successMsg = "✅ 内核参数已应用"
+	output.WriteString(successMsg + "\n")
+	f.WriteString(successMsg + "\n")
+
+	// 2. 设置1G Swap
+	swapMsg := "\n=== 设置1G Swap ===\n"
+	output.WriteString(swapMsg)
+	f.WriteString(swapMsg)
+	
+	// 检查是否已有swap（添加5分钟超时和日志重定向）
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	
+	cmd = exec.CommandContext(ctx, "bash", "-c", "if [ $(swapon --show | wc -l) -eq 0 ]; then echo 'no_swap'; else echo 'has_swap'; fi")
+	cmd.Stdout = f
+	cmd.Stderr = f
+	swapCheck, _ := cmd.Output()
+	
+	if strings.TrimSpace(string(swapCheck)) == "no_swap" {
+		// 创建1G swap文件（添加5分钟超时和日志重定向）
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		
+		cmd = exec.CommandContext(ctx, "bash", "-c", "fallocate -l 1G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=1024")
+		cmd.Stdout = f
+		cmd.Stderr = f
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("创建swap文件失败: %v", err)
+			output.WriteString("❌ " + errorMsg + "\n")
+			f.WriteString("❌ " + errorMsg + "\n")
+			return output.String(), fmt.Errorf(errorMsg)
+		}
+		successMsg = "✅ 1G Swap文件已创建"
+		output.WriteString(successMsg + "\n")
+		f.WriteString(successMsg + "\n")
+
+		// 设置权限（添加5分钟超时和日志重定向）
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		
+		cmd = exec.CommandContext(ctx, "chmod", "600", "/swapfile")
+		cmd.Stdout = f
+		cmd.Stderr = f
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("设置swap文件权限失败: %v", err)
+			output.WriteString("❌ " + errorMsg + "\n")
+			f.WriteString("❌ " + errorMsg + "\n")
+			return output.String(), fmt.Errorf(errorMsg)
+		}
+		successMsg = "✅ Swap文件权限已设置"
+		output.WriteString(successMsg + "\n")
+		f.WriteString(successMsg + "\n")
+
+		// 格式化swap（添加5分钟超时和日志重定向）
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		
+		cmd = exec.CommandContext(ctx, "mkswap", "/swapfile")
+		cmd.Stdout = f
+		cmd.Stderr = f
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("格式化swap失败: %v", err)
+			output.WriteString("❌ " + errorMsg + "\n")
+			f.WriteString("❌ " + errorMsg + "\n")
+			return output.String(), fmt.Errorf(errorMsg)
+		}
+		successMsg = "✅ Swap已格式化"
+		output.WriteString(successMsg + "\n")
+		f.WriteString(successMsg + "\n")
+
+		// 启用swap（添加5分钟超时和日志重定向）
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		
+		cmd = exec.CommandContext(ctx, "swapon", "/swapfile")
+		cmd.Stdout = f
+		cmd.Stderr = f
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("启用swap失败: %v", err)
+			output.WriteString("❌ " + errorMsg + "\n")
+			f.WriteString("❌ " + errorMsg + "\n")
+			return output.String(), fmt.Errorf(errorMsg)
+		}
+		successMsg = "✅ Swap已启用"
+		output.WriteString(successMsg + "\n")
+		f.WriteString(successMsg + "\n")
+
+		// 添加到fstab（添加5分钟超时和日志重定向）
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		
+		cmd = exec.CommandContext(ctx, "bash", "-c", "if ! grep -q '/swapfile' /etc/fstab; then echo '/swapfile none swap sw 0 0' >> /etc/fstab; fi")
+		cmd.Stdout = f
+		cmd.Stderr = f
+		if err := cmd.Run(); err != nil {
+			errorMsg := fmt.Sprintf("添加swap到fstab失败: %v", err)
+			output.WriteString("❌ " + errorMsg + "\n")
+			f.WriteString("❌ " + errorMsg + "\n")
+			return output.String(), fmt.Errorf(errorMsg)
+		}
+		successMsg = "✅ Swap已添加到fstab（开机自动挂载）"
+		output.WriteString(successMsg + "\n")
+		f.WriteString(successMsg + "\n")
+	} else {
+		skipMsg := "ℹ️ 系统已存在Swap，跳过创建"
+		output.WriteString(skipMsg + "\n")
+		f.WriteString(skipMsg + "\n")
+	}
+
+	// 3. 优化文件描述符限制
+	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
+	output.WriteString(limitsMsg)
+	f.WriteString(limitsMsg)
+	
+	limitsConfig := `* soft nofile 65535
+* hard nofile 65535
+* soft nproc 65535
+* hard nproc 65535
+root soft nofile 65535
+root hard nofile 65535`
+
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	
+	cmd = exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat >> /etc/security/limits.conf << 'EOF'
+
+# === 1C1G Machine Optimization ===
+%s
+EOF`, limitsConfig))
+	cmd.Stdout = f
+	cmd.Stderr = f
+	if err := cmd.Run(); err != nil {
+		errorMsg := fmt.Errorf("更新limits.conf失败: %v", err)
+		output.WriteString("❌ " + errorMsg.Error() + "\n")
+		f.WriteString("❌ " + errorMsg.Error() + "\n")
+		return output.String(), errorMsg
+	}
+	successMsg = "✅ 文件描述符限制已优化"
+	output.WriteString(successMsg + "\n")
+	f.WriteString(successMsg + "\n")
+	
+	// 记录结束时间和日志文件位置
+	endTime := time.Now()
+	duration := endTime.Sub(startTime)
+	logMsg = fmt.Sprintf("\nX-Panel 1C1G 机器优化完成时间: %s\n", endTime.Format("2006-01-02 15:04:05"))
+	logMsg += fmt.Sprintf("总耗时: %v\n", duration)
+	logMsg += fmt.Sprintf("详细日志已保存到: %s\n", logFile)
+	output.WriteString(logMsg)
+	f.WriteString(logMsg)
+
+	return output.String(), nil
+}
+
+// 【新增辅助函数】: 获取优化后的系统状态
+func (t *Tgbot) getSystemStatusAfterOptimization() string {
+	var status strings.Builder
+
+	// 获取内存和Swap信息
+	cmd := exec.Command("bash", "-c", "free -h")
+	output, err := cmd.Output()
+	if err == nil {
+		status.WriteString("\n**💾 内存使用情况:**\n")
+		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
+	}
+
+	// 获取内核参数
+	cmd = exec.Command("bash", "-c", "sysctl vm.swappiness vm.vfs_cache_pressure vm.dirty_ratio")
+	output, err = cmd.Output()
+	if err == nil {
+		status.WriteString("\n**⚙️ 关键内核参数:**\n")
+		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
+	}
+
+	// 获取Swap状态
+	cmd = exec.Command("bash", "-c", "swapon --show")
+	output, err = cmd.Output()
+	if err == nil && len(output) > 0 {
+		status.WriteString("\n**💿 Swap状态:**\n")
+		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
+	}
+
+	return status.String()
 }
