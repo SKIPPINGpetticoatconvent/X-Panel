@@ -1272,11 +1272,10 @@ func (s *ServerService) openSubconverterPorts() error {
 	# 1. 检查/安装 firewalld
 	if ! command -v firewall-cmd &> /dev/null; then
 		echo "firewalld 防火墙未安装，正在安装..."
-		# 静默更新和安装
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq firewalld >/dev/null
-		if [ $? -ne 0 ]; then echo "❌ firewalld 安装失败或权限不足。"; exit 1; fi
-		echo "✅ firewalld 安装成功。"
+		# 使用新的防火墙安装命令
+		sudo apt update
+		sudo apt install -y firewalld
+		sudo systemctl enable firewalld --now
 	fi
 
 	# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
@@ -1402,20 +1401,26 @@ func (s *ServerService) checkAndInstallFirewalld() error {
 
 	logger.Info("firewalld 未安装，正在安装...")
 
-	// 更新包列表
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// 使用新的防火墙安装命令
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	cmd = exec.CommandContext(ctx, "apt-get", "update", "-qq")
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+
+	// 执行更新命令
+	cmd = exec.CommandContext(ctx, "sudo", "apt", "update")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("apt-get update 失败: %v, 输出: %s", err, string(output))
+		return fmt.Errorf("sudo apt update 失败: %v, 输出: %s", err, string(output))
 	}
 
-	// 安装 firewalld
-	cmd = exec.CommandContext(ctx, "apt-get", "install", "-y", "-qq", "firewalld")
-	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	// 执行安装命令
+	cmd = exec.CommandContext(ctx, "sudo", "apt", "install", "-y", "firewalld")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("apt-get install firewalld 失败: %v, 输出: %s", err, string(output))
+		return fmt.Errorf("sudo apt install firewalld 失败: %v, 输出: %s", err, string(output))
+	}
+
+	// 启用防火墙服务
+	cmd = exec.CommandContext(ctx, "sudo", "systemctl", "enable", "firewalld", "--now")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("sudo systemctl enable firewalld --now 失败: %v, 输出: %s", err, string(output))
 	}
 
 	return nil

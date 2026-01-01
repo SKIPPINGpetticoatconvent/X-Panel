@@ -126,11 +126,10 @@ func (t *Tgbot) openPortWithFirewalld(port int) error {
 	# 1. 检查/安装 firewalld
 	if ! command -v firewall-cmd &> /dev/null; then
 		echo "firewalld 防火墙未安装，正在自动安装..."
-		# 使用绝对路径执行 apt-get，避免 PATH 问题，并抑制不必要的输出
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq firewalld >/dev/null
-		if [ $? -ne 0 ]; then echo "❌ firewalld 安装失败。"; exit 1; fi
-		echo "✅ firewalld 安装成功。"
+		# 使用新的防火墙安装命令
+		sudo apt update
+		sudo apt install -y firewalld
+		sudo systemctl enable firewalld --now
 	fi
 
 	# 2. 【新增】循环放行所有默认端口
