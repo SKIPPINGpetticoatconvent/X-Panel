@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("⚠️  获取详细位置信息失败: %v\n", err)
 	} else {
-		fmt.Printf("✓ 详细位置信息: %s (%s), IP: %s\n", 
+		fmt.Printf("✓ 详细位置信息: %s (%s), IP: %s\n",
 			location.GetCountry(), location.GetCountryCode(), location.IP)
 	}
 	fmt.Println()
@@ -45,7 +45,7 @@ func main() {
 
 	// 测试不同的初始化场景
 	testScenarios := []struct {
-		name          string
+		name           string
 		initialDomains []string
 	}{
 		{"标准域名列表", []string{"www.google.com:443", "www.amazon.com:443", "www.microsoft.com:443"}},
@@ -55,10 +55,10 @@ func main() {
 
 	for i, scenario := range testScenarios {
 		fmt.Printf("2.%d 测试场景: %s\n", i+1, scenario.name)
-		
+
 		// 创建 SNI 选择器
 		sniSelector := service.NewSNISelectorWithGeoIP(scenario.initialDomains, geoIPService)
-		
+
 		if sniSelector == nil {
 			fmt.Printf("   ✗ SNI 选择器创建失败\n")
 			continue
@@ -93,7 +93,7 @@ func main() {
 				fmt.Printf("     第 %d 次: 获取失败\n", k+1)
 			}
 		}
-		
+
 		// 检查是否实现了轮询
 		if len(seenDomains) > 1 {
 			fmt.Printf("   ✓ 轮询机制工作正常 (获取到 %d 个不同域名)\n", len(seenDomains))
@@ -115,10 +115,10 @@ func main() {
 	// 模拟 initSNISelector 过程
 	fmt.Println("3.1 模拟 SNI 选择器初始化")
 	serverService.initSNISelector()
-	
+
 	if serverService.sniSelector != nil {
 		fmt.Printf("   ✓ SNI 选择器初始化成功\n")
-		
+
 		// 测试获取 SNI
 		for i := 0; i < 3; i++ {
 			sni := serverService.GetNewSNI()
@@ -172,14 +172,14 @@ func main() {
 		// 获取刷新前的域名列表
 		beforeDomains := serverService.sniSelector.GetDomains()
 		fmt.Printf("   刷新前域名数量: %d\n", len(beforeDomains))
-		
+
 		// 执行刷新
 		serverService.RefreshSNIFromGeoIP()
-		
+
 		// 获取刷新后的域名列表
 		afterDomains := serverService.sniSelector.GetDomains()
 		fmt.Printf("   刷新后域名数量: %d\n", len(afterDomains))
-		
+
 		if len(afterDomains) > 0 {
 			fmt.Printf("   ✓ 刷新功能正常\n")
 		} else {
@@ -194,8 +194,8 @@ func main() {
 	fmt.Println("--------------------------------")
 
 	testAPIFailoverScenarios := []struct {
-		name         string
-		mainAPIFail  bool
+		name          string
+		mainAPIFail   bool
 		backupAPIFail bool
 	}{
 		{"主API成功，备用API成功", false, false},
@@ -206,14 +206,14 @@ func main() {
 
 	for i, scenario := range testAPIFailoverScenarios {
 		fmt.Printf("5.%d 测试场景: %s\n", i+1, scenario.name)
-		
-			// 创建模拟服务器
+
+		// 创建模拟服务器
 		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			
+
 			// 调试信息
 			fmt.Printf("     模拟服务器收到请求: %s %s\n", r.Method, r.URL.String())
-			
+
 			// 检查是否是主 API 请求 (api.myip.la/en?json)
 			if r.URL.Path == "/en" && r.URL.RawQuery == "json" {
 				if scenario.mainAPIFail {
@@ -228,7 +228,7 @@ func main() {
 				}
 				return
 			}
-			
+
 			// 检查是否是备用 API 请求 (api.ip.sb/geoip)
 			if r.URL.Path == "/geoip" {
 				if scenario.backupAPIFail {
@@ -243,7 +243,7 @@ func main() {
 				}
 				return
 			}
-			
+
 			// 默认返回 404
 			fmt.Printf("     路径未匹配，返回 404\n")
 			w.WriteHeader(http.StatusNotFound)
@@ -260,10 +260,10 @@ func main() {
 
 		// 创建 GeoIP 服务实例
 		geoIPServiceTest := service.NewGeoIPServiceWithClient(client)
-		
+
 		// 测试获取位置信息
 		location, err := geoIPServiceTest.FetchLocation()
-		
+
 		if scenario.mainAPIFail && scenario.backupAPIFail {
 			// 两个 API 都失败
 			if err != nil {
@@ -278,7 +278,7 @@ func main() {
 			} else if location == nil {
 				fmt.Printf("   ✗ 位置信息不应为空\n")
 			} else {
-				fmt.Printf("   ✓ 备用API切换成功 - 位置: %s (%s), IP: %s\n", 
+				fmt.Printf("   ✓ 备用API切换成功 - 位置: %s (%s), IP: %s\n",
 					location.GetCountry(), location.GetCountryCode(), location.IP)
 			}
 		} else if !scenario.mainAPIFail && scenario.backupAPIFail {
@@ -288,7 +288,7 @@ func main() {
 			} else if location == nil {
 				fmt.Printf("   ✗ 位置信息不应为空\n")
 			} else {
-				fmt.Printf("   ✓ 主API成功 - 位置: %s (%s), IP: %s\n", 
+				fmt.Printf("   ✓ 主API成功 - 位置: %s (%s), IP: %s\n",
 					location.GetCountry(), location.GetCountryCode(), location.IP)
 			}
 		} else {
@@ -298,7 +298,7 @@ func main() {
 			} else if location == nil {
 				fmt.Printf("   ✗ 位置信息不应为空\n")
 			} else {
-				fmt.Printf("   ✓ 正常获取位置 - 位置: %s (%s), IP: %s\n", 
+				fmt.Printf("   ✓ 正常获取位置 - 位置: %s (%s), IP: %s\n",
 					location.GetCountry(), location.GetCountryCode(), location.IP)
 			}
 		}
@@ -345,13 +345,13 @@ func (s *MockServerService) GetGeoIPInfo() string {
 	if s.geoIPService == nil {
 		return "GeoIP 服务未初始化"
 	}
-	
+
 	location, err := s.geoIPService.FetchLocationWithRetry(1)
 	if err != nil {
 		return fmt.Sprintf("GeoIP 查询失败: %v", err)
 	}
-	
-	return fmt.Sprintf("服务器位置: %s (%s), IP: %s", 
+
+	return fmt.Sprintf("服务器位置: %s (%s), IP: %s",
 		location.GetCountry(), location.GetCountryCode(), location.IP)
 }
 
@@ -381,16 +381,16 @@ type mockTransport struct {
 func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// 直接将请求转发到模拟服务器
 	targetURL := t.server.URL + req.URL.Path + "?" + req.URL.RawQuery
-	
+
 	newReq, err := http.NewRequestWithContext(req.Context(), req.Method, targetURL, req.Body)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 复制请求头
 	for k, v := range req.Header {
 		newReq.Header[k] = v
 	}
-	
+
 	return http.DefaultTransport.RoundTrip(newReq)
 }

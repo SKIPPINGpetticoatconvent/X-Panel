@@ -20,18 +20,18 @@ func TestMain(m *testing.M) {
 	cover := flag.Bool("cover", false, "generate coverage report")
 	benchmark := flag.Bool("bench", false, "run benchmark tests")
 	integration := flag.Bool("integration", false, "run integration tests")
-	
+
 	flag.Parse()
-	
+
 	// 设置测试环境变量
 	os.Setenv("GO_ENV", "test")
 	os.Setenv("TEST_DB_PATH", filepath.Join(os.TempDir(), "x-ui-test.db"))
-	
+
 	// 创建测试配置目录
 	testConfigDir := filepath.Join(os.TempDir(), "x-ui-test-config")
 	os.MkdirAll(testConfigDir, 0755)
 	os.Setenv("TEST_CONFIG_DIR", testConfigDir)
-	
+
 	fmt.Println("🚀 X-Panel 综合测试套件")
 	fmt.Println("=========================")
 	fmt.Printf("详细输出: %v\n", *verbose)
@@ -39,20 +39,20 @@ func TestMain(m *testing.M) {
 	fmt.Printf("基准测试: %v\n", *benchmark)
 	fmt.Printf("集成测试: %v\n", *integration)
 	fmt.Println()
-	
+
 	// 运行测试
 	exitCode := m.Run()
-	
+
 	// 清理测试环境
 	os.RemoveAll(testConfigDir)
-	
+
 	fmt.Println()
 	if exitCode == 0 {
 		fmt.Println("✅ 所有测试通过!")
 	} else {
 		fmt.Println("❌ 部分测试失败!")
 	}
-	
+
 	os.Exit(exitCode)
 }
 
@@ -60,7 +60,7 @@ func TestMain(m *testing.M) {
 func runAllTests() {
 	// Web界面功能测试
 	fmt.Println("🖥️  运行Web界面功能测试...")
-	
+
 	// 运行控制器测试
 	testing.Main(func(pat, str string) (bool, error) { return true, nil },
 		[]testing.InternalTest{
@@ -80,7 +80,7 @@ func runAllTests() {
 		nil,
 		nil,
 	)
-	
+
 	fmt.Println("✅ Web界面功能测试完成")
 	fmt.Println()
 }
@@ -88,23 +88,23 @@ func runAllTests() {
 // runAPITests 运行API接口测试
 func runAPITests() {
 	fmt.Println("🔌 运行API接口测试...")
-	
+
 	// 测试响应格式
 	fmt.Println("  - 测试API响应格式")
 	// 实际测试在 api_interface_test.go 中
-	
+
 	// 测试数据验证
 	fmt.Println("  - 测试数据验证")
-	
+
 	// 测试权限验证
 	fmt.Println("  - 测试权限验证")
-	
+
 	// 测试安全头
 	fmt.Println("  - 测试安全头")
-	
+
 	// 测试速率限制
 	fmt.Println("  - 测试速率限制")
-	
+
 	fmt.Println("✅ API接口测试完成")
 	fmt.Println()
 }
@@ -112,25 +112,25 @@ func runAPITests() {
 // runDatabaseTests 运行数据库测试
 func runDatabaseTests() {
 	fmt.Println("🗄️  运行数据库测试...")
-	
+
 	// 用户管理测试
 	fmt.Println("  - 测试用户管理")
-	
+
 	// 入站管理测试
 	fmt.Println("  - 测试入站管理")
-	
+
 	// 设置管理测试
 	fmt.Println("  - 测试设置管理")
-	
+
 	// 事务测试
 	fmt.Println("  - 测试数据库事务")
-	
+
 	// 并发测试
 	fmt.Println("  - 测试并发数据库操作")
-	
+
 	// 连接池测试
 	fmt.Println("  - 测试连接池")
-	
+
 	fmt.Println("✅ 数据库测试完成")
 	fmt.Println()
 }
@@ -138,25 +138,25 @@ func runDatabaseTests() {
 // runXrayTests 运行Xray核心集成测试
 func runXrayTests() {
 	fmt.Println("⚡ 运行Xray核心集成测试...")
-	
+
 	// 配置生成测试
 	fmt.Println("  - 测试Xray配置生成")
-	
+
 	// 进程管理测试
 	fmt.Println("  - 测试Xray进程管理")
-	
+
 	// 流量统计测试
 	fmt.Println("  - 测试流量统计")
-	
+
 	// 策略生成测试
 	fmt.Println("  - 测试动态策略生成")
-	
+
 	// 客户端过滤测试
 	fmt.Println("  - 测试客户端过滤")
-	
+
 	// 崩溃检测测试
 	fmt.Println("  - 测试崩溃检测")
-	
+
 	fmt.Println("✅ Xray核心集成测试完成")
 	fmt.Println()
 }
@@ -164,19 +164,19 @@ func runXrayTests() {
 // runPerformanceTests 运行性能测试
 func runPerformanceTests() {
 	fmt.Println("🚀 运行性能测试...")
-	
+
 	// 数据库性能测试
 	fmt.Println("  - 数据库操作性能测试")
-	
+
 	// API性能测试
 	fmt.Println("  - API响应性能测试")
-	
+
 	// Xray配置生成性能测试
 	fmt.Println("  - Xray配置生成性能测试")
-	
+
 	// 并发性能测试
 	fmt.Println("  - 并发处理性能测试")
-	
+
 	fmt.Println("✅ 性能测试完成")
 	fmt.Println()
 }
@@ -184,22 +184,22 @@ func runPerformanceTests() {
 // runSecurityTests 运行安全测试
 func runSecurityTests() {
 	fmt.Println("🔒 运行安全测试...")
-	
+
 	// 输入验证测试
 	fmt.Println("  - 输入验证测试")
-	
+
 	// SQL注入防护测试
 	fmt.Println("  - SQL注入防护测试")
-	
+
 	// XSS防护测试
 	fmt.Println("  - XSS防护测试")
-	
+
 	// 权限控制测试
 	fmt.Println("  - 权限控制测试")
-	
+
 	// 会话安全测试
 	fmt.Println("  - 会话安全测试")
-	
+
 	fmt.Println("✅ 安全测试完成")
 	fmt.Println()
 }
@@ -207,11 +207,11 @@ func runSecurityTests() {
 // generateCoverageReport 生成覆盖率报告
 func generateCoverageReport() {
 	fmt.Println("📊 生成测试覆盖率报告...")
-	
+
 	// 这里应该使用Go的覆盖率工具生成报告
 	// go test -coverprofile=coverage.out ./...
 	// go tool cover -html=coverage.out -o coverage.html
-	
+
 	fmt.Println("✅ 覆盖率报告生成完成")
 	fmt.Println("   报告文件: coverage.html")
 	fmt.Println()
@@ -258,10 +258,10 @@ func main() {
 		fmt.Println("请使用: GO_ENV=test go run comprehensive_test.go")
 		os.Exit(1)
 	}
-	
+
 	fmt.Println("开始X-Panel综合测试...")
 	fmt.Println()
-	
+
 	// 运行所有测试类型
 	runAllTests()
 	runAPITests()
@@ -269,13 +269,13 @@ func main() {
 	runXrayTests()
 	runPerformanceTests()
 	runSecurityTests()
-	
+
 	// 生成覆盖率报告
 	generateCoverageReport()
-	
+
 	// 打印测试摘要
 	printTestSummary()
-	
+
 	fmt.Println("🎉 X-Panel综合测试完成!")
 }
 
@@ -288,20 +288,20 @@ func runTestPackage(pkgPath string) {
 // 辅助函数：检查测试依赖
 func checkTestDependencies() {
 	fmt.Println("检查测试依赖...")
-	
+
 	// 检查必要的工具和依赖
 	dependencies := []string{
 		"go",
 		"sqlite3",
 		// 其他依赖...
 	}
-	
+
 	for _, dep := range dependencies {
 		if !commandExists(dep) {
 			fmt.Printf("⚠️  警告: 未找到依赖 %s\n", dep)
 		}
 	}
-	
+
 	fmt.Println("✅ 依赖检查完成")
 }
 
@@ -311,7 +311,7 @@ func commandExists(cmd string) bool {
 	if err == nil {
 		return true
 	}
-	
+
 	_, err = os.Stat("/usr/local/bin/" + cmd)
 	return err == nil
 }
@@ -322,27 +322,27 @@ func ExampleRunSpecificTests() {
 	fmt.Println("示例: 只运行Web界面测试")
 	fmt.Println("go test -v -run TestInbound ./web/controller/")
 	fmt.Println()
-	
+
 	// 只运行数据库测试
 	fmt.Println("示例: 只运行数据库测试")
 	fmt.Println("go test -v ./web/service/ -run TestDatabase")
 	fmt.Println()
-	
+
 	// 运行特定测试方法
 	fmt.Println("示例: 运行特定测试方法")
 	fmt.Println("go test -v -run TestUserService_CreateUser")
 	fmt.Println()
-	
+
 	// 运行基准测试
 	fmt.Println("示例: 运行基准测试")
 	fmt.Println("go test -bench=. -benchmem")
 	fmt.Println()
-	
+
 	// 运行并发安全测试
 	fmt.Println("示例: 运行并发安全测试")
 	fmt.Println("go test -race -v")
 	fmt.Println()
-	
+
 	// 生成覆盖率报告
 	fmt.Println("示例: 生成覆盖率报告")
 	fmt.Println("go test -coverprofile=coverage.out ./...")

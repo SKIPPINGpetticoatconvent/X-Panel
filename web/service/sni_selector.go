@@ -11,10 +11,10 @@ import (
 
 // SNISelector 负责管理 SNI 域名的轮询选择，确保不重复使用
 type SNISelector struct {
-	domains     []string      // 当前可用的域名列表
-	index       int           // 当前读取到的索引
-	mu          sync.Mutex
-	rng         *rand.Rand
+	domains      []string // 当前可用的域名列表
+	index        int      // 当前读取到的索引
+	mu           sync.Mutex
+	rng          *rand.Rand
 	geoIPService *GeoIPService // GeoIP 服务实例
 }
 
@@ -163,7 +163,7 @@ func (s *SNISelector) GetGeoIPInfo() string {
 	if s.geoIPService == nil {
 		return "GeoIP 服务未初始化"
 	}
-	
+
 	countryCode := s.geoIPService.GetCountryCode()
 	return fmt.Sprintf("当前检测到的地理位置: %s", countryCode)
 }

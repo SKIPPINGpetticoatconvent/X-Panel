@@ -132,8 +132,8 @@ func (c *Client) GetInbounds() ([]map[string]interface{}, error) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result struct {
-		Success bool                   `json:"success"`
-		Msg     string                 `json:"msg"`
+		Success bool                     `json:"success"`
+		Msg     string                   `json:"msg"`
 		Obj     []map[string]interface{} `json:"obj"`
 	}
 	if err := json.Unmarshal(body, &result); err != nil {

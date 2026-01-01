@@ -10,33 +10,33 @@ import (
 // TestCommandParsing 测试命令解析功能
 func TestCommandParsing(t *testing.T) {
 	tests := []struct {
-		name        string
-		commandText string
-		expectedCmd string
+		name         string
+		commandText  string
+		expectedCmd  string
 		expectedArgs []string
 	}{
 		{
-			name:        "Simple command",
-			commandText: "/start",
-			expectedCmd: "start",
+			name:         "Simple command",
+			commandText:  "/start",
+			expectedCmd:  "start",
 			expectedArgs: []string{},
 		},
 		{
-			name:        "Command with args",
-			commandText: "/usage test@example.com",
-			expectedCmd: "usage",
+			name:         "Command with args",
+			commandText:  "/usage test@example.com",
+			expectedCmd:  "usage",
 			expectedArgs: []string{"test@example.com"},
 		},
 		{
-			name:        "Command with multiple args",
-			commandText: "/inbound 123 test",
-			expectedCmd: "inbound",
+			name:         "Command with multiple args",
+			commandText:  "/inbound 123 test",
+			expectedCmd:  "inbound",
 			expectedArgs: []string{"123", "test"},
 		},
 		{
-			name:        "Command with @ mention",
-			commandText: "/id @testbot",
-			expectedCmd: "id",
+			name:         "Command with @ mention",
+			commandText:  "/id @testbot",
+			expectedCmd:  "id",
 			expectedArgs: []string{"@testbot"},
 		},
 	}
@@ -117,10 +117,10 @@ func TestBotTokenValidation(t *testing.T) {
 // TestAdminIdParsing 测试管理员 ID 解析功能
 func TestAdminIdParsing(t *testing.T) {
 	tests := []struct {
-		name           string
-		chatIdString   string
-		expectedCount  int
-		expectedValid  bool
+		name          string
+		chatIdString  string
+		expectedCount int
+		expectedValid bool
 	}{
 		{
 			name:          "Single valid ID",

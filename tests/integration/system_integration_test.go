@@ -24,14 +24,14 @@ func TestSystemIntegration(t *testing.T) {
 
 	// 测试配置
 	testConfig := &SystemTestConfig{
-		ComposeFile:     composeFile,
-		ProjectRoot:     projectRoot,
-		WebPort:         GetTestConfig("TEST_WEB_PORT"),
-		SubPort:         GetTestConfig("TEST_SUB_PORT"),
-		HealthCheckURL:  fmt.Sprintf("http://localhost:%s", GetTestConfig("TEST_WEB_PORT")),
-		LogFilePath:     filepath.Join(projectRoot, "test-logs", "x-ui.log"),
-		StartupTimeout:  120 * time.Second,
-		TestTimeout:     300 * time.Second,
+		ComposeFile:    composeFile,
+		ProjectRoot:    projectRoot,
+		WebPort:        GetTestConfig("TEST_WEB_PORT"),
+		SubPort:        GetTestConfig("TEST_SUB_PORT"),
+		HealthCheckURL: fmt.Sprintf("http://localhost:%s", GetTestConfig("TEST_WEB_PORT")),
+		LogFilePath:    filepath.Join(projectRoot, "test-logs", "x-ui.log"),
+		StartupTimeout: 120 * time.Second,
+		TestTimeout:    300 * time.Second,
 	}
 
 	// 运行集成测试
@@ -40,14 +40,14 @@ func TestSystemIntegration(t *testing.T) {
 
 // SystemTestConfig 系统测试配置
 type SystemTestConfig struct {
-	ComposeFile     string
-	ProjectRoot     string
-	WebPort         string
-	SubPort         string
-	HealthCheckURL  string
-	LogFilePath     string
-	StartupTimeout  time.Duration
-	TestTimeout     time.Duration
+	ComposeFile    string
+	ProjectRoot    string
+	WebPort        string
+	SubPort        string
+	HealthCheckURL string
+	LogFilePath    string
+	StartupTimeout time.Duration
+	TestTimeout    time.Duration
 }
 
 // runSystemIntegrationTest 执行系统集成测试
@@ -87,7 +87,6 @@ func runSystemIntegrationTest(t *testing.T, config *SystemTestConfig) {
 	testLogCollection(t, config)
 }
 
-
 // isServiceHealthy 检查服务健康状态
 func isServiceHealthy(url string) bool {
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -119,7 +118,6 @@ func testServiceCommunication(t *testing.T, config *SystemTestConfig) {
 		t.Errorf("服务间通信测试失败: %v", err)
 	}
 }
-
 
 // testLogCollection 测试日志收集
 func testLogCollection(t *testing.T, config *SystemTestConfig) {

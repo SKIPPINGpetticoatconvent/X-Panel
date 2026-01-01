@@ -1,8 +1,9 @@
 package database
 
 import (
-	"gorm.io/gorm" // 【中文注释】: 确保 gorm 被导入，以便在函数签名中使用
 	"time"
+
+	"gorm.io/gorm" // 【中文注释】: 确保 gorm 被导入，以便在函数签名中使用
 )
 
 // LinkHistory GORM aodel for link_history table

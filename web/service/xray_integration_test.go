@@ -3,7 +3,7 @@ package service
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -16,13 +16,13 @@ import (
 
 // MockXrayAPI 模拟Xray API接口
 type MockXrayAPI struct {
-	isRunning      bool
-	version        string
-	apiPort        int
-	trafficData    []*xray.Traffic
-	clientTraffic  []*xray.ClientTraffic
-	err            error
-	startTime      time.Time
+	isRunning     bool
+	version       string
+	apiPort       int
+	trafficData   []*xray.Traffic
+	clientTraffic []*xray.ClientTraffic
+	err           error
+	startTime     time.Time
 }
 
 func (m *MockXrayAPI) Init(port int) {
@@ -39,7 +39,7 @@ func (m *MockXrayAPI) GetTraffic(clearStats bool) ([]*xray.Traffic, []*xray.Clie
 	if !m.isRunning {
 		return nil, nil, assert.AnError
 	}
-	
+
 	// 返回模拟的流量数据
 	return m.trafficData, m.clientTraffic, m.err
 }
@@ -94,11 +94,11 @@ func (m *MockXrayProcess) Stop() error {
 // XrayIntegrationTestSuite Xray集成测试套件
 type XrayIntegrationTestSuite struct {
 	suite.Suite
-	xrayService     *XrayService
+	xrayService        *XrayService
 	mockInboundService *InboundService
 	mockSettingService *SettingService
-	mockXrayAPI     *MockXrayAPI
-	tempDir         string
+	mockXrayAPI        *MockXrayAPI
+	tempDir            string
 }
 
 // SetupSuite 设置测试套件
@@ -109,7 +109,7 @@ func (suite *XrayIntegrationTestSuite) SetupSuite() {
 	if err != nil {
 		suite.T().Fatalf("Failed to create temp dir: %v", err)
 	}
-	
+
 	// 创建模拟服务
 	suite.mockInboundService = &InboundService{}
 	suite.mockSettingService = &SettingService{}
@@ -117,7 +117,7 @@ func (suite *XrayIntegrationTestSuite) SetupSuite() {
 		version: "1.8.0",
 		apiPort: 10080,
 	}
-	
+
 	// 创建Xray服务
 	suite.xrayService = &XrayService{
 		inboundService: *suite.mockInboundService,
@@ -161,48 +161,48 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_GetXrayConfig() {
 			}
 		}
 	}`
-	
+
 	// 设置模拟的模板配置
 	// 注意：这里我们需要实际实现设置服务的方法
 	// suite.mockSettingService.SetXrayConfigTemplate(configTemplate)
-	
+
 	// 创建测试入站
 	testInbound := &model.Inbound{
-		Id:         1,
-		UserId:     1,
-		Port:       8080,
-		Protocol:   model.VLESS,
-		Remark:     "Test VLESS Inbound",
-		Enable:     true,
-		Settings:   `{"clients":[{"id":"test-id","email":"test@example.com","enable":true}]}`,
+		Id:             1,
+		UserId:         1,
+		Port:           8080,
+		Protocol:       model.VLESS,
+		Remark:         "Test VLESS Inbound",
+		Enable:         true,
+		Settings:       `{"clients":[{"id":"test-id","email":"test@example.com","enable":true}]}`,
 		StreamSettings: `{"network":"tcp","security":"reality","realitySettings":{"publicKey":"test-public-key"}}`,
-		Tag:        "inbound-8080",
+		Tag:            "inbound-8080",
 	}
-	
+
 	// 添加测试入站到模拟服务
 	// suite.mockInboundService.AddTestInbound(testInbound)
-	
+
 	// 生成Xray配置
 	config, err := suite.xrayService.GetXrayConfig()
 	if err != nil {
 		suite.T().Skip("Skipping test due to service dependency: %v", err)
 		return
 	}
-	
+
 	// 验证配置结构
 	assert.NotNil(suite.T(), config)
-	
+
 	// 如果配置生成成功，验证基本结构
 	if config != nil {
 		// 验证log配置
 		if config.Log != nil {
 			assert.NotNil(suite.T(), config.Log)
 		}
-		
+
 		// 验证inbound配置
 		if len(config.InboundConfigs) > 0 {
 			assert.Greater(suite.T(), len(config.InboundConfigs), 0)
-			
+
 			// 验证第一个入站配置
 			inbound := config.InboundConfigs[0]
 			assert.Equal(suite.T(), 8080, inbound.Port)
@@ -219,22 +219,22 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_StartStopXray() {
 		suite.T().Skip("Skipping test due to Xray dependency: %v", err)
 		return
 	}
-	
+
 	// 验证Xray正在运行
 	assert.True(suite.T(), suite.xrayService.IsXrayRunning())
-	
+
 	// 获取Xray版本
 	version := suite.xrayService.GetXrayVersion()
 	assert.NotEmpty(suite.T(), version)
-	
+
 	// 获取API端口
 	apiPort := suite.xrayService.GetApiPort()
 	assert.Greater(suite.T(), apiPort, 0)
-	
+
 	// 停止Xray
 	err = suite.xrayService.StopXray()
 	assert.NoError(suite.T(), err)
-	
+
 	// 验证Xray已停止
 	assert.False(suite.T(), suite.xrayService.IsXrayRunning())
 }
@@ -248,7 +248,7 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_GetXrayTraffic() {
 		return
 	}
 	defer suite.xrayService.StopXray()
-	
+
 	// 设置模拟的流量数据
 	suite.mockXrayAPI.trafficData = []*xray.Traffic{
 		{
@@ -258,7 +258,7 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_GetXrayTraffic() {
 			Down:      2000,
 		},
 	}
-	
+
 	suite.mockXrayAPI.clientTraffic = []*xray.ClientTraffic{
 		{
 			Email: "test@example.com",
@@ -266,10 +266,10 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_GetXrayTraffic() {
 			Down:  1000,
 		},
 	}
-	
+
 	// 获取流量数据
 	traffic, clientTraffic, err := suite.xrayService.GetXrayTraffic()
-	
+
 	// 如果Xray未运行，期望返回错误
 	if !suite.xrayService.IsXrayRunning() {
 		assert.Error(suite.T(), err)
@@ -308,30 +308,30 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_PolicyGeneration() {
 			Tag:      "inbound-9090",
 		},
 	}
-	
+
 	// 添加测试入站
 	// 注意：这里需要实际的数据库操作
 	// for _, inbound := range testInbounds {
 	//     suite.mockInboundService.CreateInbound(inbound)
 	// }
-	
+
 	// 生成配置并验证策略
 	config, err := suite.xrayService.GetXrayConfig()
 	if err != nil {
 		suite.T().Skip("Skipping test due to service dependency: %v", err)
 		return
 	}
-	
+
 	if config != nil && config.Policy != nil {
 		// 验证策略结构
 		var policy map[string]interface{}
 		err := json.Unmarshal(config.Policy, &policy)
 		assert.NoError(suite.T(), err)
-		
+
 		if levels, ok := policy["levels"].(map[string]interface{}); ok {
 			// 验证level 0存在
 			assert.Contains(suite.T(), levels, "0")
-			
+
 			// 验证限速策略
 			if level1024, ok := levels["1024"]; ok {
 				levelMap := level1024.(map[string]interface{})
@@ -353,18 +353,18 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_ConfigValidation() {
 			},
 		},
 	}
-	
+
 	// 序列化无效配置
 	configJSON, err := json.Marshal(invalidConfig)
 	assert.NoError(suite.T(), err)
-	
+
 	// 尝试使用无效配置启动Xray
 	err = suite.xrayService.RestartXray(false)
 	if err == nil {
 		// 如果启动成功，停止Xray
 		suite.xrayService.StopXray()
 	}
-	
+
 	// 验证Xray是否正常运行
 	// 注意：实际测试中可能因为权限问题无法启动
 	// assert.False(suite.T(), suite.xrayService.IsXrayRunning())
@@ -378,16 +378,16 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_GracefulShutdown() {
 		suite.T().Skip("Skipping test due to Xray dependency: %v", err)
 		return
 	}
-	
+
 	// 等待一小段时间确保Xray启动
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// 手动停止Xray
 	suite.xrayService.StopXray()
-	
+
 	// 验证Xray已停止
 	assert.False(suite.T(), suite.xrayService.IsXrayRunning())
-	
+
 	// 验证错误状态
 	xrayErr := suite.xrayService.GetXrayErr()
 	if xrayErr != nil {
@@ -402,13 +402,13 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_GracefulShutdown() {
 func (suite *XrayIntegrationTestSuite) TestXrayService_NeedRestartFlag() {
 	// 测试设置重启标志
 	suite.xrayService.SetToNeedRestart()
-	
+
 	// 验证重启标志已设置
 	assert.True(suite.T(), suite.xrayService.IsNeedRestartAndSetFalse())
-	
+
 	// 验证标志已被清除
 	assert.False(suite.T(), suite.xrayService.IsNeedRestartAndSetFalse())
-	
+
 	// 测试崩溃检测
 	assert.False(suite.T(), suite.xrayService.DidXrayCrash())
 }
@@ -437,21 +437,21 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_ClientFiltering() {
 		},
 		Tag: "inbound-8080",
 	}
-	
+
 	// 生成配置
 	config, err := suite.xrayService.GetXrayConfig()
 	if err != nil {
 		suite.T().Skip("Skipping test due to service dependency: %v", err)
 		return
 	}
-	
+
 	// 验证客户端过滤逻辑
 	if config != nil && len(config.InboundConfigs) > 0 {
 		// 解析生成的客户端设置
 		var settings map[string]interface{}
 		err := json.Unmarshal([]byte(inboundWithDisabledClient.Settings), &settings)
 		assert.NoError(suite.T(), err)
-		
+
 		// 验证配置中只包含启用的客户端
 		if clients, ok := settings["clients"].([]interface{}); ok {
 			enabledCount := 0
@@ -480,12 +480,12 @@ func (suite *XrayIntegrationTestSuite) BenchmarkXrayService_GetXrayConfig(b *tes
 			Tag:      "inbound-" + string(rune(8000+i)),
 		}
 	}
-	
+
 	// 添加测试入站到服务
 	// for _, inbound := range testInbounds {
 	//     suite.mockInboundService.CreateInbound(inbound)
 	// }
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := suite.xrayService.GetXrayConfig()
@@ -500,22 +500,22 @@ func (suite *XrayIntegrationTestSuite) BenchmarkXrayService_GetXrayConfig(b *tes
 func (suite *XrayIntegrationTestSuite) TestXrayService_XrayCrashDetection() {
 	// 模拟Xray崩溃的情况
 	// 这里我们无法真正模拟崩溃，但可以测试逻辑
-	
+
 	// 在没有启动Xray的情况下测试崩溃检测
 	assert.False(suite.T(), suite.xrayService.IsXrayRunning())
 	assert.False(suite.T(), suite.xrayService.DidXrayCrash())
-	
+
 	// 启动Xray
 	err := suite.xrayService.RestartXray(false)
 	if err != nil {
 		suite.T().Skip("Skipping test due to Xray dependency: %v", err)
 		return
 	}
-	
+
 	// 验证Xray正在运行
 	assert.True(suite.T(), suite.xrayService.IsXrayRunning())
 	assert.False(suite.T(), suite.xrayService.DidXrayCrash())
-	
+
 	// 清理
 	suite.xrayService.StopXray()
 }
@@ -524,23 +524,23 @@ func (suite *XrayIntegrationTestSuite) TestXrayService_XrayCrashDetection() {
 func (suite *XrayIntegrationTestSuite) TestXrayService_ConfigEquals() {
 	// 这个测试需要实际实现配置比较逻辑
 	// 由于我们使用的是Mock，这里只测试基本结构
-	
+
 	config1 := &xray.Config{
 		Log: &xray.LogConfig{
 			Loglevel: "warning",
 		},
 	}
-	
+
 	config2 := &xray.Config{
 		Log: &xray.LogConfig{
 			Loglevel: "warning",
 		},
 	}
-	
+
 	// 验证两个配置的JSON表示相等
 	config1JSON, _ := json.Marshal(config1)
 	config2JSON, _ := json.Marshal(config2)
-	
+
 	assert.Equal(suite.T(), string(config1JSON), string(config2JSON))
 }
 

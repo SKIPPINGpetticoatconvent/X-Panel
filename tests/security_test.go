@@ -31,12 +31,12 @@ func TestSQLInjection(t *testing.T) {
 
 		for _, input := range maliciousInputs {
 			inbound := &model.Inbound{
-				Remark: input,
-				Port:   8080,
-				Protocol: model.VMESS,
-				Settings: `{"clients":[]}`,
+				Remark:         input,
+				Port:           8080,
+				Protocol:       model.VMESS,
+				Settings:       `{"clients":[]}`,
 				StreamSettings: `{"network":"tcp"}`,
-				Sniffing: `{"enabled":false}`,
+				Sniffing:       `{"enabled":false}`,
 			}
 
 			// 验证输入数据 - 注意：validateInboundData是私有方法，无法直接调用
@@ -67,12 +67,12 @@ func TestSQLInjection(t *testing.T) {
 			require.NoError(t, err)
 
 			inbound := &model.Inbound{
-				Remark:  "Test Inbound",
-				Port:    8080,
-				Protocol: model.VMESS,
-				Settings: string(settingsData),
+				Remark:         "Test Inbound",
+				Port:           8080,
+				Protocol:       model.VMESS,
+				Settings:       string(settingsData),
 				StreamSettings: `{"network":"tcp"}`,
-				Sniffing: `{"enabled":false}`,
+				Sniffing:       `{"enabled":false}`,
 			}
 
 			// 验证应该通过，因为我们依赖GORM的保护
@@ -96,12 +96,12 @@ func TestXSS(t *testing.T) {
 
 		for _, payload := range xssPayloads {
 			inbound := &model.Inbound{
-				Remark: payload,
-				Port:   8080,
-				Protocol: model.VMESS,
-				Settings: `{"clients":[]}`,
+				Remark:         payload,
+				Port:           8080,
+				Protocol:       model.VMESS,
+				Settings:       `{"clients":[]}`,
 				StreamSettings: `{"network":"tcp"}`,
-				Sniffing: `{"enabled":false}`,
+				Sniffing:       `{"enabled":false}`,
 			}
 
 			// 验证输入数据 - XSS payload应该通过，因为我们只检查长度
@@ -115,7 +115,7 @@ func TestXSS(t *testing.T) {
 		router.GET("/test", func(c *gin.Context) {
 			data := gin.H{
 				"remark": "<script>alert('xss')</script>",
-				"title": "Test Page",
+				"title":  "Test Page",
 			}
 			c.JSON(http.StatusOK, data)
 		})
@@ -159,8 +159,8 @@ func TestCSRF(t *testing.T) {
 
 		// 测试没有CSRF保护的POST请求
 		inboundData := model.Inbound{
-			Remark:  "Test Inbound",
-			Port:    8080,
+			Remark:   "Test Inbound",
+			Port:     8080,
 			Protocol: model.VMESS,
 			Settings: `{"clients":[]}`,
 		}
@@ -233,11 +233,11 @@ func TestInputValidation(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				inbound := &model.Inbound{
-					Port:     tc.port,
-					Protocol: model.VMESS,
-					Settings: `{"clients":[]}`,
+					Port:           tc.port,
+					Protocol:       model.VMESS,
+					Settings:       `{"clients":[]}`,
 					StreamSettings: `{"network":"tcp"}`,
-					Sniffing: `{"enabled":false}`,
+					Sniffing:       `{"enabled":false}`,
 				}
 
 				// 由于validateInboundData是私有方法，我们无法直接调用
@@ -261,11 +261,11 @@ func TestInputValidation(t *testing.T) {
 		for _, protocol := range validProtocols {
 			t.Run(string(protocol), func(t *testing.T) {
 				inbound := &model.Inbound{
-					Port:     8080,
-					Protocol: protocol,
-					Settings: `{"clients":[]}`,
+					Port:           8080,
+					Protocol:       protocol,
+					Settings:       `{"clients":[]}`,
 					StreamSettings: `{"network":"tcp"}`,
-					Sniffing: `{"enabled":false}`,
+					Sniffing:       `{"enabled":false}`,
 				}
 
 				// 由于validateInboundData是私有方法，我们无法直接调用
@@ -276,11 +276,11 @@ func TestInputValidation(t *testing.T) {
 
 		// 测试无效协议
 		inbound := &model.Inbound{
-			Port:     8080,
-			Protocol: model.Protocol("invalid"),
-			Settings: `{"clients":[]}`,
+			Port:           8080,
+			Protocol:       model.Protocol("invalid"),
+			Settings:       `{"clients":[]}`,
 			StreamSettings: `{"network":"tcp"}`,
-			Sniffing: `{"enabled":false}`,
+			Sniffing:       `{"enabled":false}`,
 		}
 
 		// 由于validateInboundData是私有方法，我们无法直接调用
@@ -293,12 +293,12 @@ func TestInputValidation(t *testing.T) {
 		longRemark := strings.Repeat("a", 501) // 超过500字符
 
 		inbound := &model.Inbound{
-			Remark:   longRemark,
-			Port:     8080,
-			Protocol: model.VMESS,
-			Settings: `{"clients":[]}`,
+			Remark:         longRemark,
+			Port:           8080,
+			Protocol:       model.VMESS,
+			Settings:       `{"clients":[]}`,
 			StreamSettings: `{"network":"tcp"}`,
-			Sniffing: `{"enabled":false}`,
+			Sniffing:       `{"enabled":false}`,
 		}
 
 		// 由于validateInboundData是私有方法，我们无法直接调用
@@ -309,9 +309,9 @@ func TestInputValidation(t *testing.T) {
 
 	t.Run("TrafficLimitsValidation", func(t *testing.T) {
 		testCases := []struct {
-			name string
-			up   int64
-			down int64
+			name  string
+			up    int64
+			down  int64
 			total int64
 			valid bool
 		}{
@@ -325,14 +325,14 @@ func TestInputValidation(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				inbound := &model.Inbound{
-					Up:       tc.up,
-					Down:     tc.down,
-					Total:    tc.total,
-					Port:     8080,
-					Protocol: model.VMESS,
-					Settings: `{"clients":[]}`,
+					Up:             tc.up,
+					Down:           tc.down,
+					Total:          tc.total,
+					Port:           8080,
+					Protocol:       model.VMESS,
+					Settings:       `{"clients":[]}`,
 					StreamSettings: `{"network":"tcp"}`,
-					Sniffing: `{"enabled":false}`,
+					Sniffing:       `{"enabled":false}`,
 				}
 
 				// 由于validateInboundData是私有方法，我们无法直接调用
@@ -352,11 +352,11 @@ func TestInputValidation(t *testing.T) {
 		invalidJSON := `{"clients": [invalid json}`
 
 		inbound := &model.Inbound{
-			Port:     8080,
-			Protocol: model.VMESS,
-			Settings: invalidJSON,
+			Port:           8080,
+			Protocol:       model.VMESS,
+			Settings:       invalidJSON,
 			StreamSettings: `{"network":"tcp"}`,
-			Sniffing: `{"enabled":false}`,
+			Sniffing:       `{"enabled":false}`,
 		}
 
 		// 由于validateInboundData是私有方法，我们无法直接调用

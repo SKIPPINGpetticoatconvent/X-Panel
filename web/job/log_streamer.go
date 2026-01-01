@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nxadm/tail"
 	"x-ui/logger"
+
+	"github.com/nxadm/tail"
 )
 
 // LogStreamer 使用 tail 库实现实时日志流处理

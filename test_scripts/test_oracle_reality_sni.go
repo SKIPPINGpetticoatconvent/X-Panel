@@ -44,7 +44,7 @@ func GenerateRealityServerNames(host string) []string {
 
 func main() {
 	fmt.Println("🧪 开始测试 Oracle Reality SNI 修复...")
-	
+
 	tests := []struct {
 		name     string
 		input    string
@@ -68,15 +68,15 @@ func main() {
 	}
 
 	allPassed := true
-	
+
 	for _, tt := range tests {
 		fmt.Printf("\n📝 测试: %s\n", tt.name)
 		result := GenerateRealityServerNames(tt.input)
-		
+
 		fmt.Printf("输入: %s\n", tt.input)
 		fmt.Printf("期望输出: %v\n", tt.expected)
 		fmt.Printf("实际输出: %v\n", result)
-		
+
 		if !reflect.DeepEqual(result, tt.expected) {
 			fmt.Printf("❌ 测试失败\n")
 			allPassed = false
@@ -84,7 +84,7 @@ func main() {
 			fmt.Printf("✅ 测试通过\n")
 		}
 	}
-	
+
 	fmt.Println("\n" + strings.Repeat("=", 50))
 	if allPassed {
 		fmt.Println("🎉 所有测试通过！Oracle Reality SNI 修复验证成功")
