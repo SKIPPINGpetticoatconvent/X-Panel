@@ -1578,7 +1578,7 @@ func (s *ServerService) UpdatePanel(version string) error {
 		var updateErr error
 
 		// 2. 执行面板更新命令
-		cmdStr := "bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)"
+		cmdStr := "echo 'n' | bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)"
 		if version != "" {
 			cmdStr += " " + version
 		}
