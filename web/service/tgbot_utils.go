@@ -1286,22 +1286,18 @@ func (t *Tgbot) sendFirewallMenu(chatId int64) {
 		),
 	)
 
-	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择您要执行的操作：\n\n• 🔍 **检查状态**: 检测当前防火墙类型和状态\n• 📦 **安装工具**: 支持 UFW (Debian/Ubuntu) 和 Firewalld (CentOS/RHEL/Fedora)\n• 📦 **安装 Fail2Ban**: 安装入侵检测和预防系统\n• ✅❌ **启禁用**: 控制防火墙服务状态\n• 🔓🔒 **端口管理**: 开放或关闭特定端口\n• 📋 **查看规则**: 显示当前所有防火墙规则\n• 🚀 **一键开放**: 自动开放 X-Panel 所需端口", firewallKeyboard)
+	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择您要执行的操作：\n\n• 🔍 **检查状态**: 检测当前防火墙状态\n• 📦 **安装工具**: 安装 Firewalld 防火墙\n• 📦 **安装 Fail2Ban**: 安装入侵检测和预防系统\n• ✅❌ **启禁用**: 控制防火墙服务状态\n• 🔓🔒 **端口管理**: 开放或关闭特定端口\n• 📋 **查看规则**: 显示当前所有防火墙规则\n• 🚀 **一键开放**: 自动开放 X-Panel 所需端口", firewallKeyboard)
 }
 
 // 【新增函数】: 检查当前防火墙状态
 func (t *Tgbot) checkFirewallStatus(chatId int64) {
 	go func() {
-		// 检测系统类型
-		systemType := t.detectSystemType()
-
 		// 检查 Firewalld 状态
 		firewalldStatus, firewalldInstalled := t.getFirewalldStatus()
 
 		// 构建状态消息
 		var statusMsg strings.Builder
 		statusMsg.WriteString("🔍 **防火墙状态检测结果**\n\n")
-		statusMsg.WriteString(fmt.Sprintf("🖥️ **系统类型**: %s\n\n", systemType))
 
 		statusMsg.WriteString("📊 **防火墙**:\n")
 		if firewalldInstalled {
@@ -1323,13 +1319,6 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 // 【新增函数】: 安装 Firewalld
 func (t *Tgbot) installFirewalld(chatId int64) {
 	go func() {
-		// 检查系统类型
-		systemType := t.detectSystemType()
-		if !strings.Contains(strings.ToLower(systemType), "centos") && !strings.Contains(strings.ToLower(systemType), "rhel") && !strings.Contains(strings.ToLower(systemType), "fedora") {
-			t.SendMsgToTgbot(chatId, "⚠️ **安装失败**\n\nFirewalld 主要适用于 CentOS/RHEL/Fedora 系统。\n检测到您的系统类型: "+systemType+"\n\n建议使用相应的防火墙工具。")
-			return
-		}
-
 		// 检查是否已安装
 		_, installed := t.getFirewalldStatus()
 		if installed {
@@ -1341,7 +1330,7 @@ func (t *Tgbot) installFirewalld(chatId int64) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
-		cmd := exec.CommandContext(ctx, "bash", "-c", "yum install -y firewalld || dnf install -y firewalld")
+		cmd := exec.CommandContext(ctx, "bash", "-c", "apt-get update -qq && apt-get install -y -qq firewalld")
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
