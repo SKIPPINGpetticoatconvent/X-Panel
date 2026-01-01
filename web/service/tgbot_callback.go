@@ -1468,6 +1468,25 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔥 正在打开防火墙管理菜单...")
 		t.sendFirewallMenu(chatId)
 
+	// 【新增代码】: 处理程序更新相关回调
+	case "check_panel_update":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔄 正在检查最新版本...")
+		t.checkPanelUpdate(chatId)
+
+	case "confirm_panel_update":
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 更新指令已发送")
+		t.SendMsgToTgbot(chatId, "🔄 **X-Panel 更新任务已在后台启动**\n\n⏳ 请稍候，更新完成后将收到通知...")
+		err := t.serverService.UpdatePanel("")
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 发送更新指令失败: %v", err))
+		}
+
+	case "cancel_panel_update":
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
+		t.SendMsgToTgbotDeleteAfter(chatId, "已取消面板更新操作。", 3)
+
 	case "firewall_check_status":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔍 正在检测防火墙状态...")
 		t.checkFirewallStatus(chatId)
@@ -1705,6 +1724,7 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
 			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
 		),
 		// VPS推荐按钮已移除
@@ -3691,6 +3711,47 @@ func (t *Tgbot) SendSubconverterSuccess() {
 	)
 	t.SendMsgToTgbotAdmins(msgText)
 	// t.SendMsgToTgbot(targetChatId, msgText)
+}
+
+// 【新增方法】: 检查面板更新
+func (t *Tgbot) checkPanelUpdate(chatId int64) {
+	// 获取当前版本
+	currentVersion := config.GetVersion()
+
+	// 获取最新版本
+	latestVersion, err := t.serverService.GetPanelLatestVersion()
+	if err != nil {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 检查更新失败: %v", err))
+		return
+	}
+
+	// 比较版本
+	if currentVersion == latestVersion {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("✅ 您的面板已经是最新版本！\n\n当前版本: `%s`", currentVersion))
+		return
+	}
+
+	// 版本不同，显示更新提示
+	confirmKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("✅ 确认更新").WithCallbackData(t.encodeQuery("confirm_panel_update")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("❌ 取消").WithCallbackData(t.encodeQuery("cancel_panel_update")),
+		),
+	)
+
+	message := fmt.Sprintf(
+		"🔄 **发现新版本！**\n\n"+
+			"当前版本: `%s`\n"+
+			"最新版本: `%s`\n\n"+
+			"⚠️ **注意：** 更新将：\n"+
+			"• 自动从 GitHub 拉取最新代码\n"+
+			"• 重启面板服务（期间无法访问）\n\n"+
+			"是否确认更新？",
+		currentVersion, latestVersion)
+
+	t.SendMsgToTgbot(chatId, message, confirmKeyboard)
 }
 
 // 【新增辅助函数】: 获取域名（shell 方案）

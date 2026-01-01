@@ -1512,6 +1512,112 @@ func (s *ServerService) RestartPanel() error {
 	return nil
 }
 
+// GetPanelLatestVersion 获取面板的最新版本
+func (s *ServerService) GetPanelLatestVersion() (string, error) {
+	const (
+		XPanelURL    = "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest"
+		bufferSize = 8192
+	)
+
+	// 使用带超时的HTTP客户端
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// 添加User-Agent头部以避免被GitHub拒绝
+	req, err := http.NewRequest("GET", XPanelURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "X-Panel/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Warning("Failed to fetch X-Panel latest version from GitHub:", err)
+		return "", fmt.Errorf("无法获取X-Panel最新版本信息，请检查网络连接: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub API返回错误状态码: %d", resp.StatusCode)
+	}
+
+	buffer := bytes.NewBuffer(make([]byte, bufferSize))
+	buffer.Reset()
+	if _, err := buffer.ReadFrom(resp.Body); err != nil {
+		return "", fmt.Errorf("读取响应数据失败: %v", err)
+	}
+
+	var release Release
+	if err := json.Unmarshal(buffer.Bytes(), &release); err != nil {
+		return "", fmt.Errorf("解析JSON响应失败: %v", err)
+	}
+
+	logger.Infof("成功获取到X-Panel最新版本: %s", release.TagName)
+	return release.TagName, nil
+}
+
+// UpdatePanel 更新面板到指定版本或最新版本
+func (s *ServerService) UpdatePanel(version string) error {
+	// 启动异步任务进行面板更新，避免阻塞HTTP请求
+	go func() {
+		logger.Infof("开始异步更新X-Panel")
+
+		// 检查Telegram服务是否可用
+		tgAvailable := s.tgService != nil && s.tgService.IsRunning()
+
+		// 1. 在异步更新任务开始时发送开始通知
+		if tgAvailable {
+			startMessage := "🔄 **开始更新 X-Panel**\n\n正在从 GitHub 拉取最新代码...\n\n⏳ 请稍候，这可能需要几分钟时间..."
+			if err := s.tgService.SendMessage(startMessage); err != nil {
+				logger.Warningf("发送X-Panel更新开始通知失败: %v", err)
+			}
+		}
+
+		var updateErr error
+
+		// 2. 执行面板更新命令
+		cmdStr := "bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)"
+		if version != "" {
+			cmdStr += " " + version
+		}
+		updateCmd := exec.Command("bash", "-c", cmdStr)
+		output, err := updateCmd.CombinedOutput()
+		if err != nil {
+			logger.Error("X-Panel更新失败:", err)
+			updateErr = fmt.Errorf("X-Panel更新失败: %v\n输出: %s", err, string(output))
+		} else {
+			logger.Info("X-Panel更新成功")
+		}
+
+		// 3. 根据更新结果发送相应的通知
+		if tgAvailable {
+			if updateErr == nil {
+				// 更新成功通知
+				successMessage := "🎉 **X-Panel 更新成功！**\n\n✅ 服务已成功重启\n🔄 所有功能正常运行\n✨ 感谢您的耐心等待"
+				if err := s.tgService.SendMessage(successMessage); err != nil {
+					logger.Warningf("发送X-Panel更新成功通知失败: %v", err)
+				}
+			} else {
+				// 更新失败通知
+				failMessage := fmt.Sprintf("❌ **X-Panel 更新失败**\n\n错误信息: %v\n\n请检查日志以获取更多信息。", updateErr)
+				if err := s.tgService.SendMessage(failMessage); err != nil {
+					logger.Warningf("发送X-Panel更新失败通知失败: %v", err)
+				}
+			}
+		}
+
+		if updateErr != nil {
+			logger.Errorf("X-Panel更新失败: %v", updateErr)
+		} else {
+			logger.Info("X-Panel更新成功")
+		}
+	}()
+
+	return nil
+}
+
 // 【新增方法】: 检测服务器IP地理位置
 func (s *ServerService) GetServerLocation() (string, error) {
 	// 检查缓存，如果1小时内已经检测过，直接返回缓存结果
