@@ -2890,11 +2890,11 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 
 	var ufwWarning string = "" // NEW
 
-	// 【新增功能】：调用 ufw 放行端口
-	if err := t.openPortWithUFW(port); err != nil {
+	// 【新增功能】：调用 firewalld 放行端口
+	if err := t.openPortWithFirewalld(port); err != nil {
 		// 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
-		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `ufw allow %d` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
+		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
 	} // END NEW LOGIC
 
 	// 按照要求格式：inbound-端口号
@@ -3050,11 +3050,11 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 
 	var ufwWarning string = "" // NEW
 
-	// 【新增功能】：调用 ufw 放行端口
-	if err := t.openPortWithUFW(port); err != nil {
+	// 【新增功能】：调用 firewalld 放行端口
+	if err := t.openPortWithFirewalld(port); err != nil {
 		// 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
-		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `ufw allow %d` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
+		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
 	} // END NEW LOGIC
 
 	// 按照要求格式：inbound-端口号
@@ -3159,9 +3159,9 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	path := "/" + t.randomString(8, "abcdefghijklmnopqrstuvwxyz")
 
 	var ufwWarning string
-	if err := t.openPortWithUFW(port); err != nil {
+	if err := t.openPortWithFirewalld(port); err != nil {
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
-		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `ufw allow %d` 命令失败，但入站创建已继续。请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。", port, port)
+		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload` 命令失败，但入站创建已继续。请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。", port, port)
 	}
 
 	tag := fmt.Sprintf("inbound-%d", port)
