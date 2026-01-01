@@ -887,8 +887,10 @@ func (t *Tgbot) sendFirewallMenu(chatId int64) {
 			tu.InlineKeyboardButton("🔍 检查防火墙状态").WithCallbackData(t.encodeQuery("firewall_check_status")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📦 安装 UFW").WithCallbackData(t.encodeQuery("firewall_install_ufw")),
-			tu.InlineKeyboardButton("📦 安装 Firewalld").WithCallbackData(t.encodeQuery("firewall_install_firewalld")),
+			tu.InlineKeyboardButton("📦 安装防火墙").WithCallbackData(t.encodeQuery("firewall_install_firewalld")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📦 安装 Fail2Ban").WithCallbackData(t.encodeQuery("firewall_install_fail2ban")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("✅ 启用防火墙").WithCallbackData(t.encodeQuery("firewall_enable")),
@@ -907,7 +909,7 @@ func (t *Tgbot) sendFirewallMenu(chatId int64) {
 		),
 	)
 
-	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择您要执行的操作：\n\n• 🔍 **检查状态**: 检测当前防火墙类型和状态\n• 📦 **安装工具**: 支持 UFW (Debian/Ubuntu) 和 Firewalld (CentOS/RHEL/Fedora)\n• ✅❌ **启禁用**: 控制防火墙服务状态\n• 🔓🔒 **端口管理**: 开放或关闭特定端口\n• 📋 **查看规则**: 显示当前所有防火墙规则\n• 🚀 **一键开放**: 自动开放 X-Panel 所需端口", firewallKeyboard)
+	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择您要执行的操作：\n\n• 🔍 **检查状态**: 检测当前防火墙类型和状态\n• 📦 **安装工具**: 支持 UFW (Debian/Ubuntu) 和 Firewalld (CentOS/RHEL/Fedora)\n• 📦 **安装 Fail2Ban**: 安装入侵检测和预防系统\n• ✅❌ **启禁用**: 控制防火墙服务状态\n• 🔓🔒 **端口管理**: 开放或关闭特定端口\n• 📋 **查看规则**: 显示当前所有防火墙规则\n• 🚀 **一键开放**: 自动开放 X-Panel 所需端口", firewallKeyboard)
 }
 
 // 【新增函数】: 检查当前防火墙状态
@@ -915,9 +917,6 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 	go func() {
 		// 检测系统类型
 		systemType := t.detectSystemType()
-
-		// 检查 UFW 状态
-		ufwStatus, ufwInstalled := t.getUFWStatus()
 
 		// 检查 Firewalld 状态
 		firewalldStatus, firewalldInstalled := t.getFirewalldStatus()
@@ -927,14 +926,7 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 		statusMsg.WriteString("🔍 **防火墙状态检测结果**\n\n")
 		statusMsg.WriteString(fmt.Sprintf("🖥️ **系统类型**: %s\n\n", systemType))
 
-		statusMsg.WriteString("📊 **UFW 防火墙**:\n")
-		if ufwInstalled {
-			statusMsg.WriteString(fmt.Sprintf("✅ 已安装\n📊 状态: %s\n\n", ufwStatus))
-		} else {
-			statusMsg.WriteString("❌ 未安装\n\n")
-		}
-
-		statusMsg.WriteString("📊 **Firewalld 防火墙**:\n")
+		statusMsg.WriteString("📊 **防火墙**:\n")
 		if firewalldInstalled {
 			statusMsg.WriteString(fmt.Sprintf("✅ 已安装\n📊 状态: %s\n\n", firewalldStatus))
 		} else {
@@ -943,49 +935,13 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 
 		// 推荐防火墙类型
 		statusMsg.WriteString("💡 **推荐**:\n")
-		if strings.Contains(strings.ToLower(systemType), "ubuntu") || strings.Contains(strings.ToLower(systemType), "debian") {
-			statusMsg.WriteString("• 建议使用 UFW (Ubuntu/Debian 系统)\n")
-		} else if strings.Contains(strings.ToLower(systemType), "centos") || strings.Contains(strings.ToLower(systemType), "rhel") || strings.Contains(strings.ToLower(systemType), "fedora") {
-			statusMsg.WriteString("• 建议使用 Firewalld (CentOS/RHEL/Fedora 系统)\n")
-		} else {
-			statusMsg.WriteString("• 请根据系统类型选择合适的防火墙\n")
-		}
+		statusMsg.WriteString("• 使用 Firewalld 防火墙\n")
 
 		t.SendMsgToTgbot(chatId, statusMsg.String())
 	}()
 }
 
-// 【新增函数】: 安装 UFW
-func (t *Tgbot) installUFW(chatId int64) {
-	go func() {
-		// 检查系统类型
-		systemType := t.detectSystemType()
-		if !strings.Contains(strings.ToLower(systemType), "ubuntu") && !strings.Contains(strings.ToLower(systemType), "debian") {
-			t.SendMsgToTgbot(chatId, "⚠️ **安装失败**\n\nUFW 主要适用于 Ubuntu/Debian 系统。\n检测到您的系统类型: "+systemType+"\n\n建议使用相应的防火墙工具。")
-			return
-		}
 
-		// 检查是否已安装
-		_, installed := t.getUFWStatus()
-		if installed {
-			t.SendMsgToTgbot(chatId, "ℹ️ **UFW 已安装**\n\nUFW 防火墙已经安装在您的系统上。")
-			return
-		}
-
-		// 执行安装
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
-
-		cmd := exec.CommandContext(ctx, "bash", "-c", "apt update && apt install -y ufw")
-		output, err := cmd.CombinedOutput()
-
-		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **UFW 安装失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
-		} else {
-			t.SendMsgToTgbot(chatId, "✅ **UFW 安装成功！**\n\nUFW 防火墙已成功安装到您的系统上。\n\n接下来您可以：\n• 启用防火墙\n• 配置端口规则\n• 查看防火墙状态")
-		}
-	}()
-}
 
 // 【新增函数】: 安装 Firewalld
 func (t *Tgbot) installFirewalld(chatId int64) {
@@ -1019,31 +975,144 @@ func (t *Tgbot) installFirewalld(chatId int64) {
 	}()
 }
 
+// 【新增函数】: 安装 Fail2Ban
+func (t *Tgbot) installFail2Ban(chatId int64) {
+	go func() {
+		// 检查是否已安装
+		_, installed := t.getFail2BanStatus()
+		if installed {
+			t.SendMsgToTgbot(chatId, "ℹ️ **Fail2Ban 已安装**\n\nFail2Ban 入侵检测和预防系统已经安装在您的系统上。")
+			return
+		}
+
+		// 执行安装
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		// 尝试多种包管理器
+		var cmd *exec.Cmd
+		var output []byte
+		var err error
+
+		// 首先尝试 apt (Debian/Ubuntu)
+		cmd = exec.CommandContext(ctx, "bash", "-c", "apt update -qq && apt install -y -qq fail2ban")
+		output, err = cmd.CombinedOutput()
+
+		if err != nil {
+			// 如果 apt 失败，尝试 yum (CentOS/RHEL)
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			cmd = exec.CommandContext(ctx, "bash", "-c", "yum install -y fail2ban")
+			output, err = cmd.CombinedOutput()
+
+			if err != nil {
+				// 如果 yum 失败，尝试 dnf (Fedora/RHEL 8+)
+				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+				defer cancel()
+				cmd = exec.CommandContext(ctx, "bash", "-c", "dnf install -y fail2ban")
+				output, err = cmd.CombinedOutput()
+
+				if err != nil {
+					t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装失败**\n\n尝试了 apt、yum 和 dnf 包管理器，但都失败了。\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+					return
+				}
+			}
+		}
+
+		// 安装成功，启用并启动服务
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		cmd = exec.CommandContext(ctx, "systemctl", "enable", "fail2ban")
+		output, err = cmd.CombinedOutput()
+
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但启用服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			return
+		}
+
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		cmd = exec.CommandContext(ctx, "systemctl", "start", "fail2ban")
+		output, err = cmd.CombinedOutput()
+
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但启动服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			return
+		}
+
+		// 配置 Fail2Ban 以使用 Firewalld
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		cmd = exec.CommandContext(ctx, "bash", "-c", `cat > /etc/fail2ban/jail.local << 'EOF'
+[DEFAULT]
+banaction = firewallcmd-rich-rules
+banaction_allports = firewallcmd-rich-rules
+backend = systemd
+EOF`)
+		output, err = cmd.CombinedOutput()
+
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但配置 Firewalld 失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			return
+		}
+
+		// 重启 Fail2Ban 服务以应用新配置
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		cmd = exec.CommandContext(ctx, "systemctl", "restart", "fail2ban")
+		output, err = cmd.CombinedOutput()
+
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 配置成功，但重启服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			return
+		}
+
+		t.SendMsgToTgbot(chatId, "✅ **Fail2Ban 安装并配置成功！**\n\nFail2Ban 入侵检测和预防系统已成功安装并配置为与 Firewalld 配合工作。\n\n• Fail2Ban 使用 `firewallcmd-rich-rules` 封禁 IP\n• 会自动监控日志文件并封禁可疑活动\n• 配置文件位于 `/etc/fail2ban/jail.local`\n\n您可以根据需要配置额外的 jail 规则。")
+	}()
+}
+
+// 【新增辅助函数】: 获取 Fail2Ban 状态
+func (t *Tgbot) getFail2BanStatus() (string, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 检查是否安装
+	cmd := exec.CommandContext(ctx, "bash", "-c", "command -v fail2ban-client")
+	if err := cmd.Run(); err != nil {
+		return "未安装", false
+	}
+
+	// 获取服务状态
+	cmd = exec.CommandContext(ctx, "systemctl", "is-active", "fail2ban")
+	output, err := cmd.Output()
+
+	if err != nil {
+		return "状态未知", true
+	}
+
+	status := strings.TrimSpace(string(output))
+	if status == "active" {
+		return "运行中", true
+	} else {
+		return "未运行", true
+	}
+}
+
 // 【新增函数】: 启用防火墙
 func (t *Tgbot) enableFirewall(chatId int64) {
 	go func() {
 		// 先检查当前防火墙状态
-		ufwStatus, ufwInstalled := t.getUFWStatus()
 		firewalldStatus, firewalldInstalled := t.getFirewalldStatus()
 
 		var cmd *exec.Cmd
 		var output []byte
 		var err error
 
-		if ufwInstalled && (strings.Contains(strings.ToLower(ufwStatus), "inactive") || strings.Contains(strings.ToLower(ufwStatus), "未激活")) {
-			// 启用 UFW
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-			defer cancel()
-
-			cmd = exec.CommandContext(ctx, "bash", "-c", "ufw --force enable")
-			output, err = cmd.CombinedOutput()
-
-			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **UFW 启用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
-			} else {
-				t.SendMsgToTgbot(chatId, "✅ **UFW 启用成功！**\n\nUFW 防火墙已成功启用并设置为开机自启动。")
-			}
-		} else if firewalldInstalled && (strings.Contains(strings.ToLower(firewalldStatus), "inactive") || strings.Contains(strings.ToLower(firewalldStatus), "未激活")) {
+		if firewalldInstalled && (strings.Contains(strings.ToLower(firewalldStatus), "inactive") || strings.Contains(strings.ToLower(firewalldStatus), "未激活")) {
 			// 启用 Firewalld
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
@@ -1052,9 +1121,9 @@ func (t *Tgbot) enableFirewall(chatId int64) {
 			output, err = cmd.CombinedOutput()
 
 			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Firewalld 启用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **防火墙启用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			} else {
-				t.SendMsgToTgbot(chatId, "✅ **Firewalld 启用成功！**\n\nFirewalld 防火墙已成功启用并设置为开机自启动。")
+				t.SendMsgToTgbot(chatId, "✅ **防火墙启用成功！**\n\n防火墙已成功启用并设置为开机自启动。")
 			}
 		} else {
 			// 没有找到可用的防火墙或防火墙已经启用
@@ -1067,27 +1136,13 @@ func (t *Tgbot) enableFirewall(chatId int64) {
 func (t *Tgbot) disableFirewall(chatId int64) {
 	go func() {
 		// 先检查当前防火墙状态
-		ufwStatus, ufwInstalled := t.getUFWStatus()
 		firewalldStatus, firewalldInstalled := t.getFirewalldStatus()
 
 		var cmd *exec.Cmd
 		var output []byte
 		var err error
 
-		if ufwInstalled && (strings.Contains(strings.ToLower(ufwStatus), "active") || strings.Contains(strings.ToLower(ufwStatus), "已激活")) {
-			// 禁用 UFW
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-			defer cancel()
-
-			cmd = exec.CommandContext(ctx, "bash", "-c", "ufw disable")
-			output, err = cmd.CombinedOutput()
-
-			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **UFW 禁用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
-			} else {
-				t.SendMsgToTgbot(chatId, "✅ **UFW 禁用成功！**\n\nUFW 防火墙已成功禁用。请注意，禁用防火墙可能会降低服务器安全性。")
-			}
-		} else if firewalldInstalled && (strings.Contains(strings.ToLower(firewalldStatus), "active") || strings.Contains(strings.ToLower(firewalldStatus), "已激活")) {
+		if firewalldInstalled && (strings.Contains(strings.ToLower(firewalldStatus), "active") || strings.Contains(strings.ToLower(firewalldStatus), "已激活")) {
 			// 禁用 Firewalld
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
@@ -1096,9 +1151,9 @@ func (t *Tgbot) disableFirewall(chatId int64) {
 			output, err = cmd.CombinedOutput()
 
 			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Firewalld 禁用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **防火墙禁用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			} else {
-				t.SendMsgToTgbot(chatId, "✅ **Firewalld 禁用成功！**\n\nFirewalld 防火墙已成功禁用。请注意，禁用防火墙可能会降低服务器安全性。")
+				t.SendMsgToTgbot(chatId, "✅ **防火墙禁用成功！**\n\n防火墙已成功禁用。请注意，禁用防火墙可能会降低服务器安全性。")
 			}
 		} else {
 			// 没有找到可用的防火墙或防火墙已经禁用
@@ -1110,13 +1165,13 @@ func (t *Tgbot) disableFirewall(chatId int64) {
 // 【新增函数】: 开放端口
 func (t *Tgbot) openPort(chatId int64) {
 	// 这里简化处理，实际应用中可能需要更复杂的交互
-	t.SendMsgToTgbot(chatId, "🔓 **开放端口**\n\n⚠️ **安全警告**: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n**UFW 系统**:\n```bash\nufw allow [端口号]\nufw reload\n```\n\n**Firewalld 系统**:\n```bash\nfirewall-cmd --permanent --add-port=[端口号]/tcp\nfirewall-cmd --reload\n```\n\n例如开放 8080 端口：\n• UFW: `ufw allow 8080`\n• Firewalld: `firewall-cmd --permanent --add-port=8080/tcp`")
+	t.SendMsgToTgbot(chatId, "🔓 **开放端口**\n\n⚠️ **安全警告**: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n```bash\nfirewall-cmd --permanent --add-port=[端口号]/tcp\nfirewall-cmd --reload\n```\n\n例如开放 8080 端口：\n`firewall-cmd --permanent --add-port=8080/tcp`")
 }
 
 // 【新增函数】: 关闭端口
 func (t *Tgbot) closePort(chatId int64) {
 	// 这里简化处理，实际应用中可能需要更复杂的交互
-	t.SendMsgToTgbot(chatId, "🔒 **关闭端口**\n\n⚠️ **安全警告**: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n**UFW 系统**:\n```bash\nufw delete allow [端口号]\nufw reload\n```\n\n**Firewalld 系统**:\n```bash\nfirewall-cmd --permanent --remove-port=[端口号]/tcp\nfirewall-cmd --reload\n```\n\n例如关闭 8080 端口：\n• UFW: `ufw delete allow 8080`\n• Firewalld: `firewall-cmd --permanent --remove-port=8080/tcp`")
+	t.SendMsgToTgbot(chatId, "🔒 **关闭端口**\n\n⚠️ **安全警告**: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n```bash\nfirewall-cmd --permanent --remove-port=[端口号]/tcp\nfirewall-cmd --reload\n```\n\n例如关闭 8080 端口：\n`firewall-cmd --permanent --remove-port=8080/tcp`")
 }
 
 // 【新增函数】: 列出防火墙规则
@@ -1124,24 +1179,6 @@ func (t *Tgbot) listFirewallRules(chatId int64) {
 	go func() {
 		var rulesMsg strings.Builder
 		rulesMsg.WriteString("📋 **防火墙规则列表**\n\n")
-
-		// 检查 UFW 规则
-		_, ufwInstalled := t.getUFWStatus()
-		if ufwInstalled {
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-			defer cancel()
-
-			cmd := exec.CommandContext(ctx, "bash", "-c", "ufw status numbered")
-			output, err := cmd.CombinedOutput()
-
-			if err != nil {
-				rulesMsg.WriteString("❌ **获取 UFW 规则失败**\n")
-			} else {
-				rulesMsg.WriteString("📊 **UFW 规则**:\n```\n")
-				rulesMsg.WriteString(string(output))
-				rulesMsg.WriteString("```\n\n")
-			}
-		}
 
 		// 检查 Firewalld 规则
 		_, firewalldInstalled := t.getFirewalldStatus()
@@ -1153,15 +1190,13 @@ func (t *Tgbot) listFirewallRules(chatId int64) {
 			output, err := cmd.CombinedOutput()
 
 			if err != nil {
-				rulesMsg.WriteString("❌ **获取 Firewalld 规则失败**\n")
+				rulesMsg.WriteString("❌ **获取防火墙规则失败**\n")
 			} else {
-				rulesMsg.WriteString("📊 **Firewalld 规则**:\n```\n")
+				rulesMsg.WriteString("📊 **防火墙规则**:\n```\n")
 				rulesMsg.WriteString(string(output))
 				rulesMsg.WriteString("```\n\n")
 			}
-		}
-
-		if !ufwInstalled && !firewalldInstalled {
+		} else {
 			rulesMsg.WriteString("❌ **未检测到防火墙**\n\n请先安装并启用防火墙。")
 		}
 
@@ -1178,7 +1213,6 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 		ports := []string{"22", "80", "443", "13688", "8443"}
 
 		// 检测防火墙类型
-		ufwStatus, ufwInstalled := t.getUFWStatus()
 		firewalldStatus, firewalldInstalled := t.getFirewalldStatus()
 
 		var successPorts []string
@@ -1187,15 +1221,7 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 		for _, port := range ports {
 			var err error
 
-			if ufwInstalled && (strings.Contains(strings.ToLower(ufwStatus), "active") || strings.Contains(strings.ToLower(ufwStatus), "已激活")) {
-				// 使用 UFW 开放端口
-				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				defer cancel()
-
-				cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf("ufw allow %s/tcp", port))
-				_, err = cmd.CombinedOutput()
-
-			} else if firewalldInstalled && (strings.Contains(strings.ToLower(firewalldStatus), "active") || strings.Contains(strings.ToLower(firewalldStatus), "已激活")) {
+			if firewalldInstalled && (strings.Contains(strings.ToLower(firewalldStatus), "active") || strings.Contains(strings.ToLower(firewalldStatus), "已激活")) {
 				// 使用 Firewalld 开放端口
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
@@ -1266,27 +1292,7 @@ func (t *Tgbot) detectSystemType() string {
 	return strings.TrimSpace(string(output))
 }
 
-// 【新增辅助函数】: 获取 UFW 状态
-func (t *Tgbot) getUFWStatus() (string, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 
-	// 检查是否安装
-	cmd := exec.CommandContext(ctx, "bash", "-c", "command -v ufw")
-	if err := cmd.Run(); err != nil {
-		return "未安装", false
-	}
-
-	// 获取状态
-	cmd = exec.CommandContext(ctx, "bash", "-c", "ufw status")
-	output, err := cmd.Output()
-
-	if err != nil {
-		return "状态未知", true
-	}
-
-	return strings.TrimSpace(string(output)), true
-}
 
 // 【新增辅助函数】: 获取 Firewalld 状态
 func (t *Tgbot) getFirewalldStatus() (string, bool) {

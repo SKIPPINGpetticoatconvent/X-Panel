@@ -1372,13 +1372,15 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔍 正在检测防火墙状态...")
 		t.checkFirewallStatus(chatId)
 
-	case "firewall_install_ufw":
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📦 正在安装 UFW...")
-		t.installUFW(chatId)
+
 
 	case "firewall_install_firewalld":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📦 正在安装 Firewalld...")
 		t.installFirewalld(chatId)
+
+	case "firewall_install_fail2ban":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📦 正在安装 Fail2Ban...")
+		t.installFail2Ban(chatId)
 
 	case "firewall_enable":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 正在启用防火墙...")
