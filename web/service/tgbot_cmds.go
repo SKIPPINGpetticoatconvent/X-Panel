@@ -1,4 +1,4 @@
-package tgbot
+package service
 
 import (
 	"context" // 新增：用于 tls.Config
