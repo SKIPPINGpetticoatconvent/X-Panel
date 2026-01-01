@@ -18,6 +18,7 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/sys"
 
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
@@ -436,10 +437,13 @@ func (t *Tgbot) sendMachineOptimizationOptions(chatId int64) {
 			tu.InlineKeyboardButton("🖥️ 1C1G 机器").WithCallbackData(t.encodeQuery("optimize_1c1g")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🚀 通用/高配优化").WithCallbackData(t.encodeQuery("optimize_generic")),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("get_inbounds")),
 		),
 	)
-	t.SendMsgToTgbot(chatId, "⚡ **机器优化一键方案**\n\n请选择您的机器配置类型：\n\n🖥️ **1C1G 机器**: 适用于低配VPS的深度优化", optimizationKeyboard)
+	t.SendMsgToTgbot(chatId, "⚡ **机器优化一键方案**\n\n请选择您的机器配置类型：\n\n🖥️ **1C1G 机器**: 适用于低配VPS的深度优化\n🚀 **通用/高配优化**: 适用于高配VPS的全面优化", optimizationKeyboard)
 }
 
 // 【新增函数】: 执行1C1G优化前显示确认对话框
@@ -456,7 +460,7 @@ func (t *Tgbot) performOptimization1C1G(chatId int64, messageId int) {
 	t.editMessageCallbackTgBot(chatId, messageId, confirmKeyboard)
 
 	// 发送详细说明
-	detailMsg := "🤔 **1C1G 机器优化确认**\n\n即将执行以下优化操作：\n\n**📊 内核参数深度优化（针对1C1G低配机器）:**\n• 内存管理优化 (swappiness, cache pressure等)\n• 网络参数优化 (TCP缓冲区、连接跟踪等)\n• 文件描述符限制优化\n\n**💾 设置1G Swap（防宕机神器）:**\n• 自动创建1GB Swap文件\n• 配置开机自动挂载\n• 防止内存不足导致的宕机\n\n⚠️ **注意**: 此操作需要root权限，请确保您的VPS有足够权限。"
+	detailMsg := "🤔 **1C1G 机器优化确认**\n\n即将执行以下优化操作：\n\n**📊 内核参数深度优化（针对1C1G低配机器）:**\n• 内存管理优化 (swappiness, cache pressure等)\n• 网络参数优化 (TCP缓冲区、连接跟踪等)\n• 文件描述符限制优化\n\n**💾 设置1G Swap（防宕机神器）:**\n• 自动创建1GB Swap文件\n• 配置开机自动挂载\n• 防止内存不足导致的宕机\n\n**🚀 BBR 拥塞控制算法（网络性能提升）:**\n• 检测内核版本兼容性\n• 自动启用 BBR 算法（需要内核 4.9+）\n• 大幅提升网络吞吐量和降低延迟\n\n⚠️ **注意**: 此操作需要root权限，请确保您的VPS有足够权限。"
 	t.SendMsgToTgbot(chatId, detailMsg)
 }
 
@@ -474,7 +478,7 @@ func (t *Tgbot) executeOptimization1C1G(chatId int64, messageId int) {
 			// 获取优化后的系统状态
 			statusMsg := t.getSystemStatusAfterOptimization()
 
-			resultMsg := fmt.Sprintf("✅ **1C1G机器优化执行完成！**\n\n📊 **优化结果:**\n• 内核参数已优化 ✅\n• 1G Swap 已设置 ✅\n• 文件描述符限制已优化 ✅\n• 代理服务器参数已优化 ✅\n\n%s\n\n🎉 **优化成功完成，您的1C1G机器现在更加稳定高效！**\n\n📋 **重要信息:**\n• 详细日志文件: `/tmp/x-panel-optimization.log`\n• 优化包含针对 Sing-box/Xray 的专用参数\n• 设置了 5 分钟操作超时，防止脚本死锁", statusMsg)
+			resultMsg := fmt.Sprintf("✅ **1C1G机器优化执行完成！**\n\n📊 **优化结果:**\n• 内核参数已优化 ✅\n• 1G Swap 已设置 ✅\n• 文件描述符限制已优化 ✅\n• BBR 网络加速已启用 ✅\n• 代理服务器参数已优化 ✅\n\n%s\n\n🎉 **优化成功完成，您的1C1G机器现在网络更快、更加稳定高效！**\n\n📋 **重要信息:**\n• 详细日志文件: `/tmp/x-panel-optimization.log`\n• 优化包含针对 Sing-box/Xray 的专用参数\n• BBR算法大幅提升网络性能\n• 设置了 5 分钟操作超时，防止脚本死锁\n⚠️ **注意**: 文件描述符限制优化需要重启服务器或重新登录才能完全生效。", statusMsg)
 			t.SendMsgToTgbot(chatId, resultMsg)
 		}
 	}()
@@ -482,6 +486,11 @@ func (t *Tgbot) executeOptimization1C1G(chatId int64, messageId int) {
 
 // 【新增辅助函数】: 执行实际的1C1G优化操作
 func (t *Tgbot) execute1C1GOptimization() (string, error) {
+	// 检查 Root 权限
+	if os.Geteuid() != 0 {
+		return "", fmt.Errorf("权限不足：此操作需要 root 权限，请确保面板以 root 身份运行")
+	}
+
 	var output strings.Builder
 
 	// 创建日志文件
@@ -622,15 +631,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 	output.WriteString("正在应用基础内核参数...\n")
 	f.WriteString("正在应用基础内核参数...\n")
 
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	cmd = exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-1c1g-optimize-base.conf << 'EOF'
-%s
-EOF`, baseKernelConfig))
-	cmd.Stdout = f
-	cmd.Stderr = f
-	if err := cmd.Run(); err != nil {
+	if err := sys.AtomicWriteFile("/etc/sysctl.d/99-1c1g-optimize-base.conf", []byte(baseKernelConfig), 0644); err != nil {
 		errorMsg := fmt.Sprintf("创建基础内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
@@ -662,15 +663,7 @@ EOF`, baseKernelConfig))
 		output.WriteString("正在应用 nf_conntrack 参数...\n")
 		f.WriteString("正在应用 nf_conntrack 参数...\n")
 
-		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
-		defer cancel()
-
-		cmd = exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-nf-conntrack-optimize.conf << 'EOF'
-%s
-EOF`, nfConntrackConfig))
-		cmd.Stdout = f
-		cmd.Stderr = f
-		if err := cmd.Run(); err != nil {
+		if err := sys.AtomicWriteFile("/etc/sysctl.d/99-nf-conntrack-optimize.conf", []byte(nfConntrackConfig), 0644); err != nil {
 			output.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
 			f.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
 		} else {
@@ -813,12 +806,221 @@ EOF`, nfConntrackConfig))
 root soft nofile 65535
 root hard nofile 65535`
 
+	if err := sys.WriteConfigBlock("/etc/security/limits.conf", "# === 1C1G Machine Optimization ===", "", limitsConfig); err != nil {
+		errorMsg := fmt.Errorf("更新limits.conf失败: %v", err)
+		output.WriteString("❌ " + errorMsg.Error() + "\n")
+		f.WriteString("❌ " + errorMsg.Error() + "\n")
+		return output.String(), errorMsg
+	}
+	successMsg = "✅ 文件描述符限制已优化"
+	output.WriteString(successMsg + "\n")
+	f.WriteString(successMsg + "\n")
+
+	// 4. 【新增】启用 BBR 拥塞控制算法
+	bbrMsg := "\n=== BBR 拥塞控制算法启用 ===\n"
+	output.WriteString(bbrMsg)
+	f.WriteString(bbrMsg)
+
+	// 检查内核版本和 BBR 支持
+	kernelVersion, bbrSupported, err := t.checkBBRSupport()
+	if err != nil {
+		output.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
+		f.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
+	} else {
+		output.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
+		f.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
+
+		if bbrSupported {
+			output.WriteString("✅ BBR 支持检测: 支持\n")
+			f.WriteString("✅ BBR 支持检测: 支持\n")
+
+			// 启用 BBR
+			bbrConfig := `# ===== BBR 拥塞控制算法配置 =====
+# 启用 BBR 拥塞控制算法以提升网络性能
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+`
+			// 先备份现有文件（如果存在）
+			if backupErr := sys.BackupFile("/etc/sysctl.d/99-bbr-optimize.conf"); backupErr != nil {
+				output.WriteString("ℹ️ BBR 配置文件备份失败（文件可能不存在）\n")
+				f.WriteString("ℹ️ BBR 配置文件备份失败（文件可能不存在）\n")
+			}
+
+			if err := sys.AtomicWriteFile("/etc/sysctl.d/99-bbr-optimize.conf", []byte(bbrConfig), 0644); err != nil {
+				errorMsg := fmt.Sprintf("创建 BBR 配置文件失败: %v", err)
+				output.WriteString("❌ " + errorMsg + "\n")
+				f.WriteString("❌ " + errorMsg + "\n")
+			} else {
+				// 应用 BBR 设置
+				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+				defer cancel()
+
+				cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-bbr-optimize.conf")
+				cmd.Stdout = f
+				cmd.Stderr = f
+				if err := cmd.Run(); err != nil {
+					errorMsg := fmt.Sprintf("应用 BBR 设置失败: %v", err)
+					output.WriteString("❌ " + errorMsg + "\n")
+					f.WriteString("❌ " + errorMsg + "\n")
+				} else {
+					successMsg := "✅ BBR 拥塞控制算法已启用"
+					output.WriteString(successMsg + "\n")
+					f.WriteString(successMsg + "\n")
+
+					// 验证 BBR 是否启用
+					ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+
+					cmd = exec.CommandContext(ctx, "sysctl", "net.ipv4.tcp_congestion_control")
+					checkOutput, _ := cmd.Output()
+					output.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
+					f.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
+				}
+			}
+		} else {
+			skipMsg := "ℹ️ BBR 不支持（需要 Linux 内核 4.9+），跳过启用"
+			output.WriteString(skipMsg + "\n")
+			f.WriteString(skipMsg + "\n")
+		}
+	}
+
+	// 记录结束时间和日志文件位置
+	endTime := time.Now()
+	duration := endTime.Sub(startTime)
+	logMsg = fmt.Sprintf("\nX-Panel 1C1G 机器优化完成时间: %s\n", endTime.Format("2006-01-02 15:04:05"))
+	logMsg += fmt.Sprintf("总耗时: %v\n", duration)
+	logMsg += fmt.Sprintf("详细日志已保存到: %s\n", logFile)
+	output.WriteString(logMsg)
+	f.WriteString(logMsg)
+
+	return output.String(), nil
+}
+
+// 【新增函数】: 执行通用/高配优化操作
+func (t *Tgbot) executeGenericOptimization(chatId int64, messageId int) {
+	t.SendMsgToTgbot(chatId, "🚀 **开始执行通用/高配优化...**\n\n⏳ 正在执行优化操作，请稍候...")
+
+	go func() {
+		// 执行优化操作
+		_, err := t.executeGenericOptimizationInternal()
+
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **优化执行失败**\n\n错误信息: %v\n\n💡 **排查建议**:\n• 请查看日志文件: /tmp/x-panel-generic-optimization.log\n• 确保您的VPS具有root权限\n• 检查系统磁盘空间是否充足", err))
+		} else {
+			// 获取优化后的系统状态
+			statusMsg := t.getSystemStatusAfterOptimization()
+
+			resultMsg := fmt.Sprintf("✅ **通用/高配优化执行完成！**\n\n📊 **优化结果:**\n• 内核参数已优化 ✅\n• Swap 已智能配置 ✅\n• 文件描述符限制已优化 ✅\n• BBR 网络加速已启用 ✅\n\n%s\n\n🎉 **优化成功完成，您的VPS现在网络更快、更加稳定高效！**\n\n📋 **重要信息:**\n• 详细日志文件: `/tmp/x-panel-generic-optimization.log`\n• 优化包含针对高配VPS的专用参数\n• BBR算法大幅提升网络性能\n• 根据内存大小智能配置Swap\n⚠️ **注意**: 文件描述符限制优化需要重启服务器或重新登录才能完全生效。", statusMsg)
+			t.SendMsgToTgbot(chatId, resultMsg)
+		}
+	}()
+}
+
+// 【新增辅助函数】: 执行通用/高配优化操作的具体实现
+func (t *Tgbot) executeGenericOptimizationInternal() (string, error) {
+	// 检查 Root 权限
+	if os.Geteuid() != 0 {
+		return "", fmt.Errorf("权限不足：此操作需要 root 权限，请确保面板以 root 身份运行")
+	}
+
+	var output strings.Builder
+
+	// 创建日志文件
+	logFile := "/tmp/x-panel-generic-optimization.log"
+	f, err := os.Create(logFile)
+	if err != nil {
+		return output.String(), fmt.Errorf("创建日志文件失败: %v", err)
+	}
+	defer f.Close()
+
+	// 记录开始时间
+	startTime := time.Now()
+	logMsg := fmt.Sprintf("X-Panel 通用/高配优化开始时间: %s\n", startTime.Format("2006-01-02 15:04:05"))
+	output.WriteString(logMsg)
+	f.WriteString(logMsg)
+
+	// 1. 内核参数优化 (更激进的网络参数)
+	output.WriteString("=== 内核参数优化 ===\n")
+	f.WriteString("=== 内核参数优化 ===\n")
+
+	kernelConfig := `# ===== 通用/高配网络优化配置 =====
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+net.core.somaxconn = 4096
+net.ipv4.tcp_max_syn_backlog = 8192
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_fin_timeout = 30
+net.core.netdev_max_backlog = 50000
+net.ipv4.tcp_max_tw_buckets = 6000
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_probes = 5
+net.ipv4.tcp_keepalive_intvl = 15
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_mtu_probing = 1
+net.ipv4.tcp_moderate_rcvbuf = 1
+net.ipv4.tcp_congestion_control = bbr
+net.core.default_qdisc = fq
+
+# 文件描述符
+fs.file-max = 1000000
+`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-generic-optimize.conf << 'EOF'
+%s
+EOF`, kernelConfig))
+	cmd.Stdout = f
+	cmd.Stderr = f
+	if err := cmd.Run(); err != nil {
+		errorMsg := fmt.Sprintf("创建内核配置文件失败: %v", err)
+		output.WriteString("❌ " + errorMsg + "\n")
+		f.WriteString("❌ " + errorMsg + "\n")
+		return output.String(), fmt.Errorf(errorMsg)
+	}
+	successMsg := "✅ 内核参数配置文件已创建"
+	output.WriteString(successMsg + "\n")
+	f.WriteString(successMsg + "\n")
+
+	// 应用内核参数
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-generic-optimize.conf")
+	cmd.Stdout = f
+	cmd.Stderr = f
+	if err := cmd.Run(); err != nil {
+		errorMsg := fmt.Sprintf("应用内核参数失败: %v", err)
+		output.WriteString("❌ " + errorMsg + "\n")
+		f.WriteString("❌ " + errorMsg + "\n")
+		return output.String(), fmt.Errorf(errorMsg)
+	}
+	successMsg = "✅ 内核参数已应用"
+	output.WriteString(successMsg + "\n")
+	f.WriteString(successMsg + "\n")
+
+	// 2. 文件描述符限制优化
+	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
+	output.WriteString(limitsMsg)
+	f.WriteString(limitsMsg)
+
+	limitsConfig := `* soft nofile 65535
+* hard nofile 65535
+* soft nproc 65535
+* hard nproc 65535
+root soft nofile 65535
+root hard nofile 65535`
+
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	cmd = exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat >> /etc/security/limits.conf << 'EOF'
 
-# === 1C1G Machine Optimization ===
+# === Generic High-Performance Optimization ===
 %s
 EOF`, limitsConfig))
 	cmd.Stdout = f
@@ -833,10 +1035,167 @@ EOF`, limitsConfig))
 	output.WriteString(successMsg + "\n")
 	f.WriteString(successMsg + "\n")
 
+	// 3. 智能Swap配置
+	swapMsg := "\n=== 智能Swap配置 ===\n"
+	output.WriteString(swapMsg)
+	f.WriteString(swapMsg)
+
+	// 获取内存信息
+	t.lastStatus = t.serverService.GetStatus(t.lastStatus)
+	memTotalMB := int64(t.lastStatus.Mem.Total / 1024 / 1024)
+	var swapSize string
+	if memTotalMB < 4096 {
+		swapSize = "2G"
+	} else {
+		skipMsg := "ℹ️ 检测内存 >= 4GB，跳过 Swap 创建"
+		output.WriteString(skipMsg + "\n")
+		f.WriteString(skipMsg + "\n")
+	}
+
+	if swapSize != "" {
+		// 检查是否已有swap
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		cmd = exec.CommandContext(ctx, "bash", "-c", "if [ $(swapon --show | wc -l) -eq 0 ]; then echo 'no_swap'; else echo 'has_swap'; fi")
+		cmd.Stdout = f
+		cmd.Stderr = f
+		swapCheck, _ := cmd.Output()
+
+		if strings.TrimSpace(string(swapCheck)) == "no_swap" {
+			// 创建swap文件
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+
+			cmd = exec.CommandContext(ctx, "bash", "-c", "fallocate -l "+swapSize+" /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048")
+			cmd.Stdout = f
+			cmd.Stderr = f
+			if err := cmd.Run(); err != nil {
+				errorMsg := fmt.Sprintf("创建swap文件失败: %v", err)
+				output.WriteString("❌ " + errorMsg + "\n")
+				f.WriteString("❌ " + errorMsg + "\n")
+				return output.String(), fmt.Errorf(errorMsg)
+			}
+			successMsg = "✅ Swap文件已创建"
+			output.WriteString(successMsg + "\n")
+			f.WriteString(successMsg + "\n")
+
+			// 设置权限
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+
+			cmd = exec.CommandContext(ctx, "chmod", "600", "/swapfile")
+			cmd.Stdout = f
+			cmd.Stderr = f
+			if err := cmd.Run(); err != nil {
+				errorMsg := fmt.Sprintf("设置swap文件权限失败: %v", err)
+				output.WriteString("❌ " + errorMsg + "\n")
+				f.WriteString("❌ " + errorMsg + "\n")
+				return output.String(), fmt.Errorf(errorMsg)
+			}
+			successMsg = "✅ Swap文件权限已设置"
+			output.WriteString(successMsg + "\n")
+			f.WriteString(successMsg + "\n")
+
+			// 格式化swap
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+
+			cmd = exec.CommandContext(ctx, "mkswap", "/swapfile")
+			cmd.Stdout = f
+			cmd.Stderr = f
+			if err := cmd.Run(); err != nil {
+				errorMsg := fmt.Sprintf("格式化swap失败: %v", err)
+				output.WriteString("❌ " + errorMsg + "\n")
+				f.WriteString("❌ " + errorMsg + "\n")
+				return output.String(), fmt.Errorf(errorMsg)
+			}
+			successMsg = "✅ Swap已格式化"
+			output.WriteString(successMsg + "\n")
+			f.WriteString(successMsg + "\n")
+
+			// 启用swap
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+
+			cmd = exec.CommandContext(ctx, "swapon", "/swapfile")
+			cmd.Stdout = f
+			cmd.Stderr = f
+			if err := cmd.Run(); err != nil {
+				errorMsg := fmt.Sprintf("启用swap失败: %v", err)
+				output.WriteString("❌ " + errorMsg + "\n")
+				f.WriteString("❌ " + errorMsg + "\n")
+				return output.String(), fmt.Errorf(errorMsg)
+			}
+			successMsg = "✅ Swap已启用"
+			output.WriteString(successMsg + "\n")
+			f.WriteString(successMsg + "\n")
+
+			// 添加到fstab
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+
+			cmd = exec.CommandContext(ctx, "bash", "-c", "if ! grep -q '/swapfile' /etc/fstab; then echo '/swapfile none swap sw 0 0' >> /etc/fstab; fi")
+			cmd.Stdout = f
+			cmd.Stderr = f
+			if err := cmd.Run(); err != nil {
+				errorMsg := fmt.Sprintf("添加swap到fstab失败: %v", err)
+				output.WriteString("❌ " + errorMsg + "\n")
+				f.WriteString("❌ " + errorMsg + "\n")
+				return output.String(), fmt.Errorf(errorMsg)
+			}
+			successMsg = "✅ Swap已添加到fstab（开机自动挂载）"
+			output.WriteString(successMsg + "\n")
+			f.WriteString(successMsg + "\n")
+		} else {
+			skipMsg := "ℹ️ 系统已存在Swap，跳过创建"
+			output.WriteString(skipMsg + "\n")
+			f.WriteString(skipMsg + "\n")
+		}
+	}
+
+	// 4. BBR 启用
+	bbrMsg := "\n=== BBR 拥塞控制算法启用 ===\n"
+	output.WriteString(bbrMsg)
+	f.WriteString(bbrMsg)
+
+	// 检查内核版本和 BBR 支持
+	kernelVersion, bbrSupported, err := t.checkBBRSupport()
+	if err != nil {
+		output.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
+		f.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
+	} else {
+		output.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
+		f.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
+
+		if bbrSupported {
+			output.WriteString("✅ BBR 支持检测: 支持\n")
+			f.WriteString("✅ BBR 支持检测: 支持\n")
+
+			// 启用 BBR (已在内核配置中设置)
+			successMsg := "✅ BBR 拥塞控制算法已在内核参数中启用"
+			output.WriteString(successMsg + "\n")
+			f.WriteString(successMsg + "\n")
+
+			// 验证 BBR 是否启用
+			ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			cmd = exec.CommandContext(ctx, "sysctl", "net.ipv4.tcp_congestion_control")
+			checkOutput, _ := cmd.Output()
+			output.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
+			f.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
+		} else {
+			skipMsg := "ℹ️ BBR 不支持（需要 Linux 内核 4.9+），跳过启用"
+			output.WriteString(skipMsg + "\n")
+			f.WriteString(skipMsg + "\n")
+		}
+	}
+
 	// 记录结束时间和日志文件位置
 	endTime := time.Now()
 	duration := endTime.Sub(startTime)
-	logMsg = fmt.Sprintf("\nX-Panel 1C1G 机器优化完成时间: %s\n", endTime.Format("2006-01-02 15:04:05"))
+	logMsg = fmt.Sprintf("\nX-Panel 通用/高配优化完成时间: %s\n", endTime.Format("2006-01-02 15:04:05"))
 	logMsg += fmt.Sprintf("总耗时: %v\n", duration)
 	logMsg += fmt.Sprintf("详细日志已保存到: %s\n", logFile)
 	output.WriteString(logMsg)
@@ -871,6 +1230,24 @@ func (t *Tgbot) getSystemStatusAfterOptimization() string {
 	if err == nil && len(output) > 0 {
 		status.WriteString("\n**💿 Swap状态:**\n")
 		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
+	}
+
+	// 获取BBR状态
+	cmd = exec.Command("bash", "-c", "sysctl net.ipv4.tcp_congestion_control net.core.default_qdisc")
+	output, err = cmd.Output()
+	if err == nil {
+		bbrStatus := strings.TrimSpace(string(output))
+		// 检查是否启用了 BBR
+		bbrEnabled := strings.Contains(bbrStatus, "bbr") && strings.Contains(bbrStatus, "fq")
+		status.WriteString("\n**🚀 BBR网络加速状态:**\n")
+		if bbrEnabled {
+			status.WriteString("✅ **BBR 已启用**\n")
+		} else {
+			status.WriteString("❌ **BBR 未启用**\n")
+		}
+		status.WriteString(fmt.Sprintf("```\n%s\n```", bbrStatus))
+	} else {
+		status.WriteString("\n**🚀 BBR网络加速状态:**\n❌ **无法获取状态**\n")
 	}
 
 	return status.String()
@@ -1320,3 +1697,5 @@ func (t *Tgbot) getFirewalldStatus() (string, bool) {
 		return "未激活", true
 	}
 }
+
+

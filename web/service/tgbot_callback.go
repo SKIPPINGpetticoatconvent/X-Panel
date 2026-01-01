@@ -32,6 +32,102 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
+// checkBBRSupport 检查内核版本和 BBR 模块支持
+func (t *Tgbot) checkBBRSupport() (string, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 获取内核版本
+	kernelCmd := exec.CommandContext(ctx, "uname", "-r")
+	kernelOutput, err := kernelCmd.Output()
+	if err != nil {
+		return "", false, fmt.Errorf("获取内核版本失败: %v", err)
+	}
+	kernelVersion := strings.TrimSpace(string(kernelOutput))
+
+	// 解析内核版本号
+	kernelParts := strings.Split(kernelVersion, ".")
+	if len(kernelParts) < 2 {
+		return kernelVersion, false, fmt.Errorf("无法解析内核版本: %s", kernelVersion)
+	}
+
+	majorVersion, err := strconv.Atoi(kernelParts[0])
+	if err != nil {
+		return kernelVersion, false, fmt.Errorf("解析主版本号失败: %v", err)
+	}
+
+	minorVersion, err := strconv.Atoi(strings.Split(kernelParts[1], "-")[0])
+	if err != nil {
+		return kernelVersion, false, fmt.Errorf("解析次版本号失败: %v", err)
+	}
+
+	// 检查内核版本是否支持 BBR (需要 4.9+)
+	supportsBBR := majorVersion > 4 || (majorVersion == 4 && minorVersion >= 9)
+
+	if !supportsBBR {
+		return kernelVersion, false, nil
+	}
+
+	// 检查 BBR 模块是否可用
+	modprobeCtx, modprobeCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer modprobeCancel()
+
+	modprobeCmd := exec.CommandContext(modprobeCtx, "bash", "-c", "modprobe tcp_bbr 2>/dev/null && echo 'supported' || echo 'not_supported'")
+	modprobeOutput, err := modprobeCmd.Output()
+	if err != nil {
+		return kernelVersion, false, fmt.Errorf("检查 BBR 模块失败: %v", err)
+	}
+
+	bbrAvailable := strings.TrimSpace(string(modprobeOutput)) == "supported"
+
+	return kernelVersion, bbrAvailable, nil
+}
+
+// enableBBR 启用 BBR 拥塞控制算法
+func (t *Tgbot) enableBBR() error {
+	// 检查 BBR 支持
+	kernelVersion, bbrSupported, err := t.checkBBRSupport()
+	if err != nil {
+		return fmt.Errorf("检查 BBR 支持失败: %v", err)
+	}
+
+	if !bbrSupported {
+		logger.Info(fmt.Sprintf("BBR 不支持，内核版本: %s，需要 Linux 内核 4.9+", kernelVersion))
+		return fmt.Errorf("BBR 不支持，内核版本 %s，需要 Linux 内核 4.9+", kernelVersion)
+	}
+
+	// 创建 BBR 配置文件
+	bbrConfig := `# ===== BBR 拥塞控制算法配置 =====
+# 启用 BBR 拥塞控制算法以提升网络性能
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-bbr-optimize.conf << 'EOF'
+%s
+EOF`, bbrConfig))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("创建 BBR 配置文件失败: %v, 输出: %s", err, string(output))
+	}
+
+	// 应用 BBR 设置
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-bbr-optimize.conf")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("应用 BBR 设置失败: %v, 输出: %s", err, string(output))
+	}
+
+	logger.Info("BBR 拥塞控制算法已成功启用")
+	return nil
+}
+
 func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool) {
 	chatId := callbackQuery.Message.GetChat().ID
 
@@ -1362,6 +1458,10 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "optimize_1c1g_confirm":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在执行1C1G优化...")
 		t.executeOptimization1C1G(chatId, callbackQuery.Message.GetMessageID())
+
+	case "optimize_generic":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在执行通用/高配优化...")
+		t.executeGenericOptimization(chatId, callbackQuery.Message.GetMessageID())
 
 	// 【新增代码】: 处理防火墙管理相关回调
 	case "firewall_menu":
