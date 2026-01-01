@@ -1172,18 +1172,18 @@ func (s *ServerService) InstallSubconverter() error {
 	go func() {
 
 		// 【新增功能】：执行端口放行操作
-		var ufwWarning string
-		if ufwErr := s.openSubconverterPorts(); ufwErr != nil {
+		var firewallWarning string
+		if firewallErr := s.openSubconverterPorts(); firewallErr != nil {
 			// 不中断流程，只生成警告消息
-			logger.Warningf("自动放行 Subconverter 端口失败: %v", ufwErr)
-			ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
+			logger.Warningf("自动放行 Subconverter 端口失败: %v", firewallErr)
+			firewallWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 firewalld 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", firewallErr)
 		}
 
 		// 〔中文注释〕: 检查全局的 TgBot 实例是否存在并且正在运行
 		if s.tgService == nil || !s.tgService.IsRunning() {
 			logger.Warning("TgBot 未运行，无法发送【订阅转换】状态通知。")
 			// 即使机器人未运行，安装流程也应继续，只是不发通知
-			ufwWarning = "" // 如果机器人不在线，不发送任何警告/消息
+			firewallWarning = "" // 如果机器人不在线，不发送任何警告/消息
 		}
 
 		// 脚本路径为 /usr/bin/x-ui
@@ -1220,8 +1220,8 @@ func (s *ServerService) InstallSubconverter() error {
 		} else {
 
 			// 【新增逻辑】：如果之前端口放行失败，先发送警告消息
-			if ufwWarning != "" {
-				s.tgService.SendMessage(ufwWarning)
+			if firewallWarning != "" {
+				s.tgService.SendMessage(firewallWarning)
 			}
 
 			// 安装成功后，发送通知到 TG 机器人
@@ -1257,33 +1257,34 @@ func (s *ServerService) InstallSubconverter() error {
 	return nil // 立即返回，表示指令已接收
 }
 
-// openSubconverterPorts 检查/安装 ufw 并放行 8000 和 15268 端口
+// openSubconverterPorts 检查/安装 firewalld 并放行 8000 和 15268 端口
 func (s *ServerService) openSubconverterPorts() error {
 	// 【中文注释】: Shell 脚本更新，增加了默认端口列表和相应的放行逻辑。
 	shellCommand := `
 	PORTS_TO_OPEN="8000 15268"
 	# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
 	DEFAULT_PORTS="22 80 443 13688 8443"
-	
+
 	echo "脚本启动：正在为订阅转换服务配置防火墙..."
 
-	# 1. 检查/安装 ufw
-	if ! command -v ufw &>/dev/null; then
-		echo "ufw 防火墙未安装，正在安装..."
+	# 1. 检查/安装 firewalld
+	if ! command -v firewall-cmd &> /dev/null; then
+		echo "firewalld 防火墙未安装，正在安装..."
 		# 静默更新和安装
 		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
-		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败或权限不足。"; exit 1; fi
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq firewalld >/dev/null
+		if [ $? -ne 0 ]; then echo "❌ firewalld 安装失败或权限不足。"; exit 1; fi
+		echo "✅ firewalld 安装成功。"
 	fi
 
 	# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
 	echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
 	for p in $DEFAULT_PORTS; do
 		# 检查规则是否已存在，不存在时才添加，避免重复
-		if ! ufw status | grep -qw "$p/tcp"; then
+		if ! firewall-cmd --list-ports | grep -qw "$p/tcp"; then
 			echo "端口 $p/tcp 未放行，正在添加规则..."
-			ufw allow $p/tcp >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
+			firewall-cmd --zone=public --add-port=$p/tcp --permanent >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ firewalld 端口 $p 放行失败。"; exit 1; fi
 		else
 			echo "端口 $p/tcp 规则已存在，跳过。"
 		fi
@@ -1294,23 +1295,33 @@ func (s *ServerService) openSubconverterPorts() error {
 	# 3. 放行 Subconverter 自身需要的端口
 	echo "正在检查并放行订阅转换服务端口: $PORTS_TO_OPEN"
 	for port in $PORTS_TO_OPEN; do
-		if ! ufw status | grep -qw "$port"; then
-			echo "正在执行 ufw allow $port..."
-			ufw allow $port >/dev/null
-			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $port 放行失败。"; exit 1; fi
+		if ! firewall-cmd --list-ports | grep -qw "$port/tcp"; then
+			echo "正在执行 firewall-cmd --zone=public --add-port=$port/tcp --permanent..."
+			firewall-cmd --zone=public --add-port=$port/tcp --permanent >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ firewalld 端口 $port 放行失败。"; exit 1; fi
+			echo "✅ 端口 $port 已成功放行。"
 		else
 			echo "端口 $port 规则已存在，跳过。"
 		fi
 	done
 
 	# 4. 检查/激活防火墙
-	if ! ufw status | grep -q "Status: active"; then
-		echo "ufw 状态：未激活。正在尝试激活..."
-		ufw --force enable
-		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
+	if ! systemctl is-active --quiet firewalld; then
+		echo "firewalld 状态：未激活。正在启动..."
+		systemctl start firewalld
+		systemctl enable firewalld
+		if [ $? -ne 0 ]; then echo "❌ firewalld 激活失败。"; exit 1; fi
+		echo "✅ firewalld 已成功激活。"
+	else
+		echo "firewalld 状态已经是激活状态。"
 	fi
-    
-    echo "✅ 所有端口 ($DEFAULT_PORTS $PORTS_TO_OPEN) 已成功放行/检查。"
+
+	# 重新加载规则
+	firewall-cmd --reload
+	if [ $? -ne 0 ]; then echo "❌ firewalld 重新加载失败。"; exit 1; fi
+	echo "✅ firewalld 规则已重新加载。"
+
+    echo "🎉 所有端口 ($DEFAULT_PORTS $PORTS_TO_OPEN) 已成功放行/检查。"
     exit 0
 	`
 
@@ -1324,14 +1335,14 @@ func (s *ServerService) openSubconverterPorts() error {
 
 	if err != nil {
 		// 如果 Shell 命令返回非零退出码，则返回错误
-		return fmt.Errorf("ufw 端口放行失败: %v. 脚本输出: %s", err, logOutput)
+		return fmt.Errorf("firewalld 端口放行失败: %v. 脚本输出: %s", err, logOutput)
 	}
 
 	return nil
 }
 
 // 【新增方法实现】: 后台前端开放指定端口
-// OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
+// OpenPort 供前端调用，自动检查/安装 firewalld 并放行指定的端口。
 // 〔中文注释〕: 整个函数逻辑被放入一个 go func() 协程中，实现异步后台执行。
 // 〔中文注释〕: 函数签名不再返回 error，因为它会立即返回，无法得知后台任务的最终结果。
 func (s *ServerService) OpenPort(port string) {
@@ -1349,9 +1360,9 @@ func (s *ServerService) OpenPort(port string) {
 
 		logger.Infof("开始为端口 %s 配置防火墙规则", port)
 
-		// 3. 检查/安装 ufw
-		if err := s.checkAndInstallUFW(); err != nil {
-			logger.Errorf("ufw 检查/安装失败: %v", err)
+		// 3. 检查/安装 firewalld
+		if err := s.checkAndInstallFirewalld(); err != nil {
+			logger.Errorf("firewalld 检查/安装失败: %v", err)
 			return
 		}
 
@@ -1370,7 +1381,7 @@ func (s *ServerService) OpenPort(port string) {
 		}
 
 		// 6. 确保防火墙激活
-		if err := s.ensureUFWActive(); err != nil {
+		if err := s.ensureFirewalldActive(); err != nil {
 			logger.Errorf("激活防火墙失败: %v", err)
 			return
 		}
@@ -1379,15 +1390,15 @@ func (s *ServerService) OpenPort(port string) {
 	}()
 }
 
-// checkAndInstallUFW 检查 ufw 是否存在，如果不存在则安装
-func (s *ServerService) checkAndInstallUFW() error {
-	// 检查 ufw 是否存在
-	cmd := exec.Command("which", "ufw")
+// checkAndInstallFirewalld 检查 firewalld 是否存在，如果不存在则安装
+func (s *ServerService) checkAndInstallFirewalld() error {
+	// 检查 firewalld 是否存在
+	cmd := exec.Command("which", "firewall-cmd")
 	if err := cmd.Run(); err == nil {
-		return nil // ufw 已存在
+		return nil // firewalld 已存在
 	}
 
-	logger.Info("ufw 未安装，正在安装...")
+	logger.Info("firewalld 未安装，正在安装...")
 
 	// 更新包列表
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -1398,11 +1409,11 @@ func (s *ServerService) checkAndInstallUFW() error {
 		return fmt.Errorf("apt-get update 失败: %v, 输出: %s", err, string(output))
 	}
 
-	// 安装 ufw
-	cmd = exec.CommandContext(ctx, "apt-get", "install", "-y", "-qq", "ufw")
+	// 安装 firewalld
+	cmd = exec.CommandContext(ctx, "apt-get", "install", "-y", "-qq", "firewalld")
 	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("apt-get install ufw 失败: %v, 输出: %s", err, string(output))
+		return fmt.Errorf("apt-get install firewalld 失败: %v, 输出: %s", err, string(output))
 	}
 
 	return nil
@@ -1410,11 +1421,11 @@ func (s *ServerService) checkAndInstallUFW() error {
 
 // allowPortIfNotExists 检查端口是否已放行，如果未放行则添加规则
 func (s *ServerService) allowPortIfNotExists(port string) error {
-	// 获取当前 ufw 状态
-	cmd := exec.Command("ufw", "status")
+	// 获取当前 firewalld 状态
+	cmd := exec.Command("firewall-cmd", "--list-ports")
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("获取 ufw 状态失败: %v", err)
+		return fmt.Errorf("获取 firewalld 状态失败: %v", err)
 	}
 
 	// 检查端口是否已放行
@@ -1427,37 +1438,48 @@ func (s *ServerService) allowPortIfNotExists(port string) error {
 	// 放行端口
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd = exec.CommandContext(ctx, "ufw", "allow", port)
+	cmd = exec.CommandContext(ctx, "firewall-cmd", "--zone=public", "--add-port="+port+"/tcp", "--permanent")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("ufw allow %s 失败: %v, 输出: %s", port, err, string(output))
+		return fmt.Errorf("firewall-cmd --zone=public --add-port=%s/tcp --permanent 失败: %v, 输出: %s", port, err, string(output))
+	}
+
+	// 重新加载规则
+	cmd = exec.CommandContext(ctx, "firewall-cmd", "--reload")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("firewall-cmd --reload 失败: %v, 输出: %s", err, string(output))
 	}
 
 	logger.Infof("端口 %s 放行成功", port)
 	return nil
 }
 
-// ensureUFWActive 确保 ufw 防火墙已激活
-func (s *ServerService) ensureUFWActive() error {
-	// 检查 ufw 状态
-	cmd := exec.Command("ufw", "status")
+// ensureFirewalldActive 确保 firewalld 防火墙已激活
+func (s *ServerService) ensureFirewalldActive() error {
+	// 检查 firewalld 状态
+	cmd := exec.Command("systemctl", "is-active", "firewalld")
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("获取 ufw 状态失败: %v", err)
+		return fmt.Errorf("获取 firewalld 状态失败: %v", err)
 	}
 
-	if strings.Contains(string(output), "Status: active") {
+	if strings.TrimSpace(string(output)) == "active" {
 		return nil // 已激活
 	}
 
 	// 激活防火墙
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd = exec.CommandContext(ctx, "ufw", "--force", "enable")
+	cmd = exec.CommandContext(ctx, "systemctl", "enable", "firewalld")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("ufw enable 失败: %v, 输出: %s", err, string(output))
+		return fmt.Errorf("systemctl enable firewalld 失败: %v, 输出: %s", err, string(output))
 	}
 
-	logger.Info("ufw 防火墙已激活")
+	cmd = exec.CommandContext(ctx, "systemctl", "start", "firewalld")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("systemctl start firewalld 失败: %v, 输出: %s", err, string(output))
+	}
+
+	logger.Info("firewalld 防火墙已激活")
 	return nil
 }
 

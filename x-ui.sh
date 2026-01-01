@@ -680,40 +680,39 @@ firewall_menu() {
         open_ports
         ;;
     2)
-        sudo ufw status
+        sudo firewall-cmd --list-all
         ;;
     3)
         delete_ports
         ;;
     4)
-        sudo ufw disable
+        sudo systemctl stop firewalld
         ;;
     *) echo "无效选项" ;;
     esac
 }
 
 open_ports() {
-    if ! command -v ufw &>/dev/null; then
-        echo "ufw 防火墙未安装，正在安装..."
+    if ! command -v firewall-cmd &>/dev/null; then
+        echo "firewalld 防火墙未安装，正在安装..."
         apt-get update
-        apt-get install -y ufw
+        apt-get install -y firewalld
     else
-        echo "ufw 防火墙已安装"
+        echo "firewalld 防火墙已安装"
     fi
 
-    # Check if the firewall is inactive
-    if ufw status | grep -q "Status: active"; then
-        echo "防火墙已经激活"
-    else
-        # Open the necessary ports
-        ufw allow ssh
-        ufw allow http
-        ufw allow https
-        ufw allow 13688/tcp
-
-        # Enable the firewall
-        ufw --force enable
+    # Check if the firewall is inactive and start it
+    if ! systemctl is-active --quiet firewalld; then
+        echo "防火墙未激活，正在启动..."
+        systemctl start firewalld
+        systemctl enable firewalld
     fi
+
+    # Open the necessary ports
+    firewall-cmd --zone=public --add-port=22/tcp --permanent
+    firewall-cmd --zone=public --add-port=80/tcp --permanent
+    firewall-cmd --zone=public --add-port=443/tcp --permanent
+    firewall-cmd --zone=public --add-port=13688/tcp --permanent
 
     # Prompt the user to enter a list of ports
     read -p "输入您要打开的端口（例如 80,443,13688 或端口范围 400-500): " ports
@@ -724,7 +723,7 @@ open_ports() {
         exit 1
     fi
 
-    # Open the specified ports using ufw
+    # Open the specified ports using firewalld
     IFS=',' read -ra PORT_LIST <<<"$ports"
     for port in "${PORT_LIST[@]}"; do
         if [[ $port == *-* ]]; then
@@ -733,15 +732,18 @@ open_ports() {
             end_port=$(echo $port | cut -d'-' -f2)
             # Loop through the range and open each port
             for ((i = start_port; i <= end_port; i++)); do
-                ufw allow $i
+                firewall-cmd --zone=public --add-port=$i/tcp --permanent
             done
         else
-            ufw allow "$port"
+            firewall-cmd --zone=public --add-port=$port/tcp --permanent
         fi
     done
 
+    # Reload firewall rules
+    firewall-cmd --reload
+
     # Confirm that the ports are open
-    ufw status | grep $ports
+    firewall-cmd --list-ports
 }
 
 delete_ports() {
@@ -754,7 +756,7 @@ delete_ports() {
         exit 1
     fi
 
-    # Delete the specified ports using ufw
+    # Delete the specified ports using firewalld
     IFS=',' read -ra PORT_LIST <<<"$ports"
     for port in "${PORT_LIST[@]}"; do
         if [[ $port == *-* ]]; then
@@ -763,16 +765,19 @@ delete_ports() {
             end_port=$(echo $port | cut -d'-' -f2)
             # Loop through the range and delete each port
             for ((i = start_port; i <= end_port; i++)); do
-                ufw delete allow $i
+                firewall-cmd --zone=public --remove-port=$i/tcp --permanent
             done
         else
-            ufw delete allow "$port"
+            firewall-cmd --zone=public --remove-port=$port/tcp --permanent
         fi
     done
 
+    # Reload firewall rules
+    firewall-cmd --reload
+
     # Confirm that the ports are deleted
     echo "删除指定端口:"
-    ufw status | grep $ports
+    firewall-cmd --list-ports
 }
 
 update_geo() {

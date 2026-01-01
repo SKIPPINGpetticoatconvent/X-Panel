@@ -464,7 +464,7 @@ func (s *Server) Start() (err error) {
 	// 修改 s.httpServer 的初始化代码
 	s.httpServer = &http.Server{
 		Handler: engine,
-		// 【新增】：设置 120 秒的读写超时，确保 ufw 命令有足够的时间完成
+		// 【新增】：设置 120 秒的读写超时，确保 firewalld 命令有足够的时间完成
 		ReadTimeout:  120 * time.Second,
 		WriteTimeout: 120 * time.Second,
 	}
