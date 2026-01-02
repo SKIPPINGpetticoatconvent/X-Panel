@@ -220,6 +220,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	defer gzipReader.Close()
 
 	tarReader := tar.NewReader(gzipReader)
+	var fileNames []string
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -229,7 +230,9 @@ func downloadAndExtractPanel(url string) (string, error) {
 			return "", fmt.Errorf("读取tar失败: %v", err)
 		}
 
-		if header.Name == "x-ui" {
+		fileNames = append(fileNames, header.Name)
+
+		if filepath.Base(header.Name) == "x-ui" && header.Typeflag == tar.TypeReg {
 			// 提取二进制文件到临时位置
 			tempBin, err := os.CreateTemp("", "x-ui-")
 			if err != nil {
@@ -243,10 +246,18 @@ func downloadAndExtractPanel(url string) (string, error) {
 				return "", fmt.Errorf("提取二进制文件失败: %v", err)
 			}
 
+			// 设置执行权限
+			err = os.Chmod(tempBin.Name(), 0755)
+			if err != nil {
+				os.Remove(tempBin.Name())
+				return "", fmt.Errorf("设置临时二进制文件执行权限失败: %v", err)
+			}
+
 			return tempBin.Name(), nil
 		}
 	}
 
+	logger.Infof("压缩包中的文件列表: %v", fileNames)
 	return "", fmt.Errorf("在tar.gz中未找到x-ui二进制文件")
 }
 
