@@ -901,6 +901,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				}
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
 			case "log_settings":
+				t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
 				t.showLogSettings(chatId)
 				case "add_client_to":
 					// assign default values to clients variables
@@ -1568,6 +1569,9 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbotDeleteAfter(chatId, "已取消 Geo 数据更新操作。", 3)
 
 	// 日志设置相关回调
+	case "log_settings":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
+		t.showLogSettings(chatId)
 	case "toggle_tg_forward":
 		current, err := t.settingService.GetTgLogForwardEnabled()
 		if err != nil {
