@@ -872,15 +872,26 @@ net.core.default_qdisc = fq
 fs.file-max = 1000000
 `
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	// 检查配置文件是否存在，如果存在则备份
+	configFilePath := "/etc/sysctl.d/99-generic-optimize.conf"
+	backupFilePath := configFilePath + ".bak"
+	if _, err := os.Stat(configFilePath); err == nil {
+		// 文件存在，进行备份
+		output.WriteString("检测到现有内核配置文件，正在备份...\n")
+		f.WriteString("检测到现有内核配置文件，正在备份...\n")
+		if err := os.Rename(configFilePath, backupFilePath); err != nil {
+			errorMsg := fmt.Sprintf("备份内核配置文件失败: %v", err)
+			output.WriteString("⚠️ " + errorMsg + "\n")
+			f.WriteString("⚠️ " + errorMsg + "\n")
+			// 继续执行，不返回错误
+		} else {
+			output.WriteString("✅ 内核配置文件已备份为 " + backupFilePath + "\n")
+			f.WriteString("✅ 内核配置文件已备份为 " + backupFilePath + "\n")
+		}
+	}
 
-	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-generic-optimize.conf << 'EOF'
-%s
-EOF`, kernelConfig))
-	cmd.Stdout = f
-	cmd.Stderr = f
-	if err := cmd.Run(); err != nil {
+	// 使用安全写入方式创建内核配置文件
+	if err := sys.AtomicWriteFile(configFilePath, []byte(kernelConfig), 0644); err != nil {
 		errorMsg := fmt.Sprintf("创建内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
@@ -891,10 +902,10 @@ EOF`, kernelConfig))
 	f.WriteString(successMsg + "\n")
 
 	// 应用内核参数
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-generic-optimize.conf")
+	cmd := exec.CommandContext(ctx, "sysctl", "-p", configFilePath)
 	cmd.Stdout = f
 	cmd.Stderr = f
 	if err := cmd.Run(); err != nil {
@@ -907,35 +918,27 @@ EOF`, kernelConfig))
 	output.WriteString(successMsg + "\n")
 	f.WriteString(successMsg + "\n")
 
+
+
 	// 2. 文件描述符限制优化
 	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
 	output.WriteString(limitsMsg)
 	f.WriteString(limitsMsg)
 
-	limitsConfig := `* soft nofile 65535
-* hard nofile 65535
-* soft nproc 65535
-* hard nproc 65535
-root soft nofile 65535
-root hard nofile 65535`
+	limitsConfig := `* soft nofile 1000000
+* hard nofile 1000000
+* soft nproc 1000000
+* hard nproc 1000000
+root soft nofile 1000000
+root hard nofile 1000000`
 
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	cmd = exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat >> /etc/security/limits.conf << 'EOF'
-
-# === Generic High-Performance Optimization ===
-%s
-EOF`, limitsConfig))
-	cmd.Stdout = f
-	cmd.Stderr = f
-	if err := cmd.Run(); err != nil {
+	if err := sys.WriteConfigBlock("/etc/security/limits.conf", "# === Generic High-Performance Optimization ===", "", limitsConfig); err != nil {
 		errorMsg := fmt.Errorf("更新limits.conf失败: %v", err)
 		output.WriteString("❌ " + errorMsg.Error() + "\n")
 		f.WriteString("❌ " + errorMsg.Error() + "\n")
 		return output.String(), errorMsg
 	}
-	successMsg = "✅ 文件描述符限制已优化"
+	successMsg = "✅ 文件描述符限制已优化至 100万"
 	output.WriteString(successMsg + "\n")
 	f.WriteString(successMsg + "\n")
 
