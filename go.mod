@@ -30,7 +30,7 @@ require (
 	golang.org/x/text v0.32.0
 	google.golang.org/grpc v1.77.0
 	gorm.io/driver/sqlite v1.6.0
-	gorm.io/gorm v1.31.0
+	gorm.io/gorm v1.31.1
 )
 
 require (
