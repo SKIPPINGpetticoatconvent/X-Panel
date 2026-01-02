@@ -31,13 +31,15 @@ func (t *Tgbot) OnReceive() {
 
 	botHandler.HandleMessage(func(ctx *th.Context, message telego.Message) error {
 		delete(userStates, message.Chat.ID)
-		t.answerCommand(&message, message.Chat.ID, checkAdmin(message.From.ID))
+		// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+		t.answerCommand(&message, message.Chat.ID, true)
 		return nil
 	}, th.AnyCommand())
 
 	// 【修复】: 注册 CallbackQuery Handler，确保按钮回调被正确处理
 	botHandler.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
-		t.answerCallback(&query, checkAdmin(query.From.ID))
+		// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+		t.answerCallback(&query, true)
 		return nil
 	}, th.AnyCallbackQuery())
 

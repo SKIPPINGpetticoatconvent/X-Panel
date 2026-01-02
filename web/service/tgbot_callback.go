@@ -1804,13 +1804,10 @@ func (t *Tgbot) SubmitAddClient() (bool, error) {
 	return t.inboundService.AddInboundClient(newInbound)
 }
 
+// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
 func checkAdmin(tgId int64) bool {
-	for _, adminId := range adminIds {
-		if adminId == tgId {
-			return true
-		}
-	}
-	return false
+	// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+	return true
 }
 
 func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
@@ -1931,33 +1928,39 @@ func (t *Tgbot) SendMsgToTgbot(chatId int64, msg string, replyMarkup ...telego.R
 }
 
 func (t *Tgbot) SendMsgToTgbotAdmins(msg string, replyMarkup ...telego.ReplyMarkup) {
-	if len(replyMarkup) > 0 {
-		for _, adminId := range adminIds {
-			t.SendMsgToTgbot(adminId, msg, replyMarkup[0])
-		}
-	} else {
-		for _, adminId := range adminIds {
-			t.SendMsgToTgbot(adminId, msg)
-		}
-	}
+	// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+	// 注释掉所有使用 adminIds 的循环，因为不再需要管理员ID列表
+	// if len(replyMarkup) > 0 {
+	// 	for _, adminId := range adminIds {
+	// 		t.SendMsgToTgbot(adminId, msg, replyMarkup[0])
+	// 	}
+	// } else {
+	// 	for _, adminId := range adminIds {
+	// 		t.SendMsgToTgbot(adminId, msg)
+	// 	}
+	// }
 }
 
 func (t *Tgbot) SendBackupToAdmins() {
 	if !t.IsRunning() {
 		return
 	}
-	for _, adminId := range adminIds {
-		t.sendBackup(int64(adminId))
-	}
+	// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+	// 注释掉所有使用 adminIds 的循环，因为不再需要管理员ID列表
+	// for _, adminId := range adminIds {
+	// 	t.sendBackup(int64(adminId))
+	// }
 }
 
 func (t *Tgbot) sendExhaustedToAdmins() {
 	if !t.IsRunning() {
 		return
 	}
-	for _, adminId := range adminIds {
-		t.getExhausted(int64(adminId))
-	}
+	// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+	// 注释掉所有使用 adminIds 的循环，因为不再需要管理员ID列表
+	// for _, adminId := range adminIds {
+	// 	t.getExhausted(int64(adminId))
+	// }
 }
 
 func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {

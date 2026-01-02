@@ -41,7 +41,8 @@ func (t *Tgbot) Stop() {
 	}
 	logger.Info("Stop Telegram receiver ...")
 	isRunning = false
-	adminIds = nil
+	// TG Bot不需要检查是否是管理员,因为TG Bot默认就是给管理员的
+	// adminIds = nil // 注释掉，因为不再需要管理员ID列表
 }
 
 func (t *Tgbot) encodeQuery(query string) string {
