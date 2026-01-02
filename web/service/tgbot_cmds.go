@@ -149,6 +149,22 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 	case "xrayversion":
 		onlyMessage = true
 		t.sendXrayVersionOptions(chatId)
+	case "geoip":
+		onlyMessage = true
+		if isAdmin {
+			// 发送Geo数据更新确认消息
+			confirmKeyboard := tu.InlineKeyboard(
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("✅ 是，开始更新").WithCallbackData(t.encodeQuery("update_geodata_confirm")),
+				),
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("❌ 否，取消").WithCallbackData(t.encodeQuery("update_geodata_cancel")),
+				),
+			)
+			t.SendMsgToTgbot(chatId, "🌍 **Geo 数据更新**\n\n这将更新以下文件:\n• geoip.dat\n• geosite.dat\n• geoip_IR.dat\n• geosite_IR.dat\n• geoip_RU.dat\n• geosite_RU.dat\n\n更新完成后会自动重启 Xray 服务。\n\n⚠️ **注意**: 更新过程可能需要几分钟时间，期间请耐心等待。", confirmKeyboard)
+		} else {
+			handleUnknownCommand()
+		}
 	default:
 		handleUnknownCommand()
 	}

@@ -1487,6 +1487,25 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		t.SendMsgToTgbotDeleteAfter(chatId, "已取消面板更新操作。", 3)
 
+	case "update_geodata_ask":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌍 准备更新 Geo 数据...")
+		confirmKeyboard := tu.InlineKeyboard(
+			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("✅ 确认更新").WithCallbackData(t.encodeQuery("update_geodata_confirm")),
+			),
+			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("❌ 取消").WithCallbackData(t.encodeQuery("update_geodata_cancel")),
+			),
+		)
+		t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), confirmKeyboard)
+		text := "🌍 **Geo 数据更新确认**\n\n" +
+			"这将从官方源下载最新的 GeoIP 和 GeoSite 数据，并自动重启 Xray 服务。\n\n" +
+			"⚠️ **注意：**\n" +
+			"• 更新期间 Xray 服务会短暂中断\n" +
+			"• 下载可能需要一些时间，请耐心等待\n\n" +
+			"确认要继续吗？"
+		t.SendMsgToTgbot(chatId, text, confirmKeyboard)
+
 	case "firewall_check_status":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔍 正在检测防火墙状态...")
 		t.checkFirewallStatus(chatId)
@@ -1524,6 +1543,27 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "firewall_open_xpanel_ports":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在开放 X-Panel 端口...")
 		t.openXPanelPorts(chatId)
+
+	// 【新增代码】: 处理 Geo 数据更新相关回调
+	case "update_geodata_confirm":
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 指令已发送")
+		t.SendMsgToTgbot(chatId, "🌍 **Geo 数据更新任务已在后台启动**\n\n⏳ 请稍候，更新完成后将收到通知...")
+
+		// 调用 ServerService 的 UpdateGeoData 方法
+		if t.serverService != nil {
+			err := t.serverService.UpdateGeoData()
+			if err != nil {
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 发送 Geo 数据更新指令失败: %v", err))
+			}
+		} else {
+			t.SendMsgToTgbot(chatId, "❌ 服务未初始化，无法执行更新")
+		}
+
+	case "update_geodata_cancel":
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
+		t.SendMsgToTgbotDeleteAfter(chatId, "已取消 Geo 数据更新操作。", 3)
 	}
 }
 
@@ -1726,6 +1766,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
 			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🌍 更新 Geo 数据").WithCallbackData(t.encodeQuery("update_geodata_ask")),
 		),
 		// VPS推荐按钮已移除
 		// TODOOOOOOOOOOOOOO: Add restart button here.

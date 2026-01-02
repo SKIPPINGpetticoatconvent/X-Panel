@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"x-ui/config"
 	"x-ui/logger"
 )
 
@@ -261,119 +262,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	return "", fmt.Errorf("在tar.gz中未找到x-ui二进制文件")
 }
 
-// updateXrayCore 下载并更新 Xray 核心
-func updateXrayCore(arch string) error {
-	// 从 Xray 官方仓库下载最新版本
-	xrayURL := "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-" + arch + ".zip"
 
-	logger.Infof("开始下载 Xray 核心: %s", xrayURL)
-
-	// 下载 Xray
-	tempFile, err := os.CreateTemp("", "xray-*.zip")
-	if err != nil {
-		return fmt.Errorf("创建 Xray 临时文件失败: %v", err)
-	}
-	defer os.Remove(tempFile.Name())
-	defer tempFile.Close()
-
-	client := &http.Client{Timeout: 120 * time.Second}
-	req, err := http.NewRequest("GET", xrayURL, nil)
-	if err != nil {
-		return fmt.Errorf("创建 Xray 下载请求失败: %v", err)
-	}
-	req.Header.Set("User-Agent", "X-Panel/1.0")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("Xray 下载失败: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Xray 下载失败，状态码: %d", resp.StatusCode)
-	}
-
-	_, err = io.Copy(tempFile, resp.Body)
-	if err != nil {
-		return fmt.Errorf("写入 Xray 文件失败: %v", err)
-	}
-
-	// 解压并安装 Xray
-	installDir := "/usr/local/x-ui/bin"
-	if _, err := os.Stat(installDir); os.IsNotExist(err) {
-		os.MkdirAll(installDir, 0755)
-	}
-
-	// 使用 unzip 命令解压 (需要确保 unzip 已安装)
-	tempDir, err := os.MkdirTemp("", "xray-extract-")
-	if err != nil {
-		return fmt.Errorf("创建解压目录失败: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	cmd := exec.Command("unzip", "-o", tempFile.Name(), "-d", tempDir)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("解压 Xray 失败: %v, 输出: %s", err, string(output))
-	}
-
-	// 查找解压后的 Xray 二进制文件
-	var xrayBin string
-	entries, err := os.ReadDir(tempDir)
-	if err != nil {
-		return fmt.Errorf("读取解压目录失败: %v", err)
-	}
-
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), "xray") && !strings.HasSuffix(entry.Name(), ".sig") {
-			xrayBin = filepath.Join(tempDir, entry.Name())
-			break
-		}
-	}
-
-	if xrayBin == "" {
-		return fmt.Errorf("在解压文件中未找到 Xray 二进制文件")
-	}
-
-	// 处理 ARM 架构的文件重命名
-	targetName := "xray-linux-" + arch
-	if arch == "armv5" || arch == "armv6" || arch == "armv7" {
-		targetName = "xray-linux-arm"
-	}
-
-	targetPath := filepath.Join(installDir, targetName)
-	backupPath := filepath.Join(installDir, targetName+".bak")
-
-	// 备份现有 Xray
-	if _, err := os.Stat(targetPath); err == nil {
-		err := exec.Command("cp", targetPath, backupPath).Run()
-		if err != nil {
-			logger.Warningf("备份 Xray 失败: %v", err)
-		} else {
-			logger.Info("成功备份 Xray 核心")
-		}
-	}
-
-	// 移动新 Xray 到目标位置
-	err = exec.Command("cp", xrayBin, targetPath).Run()
-	if err != nil {
-		// 恢复备份
-		if _, err2 := os.Stat(backupPath); err2 == nil {
-			exec.Command("cp", backupPath, targetPath).Run()
-			logger.Warning("Xray 更新失败，已恢复备份")
-		}
-		return fmt.Errorf("更新 Xray 失败: %v", err)
-	}
-
-	// 设置执行权限
-	err = os.Chmod(targetPath, 0755)
-	if err != nil {
-		return fmt.Errorf("设置 Xray 执行权限失败: %v", err)
-	}
-
-	logger.Info("成功更新 Xray 核心")
-	return nil
-}
 
 // replacePanelBinary 备份并替换面板二进制文件
 func replacePanelBinary(newBinPath string) error {
@@ -512,19 +401,7 @@ func (s *ServerService) UpdatePanel(version string) error {
 		}
 
 		if updateErr == nil {
-			// 6. 更新 Xray 核心
-			logger.Info("开始更新 Xray 核心...")
-			err := updateXrayCore(detectedArch)
-			if err != nil {
-				logger.Warningf("更新 Xray 核心失败，继续其他步骤: %v", err)
-				// 不设为致命错误，让更新继续
-			} else {
-				logger.Info("Xray 核心更新成功")
-			}
-		}
-
-		if updateErr == nil {
-			// 7. 备份并替换面板二进制文件 (热替换)
+			// 6. 备份并替换面板二进制文件 (热替换)
 			err := replacePanelBinary(tempBinPath)
 			if err != nil {
 				updateErr = fmt.Errorf("替换面板二进制文件失败: %v", err)
@@ -533,7 +410,7 @@ func (s *ServerService) UpdatePanel(version string) error {
 		}
 
 		if updateErr == nil {
-			// 8. 执行数据库迁移
+			// 7. 执行数据库迁移
 			logger.Info("执行数据库迁移...")
 			err := runMigrationCommand()
 			if err != nil {
@@ -545,7 +422,7 @@ func (s *ServerService) UpdatePanel(version string) error {
 		}
 
 		if updateErr == nil {
-			// 9. 重新加载 systemd 配置并重启服务
+			// 8. 重新加载 systemd 配置并重启服务
 			logger.Info("重新加载 systemd 配置并重启面板服务...")
 			cmd := exec.Command("systemctl", "daemon-reload")
 			output, err := cmd.CombinedOutput()
@@ -572,11 +449,11 @@ func (s *ServerService) UpdatePanel(version string) error {
 			os.Remove(tempBinPath)
 		}
 
-		// 11. 发送结果通知
+		// 9. 发送结果通知
 		if tgAvailable {
 			if updateErr == nil {
 				// 更新成功通知
-				successMessage := fmt.Sprintf("🎉 **X-Panel 更新成功！**\n\n版本: `%s`\n✅ 脚本已更新\n✅ 面板二进制已替换\n✅ Xray 核心已更新\n🔄 服务已成功重启\n✨ 感谢您的耐心等待", version)
+				successMessage := fmt.Sprintf("🎉 **X-Panel 更新成功！**\n\n版本: `%s`\n✅ 脚本已更新\n✅ 面板二进制已替换\n🔄 服务已成功重启\n✨ 感谢您的耐心等待", version)
 				if err := s.tgService.SendMessage(successMessage); err != nil {
 					logger.Warningf("发送X-Panel更新成功通知失败: %v", err)
 				}
@@ -593,6 +470,161 @@ func (s *ServerService) UpdatePanel(version string) error {
 			logger.Errorf("X-Panel更新失败: %v", updateErr)
 		} else {
 			logger.Infof("X-Panel更新成功，版本: %s", version)
+		}
+	}()
+
+	return nil
+}
+
+// UpdateGeoData 更新 GeoIP 和 GeoSite 数据文件
+func (s *ServerService) UpdateGeoData() error {
+	// 启动异步任务进行 Geo 数据更新，避免阻塞HTTP请求
+	go func() {
+		logger.Info("开始异步更新 GeoIP 和 GeoSite 数据")
+
+		// 检查Telegram服务是否可用
+		tgAvailable := s.tgService != nil && s.tgService.IsRunning()
+
+		// 1. 发送开始通知
+		if tgAvailable {
+			startMessage := "🔄 **开始更新 Geo 数据**\n\n正在下载最新的 geoip.dat 和 geosite.dat 文件...\n\n⏳ 请稍候，这可能需要几分钟时间..."
+			if err := s.tgService.SendMessage(startMessage); err != nil {
+				logger.Warningf("发送 Geo 数据更新开始通知失败: %v", err)
+			}
+		}
+
+		var updateErr error
+
+		// 2. 定义要更新的 Geo 文件列表
+		geoFiles := []struct {
+			URL      string
+			FileName string
+		}{
+			{"https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat", "geoip.dat"},
+			{"https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat", "geosite.dat"},
+			{"https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat", "geoip_IR.dat"},
+			{"https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat", "geosite_IR.dat"},
+			{"https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat", "geoip_RU.dat"},
+			{"https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat", "geosite_RU.dat"},
+		}
+
+		// 3. 下载并更新所有 Geo 文件
+		downloadFile := func(url, destPath string) error {
+			// 创建带超时的HTTP客户端
+			client := &http.Client{
+				Timeout: 60 * time.Second, // 60秒超时
+			}
+
+			// 创建请求并添加User-Agent头部
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				return fmt.Errorf("创建下载请求失败: %v", err)
+			}
+			req.Header.Set("User-Agent", "X-Panel/1.0")
+
+			resp, err := client.Do(req)
+			if err != nil {
+				return fmt.Errorf("下载失败: %v", err)
+			}
+			defer resp.Body.Close()
+
+			// 检查HTTP状态码
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("下载失败，服务器返回状态码: %d", resp.StatusCode)
+			}
+
+			// 备份现有文件（如果存在）
+			if _, err := os.Stat(destPath); err == nil {
+				backupPath := destPath + ".bak"
+				if err := os.Rename(destPath, backupPath); err != nil {
+					logger.Warningf("备份文件 %s 失败: %v", destPath, err)
+				} else {
+					logger.Infof("成功备份文件: %s", destPath)
+				}
+			}
+
+			file, err := os.Create(destPath)
+			if err != nil {
+				return fmt.Errorf("创建文件 %s 失败: %v", destPath, err)
+			}
+			defer file.Close()
+
+			_, err = io.Copy(file, resp.Body)
+			if err != nil {
+				return fmt.Errorf("保存文件 %s 失败: %v", destPath, err)
+			}
+
+			return nil
+		}
+
+		var errorMessages []string
+		var successCount int
+
+		for _, file := range geoFiles {
+			destPath := fmt.Sprintf("%s/%s", config.GetBinFolderPath(), file.FileName)
+			logger.Infof("正在下载并更新: %s", file.FileName)
+
+			if err := downloadFile(file.URL, destPath); err != nil {
+				errorMessages = append(errorMessages, fmt.Sprintf("❌ 更新 %s 失败: %v", file.FileName, err))
+				logger.Errorf("更新 %s 失败: %v", file.FileName, err)
+			} else {
+				successCount++
+				logger.Infof("✅ 成功更新: %s", file.FileName)
+			}
+		}
+
+		// 4. 重启 Xray 服务
+		if updateErr == nil && successCount > 0 {
+			logger.Info("重启 Xray 服务以应用新的 Geo 数据...")
+			err := s.RestartXrayService()
+			if err != nil {
+				updateErr = fmt.Errorf("重启 Xray 服务失败: %v", err)
+				errorMessages = append(errorMessages, fmt.Sprintf("❌ 重启 Xray 服务失败: %v", err))
+				logger.Errorf("重启 Xray 服务失败: %v", err)
+			} else {
+				logger.Info("✅ Xray 服务重启成功")
+			}
+		}
+
+		// 5. 发送结果通知
+		if tgAvailable {
+			if updateErr == nil && successCount > 0 {
+				// 更新成功通知
+				successMessage := fmt.Sprintf("🎉 **Geo 数据更新成功！**\n\n✅ 成功更新 %d 个文件\n🔄 Xray 服务已重启\n\n更新的文件:\n", successCount)
+				for _, file := range geoFiles {
+					successMessage += fmt.Sprintf("• %s\n", file.FileName)
+				}
+				successMessage += "\n✨ Geo 数据已生效！"
+
+				if err := s.tgService.SendMessage(successMessage); err != nil {
+					logger.Warningf("发送 Geo 数据更新成功通知失败: %v", err)
+				}
+			} else if successCount == 0 {
+				// 完全失败通知
+				failMessage := "❌ **Geo 数据更新失败**\n\n没有成功更新任何文件，请检查网络连接和日志。"
+				if err := s.tgService.SendMessage(failMessage); err != nil {
+					logger.Warningf("发送 Geo 数据更新失败通知失败: %v", err)
+				}
+			} else {
+				// 部分成功通知
+				warningMessage := fmt.Sprintf("⚠️ **Geo 数据更新完成（部分失败）**\n\n✅ 成功更新 %d 个文件\n❌ 部分文件更新失败\n\n", successCount)
+				for _, errorMsg := range errorMessages {
+					warningMessage += errorMsg + "\n"
+				}
+				warningMessage += "\n🔄 Xray 服务已重启"
+
+				if err := s.tgService.SendMessage(warningMessage); err != nil {
+					logger.Warningf("发送 Geo 数据更新警告通知失败: %v", err)
+				}
+			}
+		}
+
+		if updateErr != nil {
+			logger.Errorf("Geo 数据更新过程中出现错误: %v", updateErr)
+		} else if successCount > 0 {
+			logger.Infof("Geo 数据更新完成，成功更新 %d 个文件", successCount)
+		} else {
+			logger.Warning("Geo 数据更新失败，没有成功更新任何文件")
 		}
 	}()
 
