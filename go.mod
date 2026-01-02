@@ -13,7 +13,7 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/mymmrac/telego v1.3.3
+	github.com/mymmrac/telego v1.4.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/nxadm/tail v1.4.11
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
@@ -87,7 +87,7 @@ require (
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	github.com/v2fly/ss-bloomring v0.0.0-20210312155135-28617310f63e // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fastjson v1.6.5 // indirect
+	github.com/valyala/fastjson v1.6.7 // indirect
 	github.com/vishvananda/netlink v1.3.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/xtls/reality v0.0.0-20251014195629-e4eec4520535 // indirect
