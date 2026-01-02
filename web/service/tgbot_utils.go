@@ -554,11 +554,12 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 		defer cancel()
 
 		cmd = exec.CommandContext(ctx, "bash", "-c", "modprobe nf_conntrack")
-		cmd.Stdout = f
-		cmd.Stderr = f
-		if err := cmd.Run(); err != nil {
-			output.WriteString("⚠️ nf_conntrack 模块加载失败，将跳过相关参数\n")
-			f.WriteString("⚠️ nf_conntrack 模块加载失败，将跳过相关参数\n")
+		modprobeOutput, err := cmd.CombinedOutput()
+		f.Write(modprobeOutput)
+		if err != nil {
+			errorMsg := fmt.Sprintf("modprobe 命令执行失败: %v, 输出: %s", err, string(modprobeOutput))
+			output.WriteString("⚠️ " + errorMsg + "，将跳过相关参数\n")
+			f.WriteString("⚠️ " + errorMsg + "，将跳过相关参数\n")
 		} else {
 			output.WriteString("✅ nf_conntrack 模块加载成功\n")
 			f.WriteString("✅ nf_conntrack 模块加载成功\n")
@@ -584,13 +585,12 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 
 	// 创建基础内核参数配置文件（不包含 nf_conntrack 参数）
 	baseKernelConfig := `# ===== 1C1G 机器深度优化配置 =====
-# 内存管理优化
+# 内存管理优化（移除不稳定的 min_free_kbytes）
 vm.swappiness = 60
 vm.vfs_cache_pressure = 50
 vm.dirty_ratio = 10
 vm.dirty_background_ratio = 5
 vm.overcommit_memory = 0
-vm.min_free_kbytes = 16384
 
 # 网络优化（保守设置，适合低配机器）
 net.core.somaxconn = 1024
@@ -603,18 +603,7 @@ net.ipv4.tcp_keepalive_intvl = 15
 net.ipv4.tcp_tw_reuse = 1
 net.ipv4.ip_local_port_range = 10000 65535
 net.ipv4.tcp_slow_start_after_idle = 0
-
-# TCP 缓冲区（适合1G内存）
-net.core.rmem_default = 262144
-net.core.wmem_default = 262144
-net.core.rmem_max = 4194304
-net.core.wmem_max = 4194304
-net.ipv4.tcp_rmem = 4096 65536 4194304
-net.ipv4.tcp_wmem = 4096 65536 4194304
-
-# 文件描述符
-fs.file-max = 65535
-fs.nr_open = 65535`
+net.ipv4.ip_forward = 1`
 
 	// 创建 nf_conntrack 专用配置文件（仅在支持时）
 	nfConntrackConfig := ``
@@ -630,7 +619,25 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 	output.WriteString("正在应用基础内核参数...\n")
 	f.WriteString("正在应用基础内核参数...\n")
 
-	if err := sys.AtomicWriteFile("/etc/sysctl.d/99-1c1g-optimize-base.conf", []byte(baseKernelConfig), 0644); err != nil {
+	// 检查配置文件是否存在，如果存在则备份
+	configFilePath := "/etc/sysctl.d/99-1c1g-optimize-base.conf"
+	backupFilePath := configFilePath + ".bak"
+	if _, err := os.Stat(configFilePath); err == nil {
+		// 文件存在，进行备份
+		output.WriteString("检测到现有配置文件，正在备份...\n")
+		f.WriteString("检测到现有配置文件，正在备份...\n")
+		if err := os.Rename(configFilePath, backupFilePath); err != nil {
+			errorMsg := fmt.Sprintf("备份配置文件失败: %v", err)
+			output.WriteString("⚠️ " + errorMsg + "\n")
+			f.WriteString("⚠️ " + errorMsg + "\n")
+			// 继续执行，不返回错误
+		} else {
+			output.WriteString("✅ 配置文件已备份为 " + backupFilePath + "\n")
+			f.WriteString("✅ 配置文件已备份为 " + backupFilePath + "\n")
+		}
+	}
+
+	if err := sys.AtomicWriteFile(configFilePath, []byte(baseKernelConfig), 0644); err != nil {
 		errorMsg := fmt.Sprintf("创建基础内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
@@ -644,11 +651,11 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-1c1g-optimize-base.conf")
-	cmd.Stdout = f
-	cmd.Stderr = f
-	if err := cmd.Run(); err != nil {
-		errorMsg := fmt.Sprintf("应用基础内核参数失败: %v", err)
+	cmd = exec.CommandContext(ctx, "sysctl", "-p", configFilePath)
+	sysctlOutput, err := cmd.CombinedOutput()
+	f.Write(sysctlOutput)
+	if err != nil {
+		errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
 		return output.String(), fmt.Errorf(errorMsg)
@@ -671,11 +678,12 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 			defer cancel()
 
 			cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-nf-conntrack-optimize.conf")
-			cmd.Stdout = f
-			cmd.Stderr = f
-			if err := cmd.Run(); err != nil {
-				output.WriteString("⚠️ 应用 nf_conntrack 参数失败，跳过相关参数\n")
-				f.WriteString("⚠️ 应用 nf_conntrack 参数失败，跳过相关参数\n")
+			sysctlOutput, err := cmd.CombinedOutput()
+			f.Write(sysctlOutput)
+			if err != nil {
+				errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
+				output.WriteString("⚠️ " + errorMsg + "，跳过相关参数\n")
+				f.WriteString("⚠️ " + errorMsg + "，跳过相关参数\n")
 			} else {
 				successMsg = "✅ nf_conntrack 参数已应用"
 				output.WriteString(successMsg + "\n")
@@ -752,10 +760,10 @@ net.ipv4.tcp_congestion_control = bbr
 				defer cancel()
 
 				cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-bbr-optimize.conf")
-				cmd.Stdout = f
-				cmd.Stderr = f
-				if err := cmd.Run(); err != nil {
-					errorMsg := fmt.Sprintf("应用 BBR 设置失败: %v", err)
+				sysctlOutput, err := cmd.CombinedOutput()
+				f.Write(sysctlOutput)
+				if err != nil {
+					errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 					output.WriteString("❌ " + errorMsg + "\n")
 					f.WriteString("❌ " + errorMsg + "\n")
 				} else {
