@@ -39,8 +39,9 @@ var clientStatusLock sync.RWMutex
 
 // CheckDeviceLimitJob 重构后的设备限制任务，使用 LogStreamer 实现实时监控
 type CheckDeviceLimitJob struct {
-	inboundService service.InboundService
-	xrayService    *service.XrayService
+	inboundService  service.InboundService
+	xrayService     *service.XrayService
+	settingService  service.SettingService
 	// 中文注释: 新增 xrayApi 字段，用于持有 Xray API 客户端实例
 	xrayApi xray.XrayAPI
 	// 中文注释: 使用 LogStreamer 进行实时日志监控
@@ -71,11 +72,12 @@ func RandomUUID() string {
 
 // NewCheckDeviceLimitJob 中文注释: 创建一个新的任务实例
 // 〔中文注释〕：增加一个 service.TelegramService 类型的参数。
-func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService) *CheckDeviceLimitJob {
+func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService, settingService service.SettingService) *CheckDeviceLimitJob {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &CheckDeviceLimitJob{
-		xrayService: xrayService,
+		xrayService:     xrayService,
+		settingService:  settingService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
 		// 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
@@ -89,6 +91,21 @@ func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService se
 // Start 启动重构后的设备限制任务（使用 LogStreamer）
 func (j *CheckDeviceLimitJob) Start() error {
 	if j.isStreamerRunning {
+		return nil
+	}
+
+	// 检查 LogStreamer 是否启用
+	logStreamerEnabled, err := j.settingService.GetLogStreamerEnabled()
+	if err != nil {
+		logger.Warningf("无法获取 LogStreamer 配置: %v", err)
+		logStreamerEnabled = false // 默认禁用
+	}
+
+	if !logStreamerEnabled {
+		logger.Info("LogStreamer 已禁用，不启动实时日志监控")
+		// 即使不启动 LogStreamer，也启动设备限制检查的 goroutine（使用其他方式检查）
+		j.wg.Add(1)
+		go j.limitCheckLoop()
 		return nil
 	}
 
@@ -188,6 +205,11 @@ func (j *CheckDeviceLimitJob) limitCheckLoop() {
 
 // performLimitCheck 执行设备限制检查
 func (j *CheckDeviceLimitJob) performLimitCheck() {
+	// 如果 LogStreamer 未运行，则跳过检查（因为没有实时数据）
+	if !j.isStreamerRunning {
+		return
+	}
+
 	// 1. 清理过期的IP
 	j.cleanupExpiredIPs()
 

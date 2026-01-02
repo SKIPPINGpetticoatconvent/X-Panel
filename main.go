@@ -34,31 +34,40 @@ import (
 func runWebServer() {
 	log.Printf("Starting %v %v", config.GetName(), config.GetVersion())
 
-	switch config.GetLogLevel() {
-	case config.Debug:
-		logger.InitLogger(logging.DEBUG)
-	case config.Info:
-		logger.InitLogger(logging.INFO)
-	case config.Notice:
-		logger.InitLogger(logging.NOTICE)
-	case config.Warn:
-		logger.InitLogger(logging.WARNING)
-	case config.Error:
-		logger.InitLogger(logging.ERROR)
-	default:
-		log.Fatalf("Unknown log level: %v", config.GetLogLevel())
-	}
-
 	godotenv.Load()
 
+	// 初始化数据库
 	err := database.InitDB(config.GetDBPath())
 	if err != nil {
 		log.Fatalf("Error initializing database: %v", err)
 	}
 
+	// 获取本地日志配置
+	settingService := service.SettingService{}
+	localLogEnabled, err := settingService.GetLocalLogEnabled()
+	if err != nil {
+		logger.Warningf("无法获取本地日志配置，使用默认设置: %v", err)
+		localLogEnabled = false // 默认禁用本地日志，符合用户需求
+	}
+
+	// 根据配置和日志级别初始化logger
+	switch config.GetLogLevel() {
+	case config.Debug:
+		logger.InitLogger(logging.DEBUG, localLogEnabled)
+	case config.Info:
+		logger.InitLogger(logging.INFO, localLogEnabled)
+	case config.Notice:
+		logger.InitLogger(logging.NOTICE, localLogEnabled)
+	case config.Warn:
+		logger.InitLogger(logging.WARNING, localLogEnabled)
+	case config.Error:
+		logger.InitLogger(logging.ERROR, localLogEnabled)
+	default:
+		log.Fatalf("Unknown log level: %v", config.GetLogLevel())
+	}
+
 	// 〔中文注释〕: 1. 初始化所有需要的服务实例
 	xrayService := service.XrayService{}
-	settingService := service.SettingService{}
 	serverService := service.ServerService{}
 	// 还需要 InboundService 等，按需添加
 	inboundService := service.InboundService{}
@@ -80,10 +89,14 @@ func runWebServer() {
 	}
 
 	var tgBotService service.TelegramService
+	var logForwarder *service.LogForwarder
 	if tgEnable {
 		// 将所有需要的服务作为参数传递进去，确保返回的 tgBotService 是一个完全初始化的、可用的实例。
 		tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
 		tgBotService = tgBot
+
+		// 创建日志转发器
+		logForwarder = service.NewLogForwarder(&settingService, tgBotService)
 	}
 
 	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
@@ -109,6 +122,13 @@ func runWebServer() {
 	if err != nil {
 		log.Fatalf("Error starting web server: %v", err)
 		return
+	}
+
+	// 启动日志转发器
+	if logForwarder != nil {
+		if err := logForwarder.Start(); err != nil {
+			logger.Warningf("启动日志转发器失败: %v", err)
+		}
 	}
 
 	var subServer *sub.Server
@@ -150,7 +170,7 @@ func runWebServer() {
 
 		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
 		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService)
+		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService, settingService)
 
 		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
 		for {
@@ -168,6 +188,13 @@ func runWebServer() {
 		switch sig {
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP signal. Restarting servers...")
+
+			// 停止日志转发器
+			if logForwarder != nil {
+				if err := logForwarder.Stop(); err != nil {
+					logger.Warningf("停止日志转发器失败: %v", err)
+				}
+			}
 
 			err := server.Stop()
 			if err != nil {
@@ -191,6 +218,13 @@ func runWebServer() {
 			}
 			log.Println("Web server restarted successfully.")
 
+			// 重新启动日志转发器
+			if logForwarder != nil {
+				if err := logForwarder.Start(); err != nil {
+					logger.Warningf("重新启动日志转发器失败: %v", err)
+				}
+			}
+
 			subServer = sub.NewServer()
 			global.SetSubServer(subServer)
 			err = subServer.Start()
@@ -201,6 +235,12 @@ func runWebServer() {
 			log.Println("Sub server restarted successfully.")
 
 		default:
+			// 停止日志转发器
+			if logForwarder != nil {
+				if err := logForwarder.Stop(); err != nil {
+					logger.Warningf("停止日志转发器失败: %v", err)
+				}
+			}
 			server.Stop()
 			subServer.Stop()
 			log.Println("Shutting down servers.")

@@ -35,9 +35,12 @@ type AllSetting struct {
 	TgBotChatId                 string `json:"tgBotChatId" form:"tgBotChatId"`
 	TgRunTime                   string `json:"tgRunTime" form:"tgRunTime"`
 	TgBotBackup                 bool   `json:"tgBotBackup" form:"tgBotBackup"`
+	TgLogForwardEnabled         bool   `json:"tgLogForwardEnabled" form:"tgLogForwardEnabled"`
+	TgLogLevel                  string `json:"tgLogLevel" form:"tgLogLevel"`
 	TgBotLoginNotify            bool   `json:"tgBotLoginNotify" form:"tgBotLoginNotify"`
 	TgCpu                       int    `json:"tgCpu" form:"tgCpu"`
 	TgLang                      string `json:"tgLang" form:"tgLang"`
+	LogStreamerEnabled          bool   `json:"logStreamerEnabled" form:"logStreamerEnabled"`
 	TimeLocation                string `json:"timeLocation" form:"timeLocation"`
 	TwoFactorEnable             bool   `json:"twoFactorEnable" form:"twoFactorEnable"`
 	TwoFactorToken              string `json:"twoFactorToken" form:"twoFactorToken"`

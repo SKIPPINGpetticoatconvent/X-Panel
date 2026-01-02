@@ -883,23 +883,25 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.errorOperation"))
 					}
 				case "get_clients":
-					inboundId := dataArray[1]
-					inboundIdInt, err := strconv.Atoi(inboundId)
-					if err != nil {
-						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-						return
-					}
-					inbound, err := t.inboundService.GetInbound(inboundIdInt)
-					if err != nil {
-						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-						return
-					}
-					clients, err := t.getInboundClients(inboundIdInt)
-					if err != nil {
-						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-						return
-					}
-					t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
+				inboundId := dataArray[1]
+				inboundIdInt, err := strconv.Atoi(inboundId)
+				if err != nil {
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+					return
+				}
+				inbound, err := t.inboundService.GetInbound(inboundIdInt)
+				if err != nil {
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+					return
+				}
+				clients, err := t.getInboundClients(inboundIdInt)
+				if err != nil {
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+					return
+				}
+				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
+			case "log_settings":
+				t.showLogSettings(chatId)
 				case "add_client_to":
 					// assign default values to clients variables
 					client_Id = uuid.New().String()
@@ -1564,6 +1566,64 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		t.SendMsgToTgbotDeleteAfter(chatId, "已取消 Geo 数据更新操作。", 3)
+
+	// 日志设置相关回调
+	case "toggle_tg_forward":
+		current, err := t.settingService.GetTgLogForwardEnabled()
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 获取状态失败")
+			return
+		}
+		err = t.settingService.SetTgLogForwardEnabled(!current)
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
+			return
+		}
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 已切换 TG 转发状态")
+		t.showLogSettings(chatId)
+
+	case "toggle_local_log":
+		current, err := t.settingService.GetLocalLogEnabled()
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 获取状态失败")
+			return
+		}
+		err = t.settingService.SetLocalLogEnabled(!current)
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
+			return
+		}
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 已切换本地日志状态")
+		t.showLogSettings(chatId)
+
+	case "cycle_log_level":
+		current, err := t.settingService.GetTgLogLevel()
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 获取级别失败")
+			return
+		}
+		var newLevel string
+		switch current {
+		case "info":
+			newLevel = "warn"
+		case "warn":
+			newLevel = "error"
+		case "error":
+			newLevel = "info"
+		default:
+			newLevel = "warn"
+		}
+		err = t.settingService.SetTgLogLevel(newLevel)
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
+			return
+		}
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, fmt.Sprintf("✅ 日志级别已设置为 %s", newLevel))
+		t.showLogSettings(chatId)
+
+	case "back_to_main":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "返回主菜单")
+		t.SendAnswer(chatId, "请选择操作:", true)
 	}
 }
 
@@ -1766,6 +1826,9 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
 			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🌍 更新 Geo 数据").WithCallbackData(t.encodeQuery("update_geodata_ask")),
@@ -3839,3 +3902,53 @@ func (t *Tgbot) generateShortIds() []string {
 }
 
 // 【新增辅助函数】: 随机字符串生成器
+
+// showLogSettings 显示日志设置菜单
+func (t *Tgbot) showLogSettings(chatId int64) {
+	tgForwardEnabled, err := t.settingService.GetTgLogForwardEnabled()
+	if err != nil {
+		t.SendMsgToTgbot(chatId, "❌ 获取 TG 转发状态失败")
+		return
+	}
+	localLogEnabled, err := t.settingService.GetLocalLogEnabled()
+	if err != nil {
+		localLogEnabled = false
+	}
+	logLevel, err := t.settingService.GetTgLogLevel()
+	if err != nil {
+		logLevel = "warn"
+	}
+
+	tgForwardStatus := "❌"
+	if tgForwardEnabled {
+		tgForwardStatus = "✅"
+	}
+	localLogStatus := "❌"
+	if localLogEnabled {
+		localLogStatus = "✅"
+	}
+
+	message := fmt.Sprintf("📝 **日志设置**\n\n"+
+		"📤 TG 转发: %s\n"+
+		"💾 本地日志: %s\n"+
+		"🔧 日志级别: %s\n\n"+
+		"选择要切换的设置:",
+		tgForwardStatus, localLogStatus, logLevel)
+
+	keyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(fmt.Sprintf("📤 TG 转发: %s", tgForwardStatus)).WithCallbackData(t.encodeQuery("toggle_tg_forward")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(fmt.Sprintf("💾 本地日志: %s", localLogStatus)).WithCallbackData(t.encodeQuery("toggle_local_log")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(fmt.Sprintf("🔧 日志级别: %s", logLevel)).WithCallbackData(t.encodeQuery("cycle_log_level")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),
+		),
+	)
+
+	t.SendMsgToTgbot(chatId, message, keyboard)
+}

@@ -47,6 +47,10 @@ var defaultValueMap = map[string]string{
 	"tgRunTime":          "@daily",
 	"tgBotBackup":        "false",
 	"tgBotLoginNotify":   "true",
+	"tgLogForwardEnabled": "true",
+	"tgLogLevel":         "warn",
+	"localLogEnabled": "false",
+	"logStreamerEnabled": "false",
 	"tgCpu":              "80",
 	"tgLang":             "zh-CN",
 	"twoFactorEnable":    "false",
@@ -414,6 +418,38 @@ func (s *SettingService) GetTgBotLoginNotify() (bool, error) {
 	return s.getBool("tgBotLoginNotify")
 }
 
+func (s *SettingService) GetTgLogForwardEnabled() (bool, error) {
+	return s.getBool("tgLogForwardEnabled")
+}
+
+func (s *SettingService) GetTgLogLevel() (string, error) {
+	return s.getString("tgLogLevel")
+}
+
+func (s *SettingService) SetTgLogLevel(level string) error {
+	return s.setString("tgLogLevel", level)
+}
+
+func (s *SettingService) SetTgLogForwardEnabled(value bool) error {
+	return s.setBool("tgLogForwardEnabled", value)
+}
+
+func (s *SettingService) GetLocalLogEnabled() (bool, error) {
+	return s.getBool("localLogEnabled")
+}
+
+func (s *SettingService) SetLocalLogEnabled(value bool) error {
+	return s.setBool("localLogEnabled", value)
+}
+
+func (s *SettingService) GetLogStreamerEnabled() (bool, error) {
+	return s.getBool("logStreamerEnabled")
+}
+
+func (s *SettingService) SetLogStreamerEnabled(value bool) error {
+	return s.setBool("logStreamerEnabled", value)
+}
+
 func (s *SettingService) GetTgCpu() (int, error) {
 	return s.getInt("tgCpu")
 }
@@ -696,6 +732,7 @@ func (s *SettingService) GetDefaultSettings(host string) (any, error) {
 		"defaultCert":   func() (any, error) { return s.GetCertFile() },
 		"defaultKey":    func() (any, error) { return s.GetKeyFile() },
 		"tgBotEnable":   func() (any, error) { return s.GetTgbotEnabled() },
+		"logStreamerEnabled": func() (any, error) { return s.GetLogStreamerEnabled() },
 		"subEnable":     func() (any, error) { return s.GetSubEnable() },
 		"subTitle":      func() (any, error) { return s.GetSubTitle() },
 		"subURI":        func() (any, error) { return s.GetSubURI() },
