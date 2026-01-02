@@ -215,6 +215,40 @@ func TestLogForwarder_LevelFilteringTest(t *testing.T) {
 	}
 }
 
+// TestLogForwarder_BatchProcessingTest 测试批处理功能
+func TestLogForwarder_BatchProcessingTest(t *testing.T) {
+	mockSetting := &MockSettingService{logLevel: "warn"}
+	mockTelegram := &MockTelegramService{}
+	lf := NewLogForwarder(mockSetting, mockTelegram)
+
+	err := lf.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lf.Stop()
+
+	// 发送多个 WARNING 消息，应该被批处理
+	for i := 0; i < 7; i++ { // 超过 batchSize (5)
+		message := fmt.Sprintf("Warning message %d", i)
+		formatted := fmt.Sprintf("WARNING - %s", message)
+		lf.OnLog(logging.WARNING, message, formatted)
+	}
+
+	// 等待批处理完成
+	time.Sleep(50 * time.Millisecond)
+
+	sentCount := mockTelegram.GetSendCount()
+	t.Logf("Messages sent after batch processing: %d", sentCount)
+
+	// 应该发送 2 次：第一次 5 条，第二次 2 条（因为定时器也可能触发）
+	if sentCount < 1 {
+		t.Error("Expected at least 1 message to be sent")
+	}
+	if sentCount > 3 {
+		t.Errorf("Too many messages sent: %d, batching not working properly", sentCount)
+	}
+}
+
 // getMemStats 获取当前内存统计
 func getMemStats() uint64 {
 	var m runtime.MemStats

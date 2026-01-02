@@ -87,6 +87,7 @@ var (
 		level logging.Level
 		log   string
 	}
+	logBufferMu      sync.RWMutex // 保护 logBuffer 的并发访问
 	listenerBackend  *ListenerBackend
 	localLogEnabled  bool
 )
@@ -205,12 +206,11 @@ func Errorf(format string, args ...any) {
 }
 
 func addToBuffer(level string, newLog string) {
+	logBufferMu.Lock()
+	defer logBufferMu.Unlock()
+
 	t := time.Now()
-	maxSize := 10240
-	if !localLogEnabled {
-		// 当本地日志禁用时，使用更小的缓冲区以节省内存
-		maxSize = 1000
-	}
+	maxSize := 200 // 固定缓冲区大小为200条最近日志
 	if len(logBuffer) >= maxSize {
 		logBuffer = logBuffer[1:]
 	}
@@ -228,11 +228,14 @@ func addToBuffer(level string, newLog string) {
 }
 
 func GetLogs(c int, level string) []string {
+	logBufferMu.RLock()
+	defer logBufferMu.RUnlock()
+
 	var output []string
 	logLevel, _ := logging.LogLevel(level)
 
-	for i := len(logBuffer) - 1; i >= 0 && len(output) <= c; i-- {
-		if logBuffer[i].level <= logLevel {
+	for i := len(logBuffer) - 1; i >= 0 && len(output) < c; i-- {
+		if logBuffer[i].level >= logLevel {
 			output = append(output, fmt.Sprintf("%s %s - %s", logBuffer[i].time, logBuffer[i].level, logBuffer[i].log))
 		}
 	}

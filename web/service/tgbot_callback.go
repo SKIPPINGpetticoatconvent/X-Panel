@@ -1572,7 +1572,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "log_settings":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
 		t.showLogSettings(chatId)
-	case "toggle_tg_forward":
 		current, err := t.settingService.GetTgLogForwardEnabled()
 		if err != nil {
 			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 获取状态失败")
@@ -1628,6 +1627,45 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "back_to_main":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "返回主菜单")
 		t.SendAnswer(chatId, "请选择操作:", true)
+	case "fetch_logs":
+		// 解析数量参数
+		tempDataArray := strings.Split(decodedQueryForAll, " ")
+		count := 20 // 默认
+		if len(tempDataArray) > 1 {
+			if c, err := strconv.Atoi(tempDataArray[1]); err == nil && c > 0 {
+				count = c
+			}
+		}
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, fmt.Sprintf("📄 获取最近 %d 条日志...", count))
+		// 获取配置的日志级别
+		level, err := t.settingService.GetTgLogLevel()
+		if err != nil {
+			level = "info" // 默认级别
+		}
+		logs := logger.GetLogs(count, level)
+		if len(logs) == 0 {
+			t.SendMsgToTgbot(chatId, "📋 **最近日志**\n\n❌ 未找到符合级别的日志记录")
+		} else {
+			content := strings.Join(logs, "\n")
+			t.sendLongMessage(chatId, content)
+		}
+	case "toggle_log_forward":
+		current, err := t.settingService.GetTgLogForwardEnabled()
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 获取状态失败")
+			return
+		}
+		err = t.settingService.SetTgLogForwardEnabled(!current)
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
+			return
+		}
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 已切换 TG 转发状态")
+		t.showLogMenu(chatId)
+
+	case "close_menu":
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已关闭菜单")
 	}
 }
 

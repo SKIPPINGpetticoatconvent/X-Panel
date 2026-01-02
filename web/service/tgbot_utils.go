@@ -1471,4 +1471,58 @@ func (t *Tgbot) getFirewalldStatus() (string, bool) {
 	}
 }
 
+// showLogMenu 显示日志查看菜单
+func (t *Tgbot) showLogMenu(chatId int64) {
+	message := "📋 **日志查看菜单**\n\n请选择日志查看选项："
+
+	keyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📄 最近 20 条").WithCallbackData(t.encodeQuery("fetch_logs 20")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📄 最近 50 条").WithCallbackData(t.encodeQuery("fetch_logs 50")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚙️ 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("❌ 关闭").WithCallbackData(t.encodeQuery("close_menu")),
+		),
+	)
+
+	t.SendMsgToTgbot(chatId, message, keyboard)
+}
+
+// sendLongMessage 处理长消息分段发送，使用 <pre> 标签包裹
+func (t *Tgbot) sendLongMessage(chatId int64, content string) {
+	const maxLength = 4096 - 20 // 减去 <pre> 标签的长度
+
+	if len(content) <= maxLength {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("<pre>%s</pre>", content))
+		return
+	}
+
+	// 分段发送
+	lines := strings.Split(content, "\n")
+	var buffer strings.Builder
+
+	for _, line := range lines {
+		if buffer.Len() > 0 && buffer.Len()+len(line)+1 > maxLength {
+			// 发送当前段
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("<pre>%s</pre>", buffer.String()))
+			buffer.Reset()
+		}
+
+		if buffer.Len() > 0 {
+			buffer.WriteString("\n")
+		}
+		buffer.WriteString(line)
+	}
+
+	// 发送最后一段
+	if buffer.Len() > 0 {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("<pre>%s</pre>", buffer.String()))
+	}
+}
+
 
