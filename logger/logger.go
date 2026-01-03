@@ -108,15 +108,16 @@ func InitLogger(level logging.Level, enabled bool) {
 	// 根据配置决定后端
 	if enabled {
 		// 启用本地文件日志
+		fmt.Fprintln(os.Stderr, "[Security] Local file logging is enabled. Log file: x-ui.log")
 		filePath := "x-ui.log"
-		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
 			logger.Warningf("无法创建日志文件 %s: %v", filePath, err)
 			// 回退到控制台
 			backend = logging.NewLogBackend(os.Stderr, "", 0)
 		} else {
 			backend = logging.NewLogBackend(file, "", 0)
-			file.Close() // 保持文件句柄开放由logging库管理
+			// file.Close() // 不要关闭文件，logging 库需要它
 		}
 	} else {
 		// 禁用文件日志，使用syslog或控制台
