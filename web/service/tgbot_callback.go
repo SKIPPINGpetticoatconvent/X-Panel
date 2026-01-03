@@ -1572,18 +1572,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "log_settings":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
 		t.showLogSettings(chatId)
-		current, err := t.settingService.GetTgLogForwardEnabled()
-		if err != nil {
-			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 获取状态失败")
-			return
-		}
-		err = t.settingService.SetTgLogForwardEnabled(!current)
-		if err != nil {
-			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
-			return
-		}
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 已切换 TG 转发状态")
-		t.showLogSettings(chatId)
 
 	case "toggle_local_log":
 		current, err := t.settingService.GetLocalLogEnabled()
@@ -1617,6 +1605,32 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			newLevel = "warn"
 		}
 		err = t.settingService.SetTgLogLevel(newLevel)
+		if err != nil {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
+			return
+		}
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, fmt.Sprintf("✅ 日志级别已设置为 %s", newLevel))
+		t.showLogSettings(chatId)
+
+	case "set_log_level":
+		// 解析级别参数
+		tempDataArray := strings.Split(decodedQueryForAll, " ")
+		if len(tempDataArray) < 2 {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 参数错误")
+			return
+		}
+		newLevel := tempDataArray[1]
+		// 验证级别
+		validLevels := map[string]bool{"error": true, "warn": true, "warning": true, "info": true, "debug": true}
+		if !validLevels[newLevel] {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 无效的日志级别")
+			return
+		}
+		// 标准化级别名称
+		if newLevel == "warning" {
+			newLevel = "warn"
+		}
+		err := t.settingService.SetTgLogLevel(newLevel)
 		if err != nil {
 			t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
 			return
@@ -3986,6 +4000,13 @@ func (t *Tgbot) showLogSettings(chatId int64) {
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(fmt.Sprintf("🔧 日志级别: %s", logLevel)).WithCallbackData(t.encodeQuery("cycle_log_level")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🔴 仅错误").WithCallbackData(t.encodeQuery("set_log_level error")),
+			tu.InlineKeyboardButton("⚠️ 警告及以上").WithCallbackData(t.encodeQuery("set_log_level warn")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("ℹ️ 全部信息").WithCallbackData(t.encodeQuery("set_log_level info")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),

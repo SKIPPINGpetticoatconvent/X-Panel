@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/op/go-logging"
@@ -51,7 +52,16 @@ func TestLogForwarder_shouldSkipLog(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := lf.shouldSkipLog(tt.message, tt.formatted)
+			// 创建一个虚拟的日志级别用于测试
+			level := logging.INFO
+			if strings.Contains(tt.formatted, "DEBUG") {
+				level = logging.DEBUG
+			} else if strings.Contains(tt.formatted, "ERROR") {
+				level = logging.ERROR
+			} else if strings.Contains(tt.formatted, "WARNING") {
+				level = logging.WARNING
+			}
+			result := lf.shouldSkipLog(tt.message, tt.formatted, level)
 			if result != tt.expected {
 				t.Errorf("shouldSkipLog() = %v, want %v", result, tt.expected)
 			}

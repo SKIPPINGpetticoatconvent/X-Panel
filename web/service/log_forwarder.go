@@ -17,6 +17,7 @@ type LogForwarder struct {
 	settingService  *SettingService
 	telegramService TelegramService
 	isEnabled       bool
+	forwardLevel    logging.Level // 日志转发级别 (ERROR, WARNING, INFO, DEBUG)
 	logBuffer       chan *LogMessage
 	bufferSize      int
 	workerCount     int
@@ -40,15 +41,38 @@ type LogMessage struct {
 func NewLogForwarder(settingService *SettingService, telegramService TelegramService) *LogForwarder {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// 获取配置的日志级别，默认 WARNING
+	forwardLevel := logging.WARNING
+	if levelStr, err := settingService.GetTgLogLevel(); err == nil {
+		switch levelStr {
+		case "error":
+			forwardLevel = logging.ERROR
+		case "warn":
+			forwardLevel = logging.WARNING
+		case "info":
+			forwardLevel = logging.INFO
+		case "debug":
+			forwardLevel = logging.DEBUG
+		default:
+			forwardLevel = logging.WARNING
+		}
+	}
+
+	// 针对低配机器（1CPU 1RAM）的优化配置
+	// bufferSize: 200 (限制内存占用)
+	// workerCount: 1 (限制 CPU 占用)
+	// batchSize: 10 (减少网络 I/O 和上下文切换)
+	// maxBatchDelay: 10s (减少定时器唤醒频率)
 	return &LogForwarder{
 		settingService:  settingService,
 		telegramService: telegramService,
 		isEnabled:       false,
-		logBuffer:       make(chan *LogMessage, 500), // 缓冲区大小为500，节省内存
-		bufferSize:      500,
-		workerCount:     1, // 1个工作协程，减少CPU占用
-		batchSize:       5, // 每5条日志批量发送一次
-		maxBatchDelay:   10 * time.Second, // 最长等待10秒后强制发送
+		forwardLevel:    forwardLevel,
+		logBuffer:       make(chan *LogMessage, 200), 
+		bufferSize:      200,
+		workerCount:     1, 
+		batchSize:       10, 
+		maxBatchDelay:   10 * time.Second, 
 		ctx:             ctx,
 		cancel:          cancel,
 	}
@@ -146,7 +170,7 @@ func (lf *LogForwarder) OnLog(level logging.Level, message string, formattedLog 
 	}
 
 	// 过滤不需要转发的日志
-	if lf.shouldSkipLog(message, formattedLog) {
+	if lf.shouldSkipLog(message, formattedLog, level) {
 		return
 	}
 
@@ -164,39 +188,32 @@ func (lf *LogForwarder) OnLog(level logging.Level, message string, formattedLog 
 		// 发送成功
 	default:
 		// 缓冲区满，丢弃消息
+		// 注意：在高负载下，这可以防止内存无限增长
 		logger.Warning("日志转发缓冲区已满，丢弃日志消息")
 	}
 }
 
 // shouldSkipLog 判断是否应该跳过转发此日志
-// 分类处理策略：只推送 Error/Warning，Info/Debug 记录在缓冲区供 /logs 查询
-func (lf *LogForwarder) shouldSkipLog(message, formattedLog string) bool {
-	// 始终只转发 ERROR 和 WARNING 级别（分类处理）
-	if !strings.Contains(formattedLog, "ERROR") && !strings.Contains(formattedLog, "WARNING") {
+// 根据配置的级别转发日志
+func (lf *LogForwarder) shouldSkipLog(message, formattedLog string, level logging.Level) bool {
+	// 检查级别是否满足转发条件
+	if level > lf.forwardLevel {
 		return true
 	}
 
-	// 跳过与 Telegram Bot 相关的日志，避免死循环
-	if strings.Contains(message, "Telegram") ||
-		strings.Contains(message, "telegram") ||
-		strings.Contains(message, "bot") ||
-		strings.Contains(message, "Bot") ||
-		strings.Contains(message, "SendMsgToTgbot") ||
-		strings.Contains(message, "SendMessage") {
-		return true
+	// 定义需要跳过的关键词列表
+	// 包含 Telegram Bot 相关、日志转发器自身以及频繁的无意义日志
+	skipKeywords := []string{
+		"Telegram", "telegram", "bot", "Bot", "SendMsgToTgbot", "SendMessage",
+		"LogForwarder", "日志转发",
+		"checkpoint", "database", "DB",
 	}
 
-	// 跳过与日志转发器本身相关的日志
-	if strings.Contains(message, "LogForwarder") ||
-		strings.Contains(message, "日志转发") {
-		return true
-	}
-
-	// 跳过一些频繁的、无意义的日志
-	if strings.Contains(message, "checkpoint") ||
-		strings.Contains(message, "database") ||
-		strings.Contains(message, "DB") {
-		return true
+	// 遍历检查，避免过多的字符串操作和复杂的逻辑
+	for _, keyword := range skipKeywords {
+		if strings.Contains(message, keyword) {
+			return true
+		}
 	}
 
 	return false
@@ -288,17 +305,20 @@ func (lf *LogForwarder) forwardLog(logMsg *LogMessage) {
 
 // formatLogMessage 格式化日志消息
 func (lf *LogForwarder) formatLogMessage(logMsg *LogMessage) string {
-	// 只转发 ERROR、WARNING 和 INFO 级别
+	// 根据级别格式化消息，使用清晰的格式和 HTML 标记
 	switch logMsg.Level {
 	case logging.ERROR:
-		return fmt.Sprintf("🚨 <b>ERROR</b>\n%s", logMsg.Formatted)
+		return fmt.Sprintf("🚨 <b>ERROR</b>\n<code>%s</code>", logMsg.Message)
 	case logging.WARNING:
-		return fmt.Sprintf("⚠️ <b>WARNING</b>\n%s", logMsg.Formatted)
+		return fmt.Sprintf("⚠️ <b>WARNING</b>\n<code>%s</code>", logMsg.Message)
 	case logging.INFO:
 		// INFO 级别只转发重要的消息
 		if lf.isImportantInfo(logMsg.Message) {
-			return fmt.Sprintf("ℹ️ <b>INFO</b>\n%s", logMsg.Formatted)
+			return fmt.Sprintf("ℹ️ <b>INFO</b>\n<code>%s</code>", logMsg.Message)
 		}
+	case logging.DEBUG:
+		// DEBUG 级别使用简洁格式
+		return fmt.Sprintf("🐛 <b>DEBUG</b>\n<code>%s</code>", logMsg.Message)
 	}
 
 	return ""
@@ -306,23 +326,24 @@ func (lf *LogForwarder) formatLogMessage(logMsg *LogMessage) string {
 
 // isImportantInfo 判断 INFO 级别消息是否重要
 func (lf *LogForwarder) isImportantInfo(message string) bool {
+	// 避免使用 strings.ToLower 以减少内存分配
+	// 包含常见的大小写变体
 	importantKeywords := []string{
-		"started",
-		"stopped",
-		"running",
-		"failed",
-		"error",
-		"restart",
-		"shutdown",
-		"connected",
-		"disconnected",
-		"login",
-		"logout",
+		"started", "Started",
+		"stopped", "Stopped",
+		"running", "Running",
+		"failed", "Failed",
+		"error", "Error",
+		"restart", "Restart",
+		"shutdown", "Shutdown",
+		"connected", "Connected",
+		"disconnected", "Disconnected",
+		"login", "Login",
+		"logout", "Logout",
 	}
 
-	messageLower := strings.ToLower(message)
 	for _, keyword := range importantKeywords {
-		if strings.Contains(messageLower, keyword) {
+		if strings.Contains(message, keyword) {
 			return true
 		}
 	}
@@ -330,7 +351,15 @@ func (lf *LogForwarder) isImportantInfo(message string) bool {
 	return false
 }
 
-// UpdateConfig 更新配置（动态启用/禁用）
+// SetForwardLevel 设置日志转发级别
+func (lf *LogForwarder) SetForwardLevel(level logging.Level) {
+	lf.mu.Lock()
+	defer lf.mu.Unlock()
+	lf.forwardLevel = level
+	logger.Infof("日志转发级别已设置为: %v", level)
+}
+
+// UpdateConfig 更新配置（动态启用/禁用和级别）
 func (lf *LogForwarder) UpdateConfig() {
 	enabled, err := lf.settingService.GetTgLogForwardEnabled()
 	if err != nil {
@@ -338,10 +367,34 @@ func (lf *LogForwarder) UpdateConfig() {
 		return
 	}
 
+	// 获取新的级别
+	var newLevel logging.Level = logging.WARNING
+	if levelStr, err := lf.settingService.GetTgLogLevel(); err == nil {
+		switch levelStr {
+		case "error":
+			newLevel = logging.ERROR
+		case "warn":
+			newLevel = logging.WARNING
+		case "info":
+			newLevel = logging.INFO
+		case "debug":
+			newLevel = logging.DEBUG
+		default:
+			newLevel = logging.WARNING
+		}
+	}
+
 	lf.mu.Lock()
 	currentEnabled := lf.isEnabled
+	currentLevel := lf.forwardLevel
 	lf.mu.Unlock()
 
+	// 更新级别
+	if currentLevel != newLevel {
+		lf.SetForwardLevel(newLevel)
+	}
+
+	// 更新启用状态
 	if enabled != currentEnabled {
 		if enabled {
 			logger.Info("启用日志转发功能")
