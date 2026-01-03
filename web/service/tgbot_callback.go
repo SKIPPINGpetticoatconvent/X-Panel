@@ -169,6 +169,51 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 				t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 				return
+			case "set_log_level":
+				// 解析级别参数
+				if len(dataArray) < 2 {
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 参数错误")
+					return
+				}
+				newLevel := dataArray[1]
+				// 验证级别
+				validLevels := map[string]bool{"error": true, "warn": true, "warning": true, "info": true, "debug": true}
+				if !validLevels[newLevel] {
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 无效的日志级别")
+					return
+				}
+				// 标准化级别名称
+				if newLevel == "warning" {
+					newLevel = "warn"
+				}
+				err := t.settingService.SetTgLogLevel(newLevel)
+				if err != nil {
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, "❌ 设置失败")
+					return
+				}
+				t.sendCallbackAnswerTgBot(callbackQuery.ID, fmt.Sprintf("✅ 日志级别已设置为 %s", newLevel))
+				t.showLogSettings(chatId)
+			case "fetch_logs":
+				// 解析数量参数
+				count := 20 // 默认
+				if len(dataArray) > 1 {
+					if c, err := strconv.Atoi(dataArray[1]); err == nil && c > 0 {
+						count = c
+					}
+				}
+				t.sendCallbackAnswerTgBot(callbackQuery.ID, fmt.Sprintf("📄 获取最近 %d 条日志...", count))
+				// 获取配置的日志级别
+				level, err := t.settingService.GetTgLogLevel()
+				if err != nil {
+					level = "info" // 默认级别
+				}
+				logs := logger.GetLogs(count, level)
+				if len(logs) == 0 {
+					t.SendMsgToTgbot(chatId, "📋 **最近日志**\n\n❌ 未找到符合级别的日志记录")
+				} else {
+					content := strings.Join(logs, "\n")
+					t.sendLongMessage(chatId, content)
+				}
 			default:
 				email := dataArray[1]
 				switch dataArray[0] {
@@ -3993,7 +4038,7 @@ func (t *Tgbot) showLogSettings(chatId int64) {
 
 	keyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(fmt.Sprintf("📤 TG 转发: %s", tgForwardStatus)).WithCallbackData(t.encodeQuery("toggle_tg_forward")),
+			tu.InlineKeyboardButton(fmt.Sprintf("📤 TG 转发: %s", tgForwardStatus)).WithCallbackData(t.encodeQuery("toggle_log_forward")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(fmt.Sprintf("💾 本地日志: %s", localLogStatus)).WithCallbackData(t.encodeQuery("toggle_local_log")),
