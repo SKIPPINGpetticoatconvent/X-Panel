@@ -24,7 +24,6 @@ import (
 // 任何实现了 SendMessage(msg string) error 方法的结构体，都可以被认为是 TelegramService。
 type TelegramService interface {
 	SendMessage(msg string) error
-	SendSubconverterSuccess()
 	IsRunning() bool
 	// 您可以根据 server.go 的需要，在这里继续扩展接口
 	// 〔中文注释〕: 将 SendOneClickConfig 方法添加到接口中，这样其他服务可以通过接口来调用它，
@@ -261,7 +260,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 			{Command: "status", Description: t.I18nBot("tgbot.commands.statusDesc")},
 			{Command: "id", Description: t.I18nBot("tgbot.commands.idDesc")},
 			{Command: "oneclick", Description: "一键配置节点"},
-			{Command: "subconverter", Description: "检测或安装订阅转换"},
+
 			{Command: "restartx", Description: "重启X-Panel面板"},
 			{Command: "xrayversion", Description: "管理Xray版本"},
 		},

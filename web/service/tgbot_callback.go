@@ -2,12 +2,10 @@ package service
 
 import (
 	"context"
-	"crypto/tls"    // 新增：用于 tls.Config
 	"encoding/json" // 新增：用于 json.Marshal / Unmarshal
 	"errors"
 	"fmt"
 	"net"
-	"net/http" // 新增：用于 http.Client / Transport
 	"net/url"
 	"os"
 	"os/exec"       // 新增：用于 exec.Command（getDomain 等）
@@ -1379,24 +1377,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
 		t.remoteCreateOneClickInbound("switch_vision", chatId)
 
-	case "subconverter_install":
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔄 正在检查服务...")
-		t.checkAndInstallSubconverter(chatId)
 
-	case "confirm_sub_install":
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 指令已发送")
-		t.SendMsgToTgbot(chatId, "【订阅转换】模块正在后台安装，大约需要1-2分钟，完成后将再次通知您。")
-		err := t.serverService.InstallSubconverter()
-		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("发送安装指令失败: %v", err))
-		}
-
-	case "cancel_sub_install":
-		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
-		t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")
 	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
 	case "restart_panel":
 		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
@@ -1915,11 +1896,7 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
 		),
-		// 【一键配置】和【订阅转换】按钮的回调数据
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
-		),
+	
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("xrayversion")),
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
@@ -3099,37 +3076,7 @@ func (t *Tgbot) sendDirectOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连：\n\n🚀 Vless + TCP + Reality: 高性能直连，优秀兼容性\n⚡ Vless + XHTTP + Reality: 新型传输，更佳隐蔽性", directKeyboard)
 }
 
-// 【新增函数】: 检查并安装【订阅转换】
-func (t *Tgbot) checkAndInstallSubconverter(chatId int64) {
-	domain, err := t.getDomain()
-	if err != nil {
-		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 操作失败：%v", err))
-		return
-	}
-	subConverterUrl := fmt.Sprintf("https://%s:15268", domain)
 
-	t.SendMsgToTgbot(chatId, fmt.Sprintf("正在检测服务状态...\n地址: `%s`", subConverterUrl))
-
-	go func() {
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		client := &http.Client{Transport: tr, Timeout: 3 * time.Second}
-		_, err := client.Get(subConverterUrl)
-
-		if err == nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("✅ 服务已存在！\n\n您可以直接通过以下地址访问：\n`%s`", subConverterUrl))
-		} else {
-			confirmKeyboard := tu.InlineKeyboard(
-				tu.InlineKeyboardRow(
-					tu.InlineKeyboardButton("✅ 是，立即安装").WithCallbackData("confirm_sub_install"),
-					tu.InlineKeyboardButton("❌ 否，取消").WithCallbackData("cancel_sub_install"),
-				),
-			)
-			t.SendMsgToTgbot(chatId, "⚠️ 服务检测失败，可能尚未安装。\n\n------>>>>您想现在执行〔订阅转换〕安装指令吗？\n\n**【重要】**请确保服务器防火墙已放行 `8000` 和 `15268` 端口。", confirmKeyboard)
-		}
-	}()
-}
 
 // 远程创建【一键配置】入站，增加一个 type 参数
 func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
@@ -3899,26 +3846,7 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
-// 【新增辅助函数】: 发送【订阅转换】安装成功的通知
-func (t *Tgbot) SendSubconverterSuccess() {
-	// func (t *Tgbot) SendSubconverterSuccess(targetChatId int64) {
-	domain, err := t.getDomain()
-	if err != nil {
-		domain = "[您的面板域名]"
-	}
 
-	msgText := fmt.Sprintf(
-		"🎉 **恭喜！【订阅转换】模块已成功安装！**\n\n"+
-			"您现在可以使用以下地址访问 Web 界面：\n\n"+
-			"🔗 **登录地址**: `https://%s:15268`\n\n"+
-			"默认用户名: `admin`\n"+
-			"默认 密码: `123456`\n\n"+
-			"可登录订阅转换后台修改您的密码！",
-		domain,
-	)
-	t.SendMsgToTgbotAdmins(msgText)
-	// t.SendMsgToTgbot(targetChatId, msgText)
-}
 
 // 【新增方法】: 检查面板更新
 func (t *Tgbot) checkPanelUpdate(chatId int64) {

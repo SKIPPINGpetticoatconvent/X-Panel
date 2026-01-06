@@ -156,18 +156,7 @@ func TestCommandHandling(t *testing.T) {
 			isAdmin:       false,
 			shouldProcess: false,
 		},
-		{
-			name:          "Subconverter command - admin",
-			command:       "/subconverter",
-			isAdmin:       true,
-			shouldProcess: true,
-		},
-		{
-			name:          "Subconverter command - non-admin",
-			command:       "/subconverter",
-			isAdmin:       false,
-			shouldProcess: false,
-		},
+
 		{
 			name:          "RestartX command - admin",
 			command:       "/restartx",
@@ -208,7 +197,6 @@ func TestCommandHandling(t *testing.T) {
 			isAdminCommand := strings.Contains(tt.command, "/inbound") ||
 				strings.Contains(tt.command, "/restart") ||
 				strings.Contains(tt.command, "/oneclick") ||
-				strings.Contains(tt.command, "/subconverter") ||
 				strings.Contains(tt.command, "/restartx")
 
 			// 验证权限逻辑
@@ -632,7 +620,6 @@ func BenchmarkCommandProcessing(b *testing.B) {
 		"/inbound 123",
 		"/restart",
 		"/oneclick",
-		"/subconverter",
 		"/restartx",
 		"/xrayversion",
 	}
@@ -791,7 +778,6 @@ func TestIntegrationScenarios(t *testing.T) {
 			"/inbound 123",
 			"/restart",
 			"/oneclick",
-			"/subconverter",
 			"/restartx",
 		}
 		
