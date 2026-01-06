@@ -1680,6 +1680,18 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "back_to_main":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "返回主菜单")
 		t.SendAnswer(chatId, "请选择操作:", true)
+	case "menu_system_status":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📊 正在打开系统状态菜单...")
+		t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), t.SystemStatusKeyboard())
+	case "menu_user_management":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "👥 正在打开用户管理菜单...")
+		t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), t.UserManagementKeyboard())
+	case "menu_panel_settings":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚙️ 正在打开面板设置菜单...")
+		t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), t.PanelSettingsKeyboard())
+	case "menu_quick_tools":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在打开快捷工具菜单...")
+		t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), t.QuickToolsKeyboard())
 	case "fetch_logs":
 		// 解析数量参数
 		tempDataArray := strings.Split(decodedQueryForAll, " ")
@@ -1845,47 +1857,92 @@ func checkAdmin(tgId int64) bool {
 	return false
 }
 
-func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
-	numericKeyboard := tu.InlineKeyboard(
+// MainMenuKeyboard 生成主菜单键盘
+func (t *Tgbot) MainMenuKeyboard() *telego.InlineKeyboardMarkup {
+	return tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📊 系统状态").WithCallbackData(t.encodeQuery("menu_system_status")),
+			tu.InlineKeyboardButton("👥 用户管理").WithCallbackData(t.encodeQuery("menu_user_management")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚙️ 面板设置").WithCallbackData(t.encodeQuery("menu_panel_settings")),
+			tu.InlineKeyboardButton("⚡ 快捷工具").WithCallbackData(t.encodeQuery("menu_quick_tools")),
+		),
+	)
+}
+
+// SystemStatusKeyboard 生成系统状态子菜单键盘
+func (t *Tgbot) SystemStatusKeyboard() *telego.InlineKeyboardMarkup {
+	return tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.serverUsage")).WithCallbackData(t.encodeQuery("get_usage")),
-			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.SortedTrafficUsageReport")).WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.ResetAllTraffics")).WithCallbackData(t.encodeQuery("reset_all_traffics")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.dbBackup")).WithCallbackData(t.encodeQuery("get_backup")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.getBanLogs")).WithCallbackData(t.encodeQuery("get_banlogs")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.getInbounds")).WithCallbackData(t.encodeQuery("inbounds")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.depleteSoon")).WithCallbackData(t.encodeQuery("deplete_soon")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.commands")).WithCallbackData(t.encodeQuery("commands")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.onlines")).WithCallbackData(t.encodeQuery("onlines")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.allClients")).WithCallbackData(t.encodeQuery("get_inbounds")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚡ 一键配置").WithCallbackData(t.encodeQuery("oneclick_options")),
-			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📂 更新管理").WithCallbackData(t.encodeQuery("update_management")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.getBanLogs")).WithCallbackData(t.encodeQuery("get_banlogs")),
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),
+		),
+	)
+}
+
+// UserManagementKeyboard 生成用户管理子菜单键盘
+func (t *Tgbot) UserManagementKeyboard() *telego.InlineKeyboardMarkup {
+	return tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.allClients")).WithCallbackData(t.encodeQuery("get_inbounds")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.SortedTrafficUsageReport")).WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.depleteSoon")).WithCallbackData(t.encodeQuery("deplete_soon")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.ResetAllTraffics")).WithCallbackData(t.encodeQuery("reset_all_traffics")),
+			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),
+		),
+	)
+}
+
+// PanelSettingsKeyboard 生成面板设置子菜单键盘
+func (t *Tgbot) PanelSettingsKeyboard() *telego.InlineKeyboardMarkup {
+	return tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
+			tu.InlineKeyboardButton("📂 更新管理").WithCallbackData(t.encodeQuery("update_management")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.dbBackup")).WithCallbackData(t.encodeQuery("get_backup")),
 			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
 		),
-		// VPS推荐按钮已移除
-		// TODOOOOOOOOOOOOOO: Add restart button here.
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),
+		),
 	)
+}
+
+// QuickToolsKeyboard 生成快捷工具子菜单键盘
+func (t *Tgbot) QuickToolsKeyboard() *telego.InlineKeyboardMarkup {
+	return tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ 一键配置").WithCallbackData(t.encodeQuery("oneclick_options")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.commands")).WithCallbackData(t.encodeQuery("commands")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),
+		),
+	)
+}
+
+func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 	numericKeyboardClient := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.clientUsage")).WithCallbackData(t.encodeQuery("client_traffic")),
@@ -1895,7 +1952,7 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 
 	var ReplyMarkup telego.ReplyMarkup
 	if isAdmin {
-		ReplyMarkup = numericKeyboard
+		ReplyMarkup = t.MainMenuKeyboard()
 	} else {
 		ReplyMarkup = numericKeyboardClient
 	}
