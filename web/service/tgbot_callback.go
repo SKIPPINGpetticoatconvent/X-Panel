@@ -1745,11 +1745,7 @@ func (t *Tgbot) BuildInboundClientDataMessage(inbound_remark string, protocol mo
 	case model.VMESS, model.VLESS:
 		message = t.I18nBot("tgbot.messages.inbound_client_data_id", "InboundRemark=="+inbound_remark, "ClientId=="+client_Id, "ClientEmail=="+client_Email, "ClientTraffic=="+traffic_value, "ClientExp=="+expiryTime, "IpLimit=="+ip_limit, "ClientComment=="+client_Comment)
 
-	case model.Trojan:
-		message = t.I18nBot("tgbot.messages.inbound_client_data_pass", "InboundRemark=="+inbound_remark, "ClientPass=="+client_TrPassword, "ClientEmail=="+client_Email, "ClientTraffic=="+traffic_value, "ClientExp=="+expiryTime, "IpLimit=="+ip_limit, "ClientComment=="+client_Comment)
 
-	case model.Shadowsocks:
-		message = t.I18nBot("tgbot.messages.inbound_client_data_pass", "InboundRemark=="+inbound_remark, "ClientPass=="+client_ShPassword, "ClientEmail=="+client_Email, "ClientTraffic=="+traffic_value, "ClientExp=="+expiryTime, "IpLimit=="+ip_limit, "ClientComment=="+client_Comment)
 
 	default:
 		return "", errors.New("unknown protocol")
@@ -1796,38 +1792,7 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
             }]
         }`, client_Id, client_Flow, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
 
-	case model.Trojan:
-		jsonString = fmt.Sprintf(`{
-            "clients": [{
-                "password": "%s",
-                "email": "%s",
-                "limitIp": %d,
-                "totalGB": %d,
-                "expiryTime": %d,
-                "enable": %t,
-                "tgId": "%s",
-                "subId": "%s",
-                "comment": "%s",
-                "reset": %d
-            }]
-        }`, client_TrPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
 
-	case model.Shadowsocks:
-		jsonString = fmt.Sprintf(`{
-            "clients": [{
-                "method": "%s",
-                "password": "%s",
-                "email": "%s",
-                "limitIp": %d,
-                "totalGB": %d,
-                "expiryTime": %d,
-                "enable": %t,
-                "tgId": "%s",
-                "subId": "%s",
-                "comment": "%s",
-                "reset": %d
-            }]
-        }`, client_Method, client_ShPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
 
 	default:
 		return "", errors.New("unknown protocol")
@@ -2056,9 +2021,11 @@ func (t *Tgbot) prepareServerUsageInfo() string {
 				for _, address := range addrs {
 					if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 						if ipnet.IP.To4() != nil {
-							ipv4 += ipnet.IP.String() + " "
+							// 隐藏 IPv4 地址
+							ipv4 += "****** "
 						} else if ipnet.IP.To16() != nil && !ipnet.IP.IsLinkLocalUnicast() {
-							ipv6 += ipnet.IP.String() + " "
+							// 隐藏 IPv6 地址
+							ipv6 += "****** "
 						}
 					}
 				}
@@ -2103,10 +2070,12 @@ func (t *Tgbot) UserLoginNotify(username string, password string, ip string, tim
 	case LoginFail:
 		msg += t.I18nBot("tgbot.messages.loginFailed")
 		msg += t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname)
-		msg += t.I18nBot("tgbot.messages.password", "Password=="+password)
+		// 隐藏密码显示
+		msg += t.I18nBot("tgbot.messages.password", "Password=="+"******")
 	}
 	msg += t.I18nBot("tgbot.messages.username", "Username=="+username)
-	msg += t.I18nBot("tgbot.messages.ip", "IP=="+ip)
+	// 隐藏 IP 地址显示
+	msg += t.I18nBot("tgbot.messages.ip", "IP=="+"******")
 	msg += t.I18nBot("tgbot.messages.time", "Time=="+time)
 	t.SendMsgToTgbotAdmins(msg)
 }
@@ -2545,61 +2514,7 @@ func (t *Tgbot) addClient(chatId int64, msg string, messageID ...int) {
 		} else {
 			t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
 		}
-	case model.Trojan:
-		inlineKeyboard := tu.InlineKeyboard(
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.change_email")).WithCallbackData("add_client_ch_default_email"),
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.change_password")).WithCallbackData("add_client_ch_default_pass_tr"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.limitTraffic")).WithCallbackData("add_client_ch_default_traffic"),
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.resetExpire")).WithCallbackData("add_client_ch_default_exp"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.change_comment")).WithCallbackData("add_client_ch_default_comment"),
-				tu.InlineKeyboardButton("ip limit").WithCallbackData("add_client_ch_default_ip_limit"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.submitDisable")).WithCallbackData("add_client_submit_disable"),
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.submitEnable")).WithCallbackData("add_client_submit_enable"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.cancel")).WithCallbackData("add_client_cancel"),
-			),
-		)
-		if len(messageID) > 0 {
-			t.editMessageTgBot(chatId, messageID[0], msg, inlineKeyboard)
-		} else {
-			t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
-		}
-	case model.Shadowsocks:
-		inlineKeyboard := tu.InlineKeyboard(
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.change_email")).WithCallbackData("add_client_ch_default_email"),
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.change_password")).WithCallbackData("add_client_ch_default_pass_sh"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.limitTraffic")).WithCallbackData("add_client_ch_default_traffic"),
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.resetExpire")).WithCallbackData("add_client_ch_default_exp"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.change_comment")).WithCallbackData("add_client_ch_default_comment"),
-				tu.InlineKeyboardButton("ip limit").WithCallbackData("add_client_ch_default_ip_limit"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.submitDisable")).WithCallbackData("add_client_submit_disable"),
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.submitEnable")).WithCallbackData("add_client_submit_enable"),
-			),
-			tu.InlineKeyboardRow(
-				tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.cancel")).WithCallbackData("add_client_cancel"),
-			),
-		)
 
-		if len(messageID) > 0 {
-			t.editMessageTgBot(chatId, messageID[0], msg, inlineKeyboard)
-		} else {
-			t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
-		}
 	}
 
 }
