@@ -1377,6 +1377,19 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
 		t.remoteCreateOneClickInbound("switch_vision", chatId)
 
+	// 【新增代码】: 处理更新管理子菜单相关回调
+	case "update_management":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📂 正在打开更新管理菜单...")
+		t.sendUpdateManagementMenu(chatId)
+
+	case "update_management_xray":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 请选择要更新的版本...")
+		t.sendXrayVersionOptions(chatId)
+
+	case "update_management_panel":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔄 正在检查最新版本...")
+		t.checkPanelUpdate(chatId)
+
 
 	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
 	case "restart_panel":
@@ -1859,22 +1872,16 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ 一键配置").WithCallbackData(t.encodeQuery("oneclick_options")),
 			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
 		),
-	
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("xrayversion")),
+			tu.InlineKeyboardButton("📂 更新管理").WithCallbackData(t.encodeQuery("update_management")),
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
 			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
-		),
-		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🌍 更新 Geo 数据").WithCallbackData(t.encodeQuery("update_geodata_ask")),
 		),
 		// VPS推荐按钮已移除
 		// TODOOOOOOOOOOOOOO: Add restart button here.
@@ -3902,4 +3909,23 @@ func (t *Tgbot) showLogSettings(chatId int64) {
 	)
 
 	t.SendMsgToTgbot(chatId, message, keyboard)
+}
+
+// 【新增方法】: 显示更新管理子菜单
+func (t *Tgbot) sendUpdateManagementMenu(chatId int64) {
+	updateKeyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("update_management_xray")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("update_management_panel")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🌍 更新 Geo 数据").WithCallbackData(t.encodeQuery("update_geodata_ask")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("back_to_main")),
+		),
+	)
+	t.SendMsgToTgbot(chatId, "📂 **更新管理**\n\n请选择要执行的操作：", updateKeyboard)
 }
