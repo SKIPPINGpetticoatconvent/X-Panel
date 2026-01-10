@@ -1423,12 +1423,19 @@ request_ip_cert() {
     echo -e "${green}申请 IP 证书${plain}"
     echo ""
 
-    # Prompt for IP address
-    read -rp "请输入 IP 地址: " cert_ip
+    # Auto-detect public IP
+    echo -e "${yellow}正在检测公网 IP...${plain}"
+    cert_ip=$(detect_public_ip)
     if [[ -z "$cert_ip" ]]; then
-        LOGE "IP 地址不能为空"
-        before_show_menu
-        return
+        LOGE "无法检测到公网 IP，请手动输入"
+        read -rp "请输入 IP 地址: " cert_ip
+        if [[ -z "$cert_ip" ]]; then
+            LOGE "IP 地址不能为空"
+            before_show_menu
+            return
+        fi
+    else
+        echo -e "${green}检测到公网 IP: $cert_ip${plain}"
     fi
 
     # Prompt for email
@@ -1451,6 +1458,72 @@ request_ip_cert() {
     fi
 
     before_show_menu
+}
+
+# Function to detect public IP
+detect_public_ip() {
+    local services=(
+        "https://api.ipify.org"
+        "https://ifconfig.me/ip"
+        "https://icanhazip.com"
+        "https://ip.sb"
+        "https://api.ip.sb/ip"
+    )
+
+    for service in "${services[@]}"; do
+        ip=$(curl -s --max-time 5 "$service" 2>/dev/null)
+        if [[ $? == 0 && -n "$ip" ]]; then
+            # Validate IP format
+            if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                # Check if not private IP
+                if ! is_private_ip "$ip"; then
+                    echo "$ip"
+                    return 0
+                fi
+            fi
+        fi
+    done
+    return 1
+}
+
+# Function to check if IP is private
+is_private_ip() {
+    local ip=$1
+    local private_ranges=(
+        "10.0.0.0/8"
+        "172.16.0.0/12"
+        "192.168.0.0/16"
+        "127.0.0.0/8"
+        "169.254.0.0/16"
+    )
+
+    for range in "${private_ranges[@]}"; do
+        if ip_in_range "$ip" "$range"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Function to check if IP is in CIDR range
+ip_in_range() {
+    local ip=$1
+    local cidr=$2
+
+    # Simple check using awk (basic implementation)
+    # For full CIDR check, would need more complex logic
+    local network=$(echo $cidr | cut -d'/' -f1)
+    local prefix=$(echo $cidr | cut -d'/' -f2)
+
+    # For simplicity, check if IP starts with network prefix
+    case $prefix in
+        8) [[ "$ip" == 10.* ]] && return 0 ;;
+        12) [[ "$ip" == 172.1[6-9].* || "$ip" == 172.2[0-9].* || "$ip" == 172.3[0-1].* ]] && return 0 ;;
+        16) [[ "$ip" == 192.168.* ]] && return 0 ;;
+        24) [[ "$ip" == 127.* ]] && return 0 ;;
+        16) [[ "$ip" == 169.254.* ]] && return 0 ;;
+    esac
+    return 1
 }
 
 
@@ -1808,7 +1881,7 @@ show_menu() {
   ${green}16.${plain} 启用开机启动
   ${green}17.${plain} 禁用开机启动
 ——————————————————————
-  ${green}18.${plain} SSL 证书管理
+  ${green}18.${plain} IP 证书申请
   ${green}19.${plain} CF SSL 证书
   ${green}20.${plain} IP 限制管理
   ${green}21.${plain} 防火墙管理
@@ -1880,7 +1953,7 @@ show_menu() {
         check_install && disable
         ;;
     18)
-        ssl_cert_issue_main
+        request_ip_cert
         ;;
     19)
         ssl_cert_issue_CF

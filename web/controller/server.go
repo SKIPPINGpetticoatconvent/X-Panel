@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"x-ui/logger"
 	"x-ui/web/global"
 	"x-ui/web/service"
 
@@ -17,8 +18,9 @@ var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 type ServerController struct {
 	BaseController
 
-	serverService  service.ServerService
-	settingService service.SettingService
+	serverService     service.ServerService
+	settingService    service.SettingService
+	publicIPDetector  *service.PublicIPDetector
 
 	lastStatus        *service.Status
 	lastGetStatusTime time.Time
@@ -33,7 +35,8 @@ func NewServerController(g *gin.RouterGroup, serverService service.ServerService
 		lastGetStatusTime: time.Now(),
 		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。
 		//    这样一来，这个 Controller 内部使用的就是我们在 main.go 中创建的那个功能完整的服务了。
-		serverService: serverService,
+		serverService:     serverService,
+		publicIPDetector:  service.NewPublicIPDetector(),
 	}
 	a.initRouter(g)
 	a.startTask()
@@ -65,6 +68,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/openPort", a.openPort)
 	g.GET("/getNewSNI", a.getNewSNI)
 	g.GET("/getRandomRealitySNI", a.getRandomRealitySNI)
+	g.GET("/ip", a.getPublicIP)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -373,4 +377,35 @@ func (a *ServerController) getNewSNI(c *gin.Context) {
 func (a *ServerController) getRandomRealitySNI(c *gin.Context) {
 	target, domain := a.serverService.GetRandomRealitySNI()
 	jsonObj(c, map[string]string{"target": target, "domain": domain}, nil)
+}
+
+// getPublicIP 获取公网 IP 地址
+func (a *ServerController) getPublicIP(c *gin.Context) {
+	ipv4, ipv6, err := a.getPublicIPs()
+	if err != nil {
+		jsonMsg(c, "Failed to detect public IP", err)
+		return
+	}
+
+	jsonObj(c, map[string]interface{}{
+		"ipv4": ipv4,
+		"ipv6": ipv6,
+	}, nil)
+}
+
+// getPublicIPs 获取 IPv4 和 IPv6 地址
+func (a *ServerController) getPublicIPs() (ipv4, ipv6 string, err error) {
+	// 尝试获取 IPv4
+	ipv4, err4 := a.publicIPDetector.GetPublicIP()
+	if err4 != nil {
+		// 如果 IPv4 获取失败，记录警告但不返回错误
+		logger.Warning("Failed to get IPv4 address:", err4)
+		ipv4 = ""
+	}
+
+	// 注意：当前实现主要关注 IPv4，IPv6 暂时返回空字符串
+	// 如果需要 IPv6 支持，可以扩展检测逻辑
+	ipv6 = ""
+
+	return ipv4, ipv6, nil
 }
