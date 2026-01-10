@@ -7,8 +7,6 @@ replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20250503011706-39ed1f5ac29
 replace github.com/sagernet/sing-shadowsocks => github.com/sagernet/sing-shadowsocks v0.2.8
 
 require (
-	github.com/BurntSushi/toml v1.5.0
-	github.com/caddyserver/certmagic v0.25.1
 	github.com/gin-contrib/gzip v1.2.5
 	github.com/gin-contrib/sessions v1.0.4
 	github.com/gin-gonic/gin v1.11.0
@@ -16,7 +14,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mymmrac/telego v1.4.0
-	github.com/nicksnyder/go-i18n/v2 v2.6.0
+	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/nxadm/tail v1.4.11
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/pelletier/go-toml/v2 v2.2.4
@@ -40,7 +38,6 @@ require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
-	github.com/caddyserver/zerossl v0.1.4 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -67,11 +64,9 @@ require (
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-sqlite3 v1.14.32 // indirect
-	github.com/mholt/acmez/v3 v3.1.4 // indirect
 	github.com/miekg/dns v1.1.69 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -97,10 +92,6 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	github.com/xtls/reality v0.0.0-20251014195629-e4eec4520535 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	github.com/zeebo/blake3 v0.2.4 // indirect
-	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.1 // indirect
-	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/arch v0.22.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
