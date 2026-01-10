@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -33,6 +34,7 @@ import (
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 type ProcessState string
@@ -1770,6 +1772,64 @@ func (s *ServerService) RefreshSNIFromGeoIP() {
 	// 使用 SNISelector 的刷新方法
 	s.sniSelector.RefreshDomainsFromGeoIP(s)
 	logger.Info("SNI域名列表已根据地理位置刷新")
+}
+
+// GetXrayProcessInfo 获取 Xray 进程信息 (PID 和 UID)
+func (s *ServerService) GetXrayProcessInfo() (pid, uid int, err error) {
+	if !s.xrayService.IsXrayRunning() {
+		return 0, 0, errors.New("xray is not running")
+	}
+
+	// 使用 gopsutil 查找 xray 进程
+	processes, err := process.Processes()
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get processes: %w", err)
+	}
+
+	// 查找 xray 进程 (通过命令行或进程名)
+	for _, proc := range processes {
+		cmdline, err := proc.Cmdline()
+		if err != nil {
+			continue
+		}
+
+		// 检查是否包含 xray
+		if strings.Contains(cmdline, "xray") {
+			pid = int(proc.Pid)
+
+			// 获取进程 UID
+			uids, err := proc.Uids()
+			if err != nil {
+				logger.Warningf("Failed to get UIDs for process %d: %v", pid, err)
+				// 返回当前用户 UID 作为回退
+				uid = os.Getuid()
+			} else if len(uids) > 0 {
+				uid = int(uids[0]) // 真实 UID
+			} else {
+				uid = os.Getuid()
+			}
+
+			return pid, uid, nil
+		}
+	}
+
+	return 0, 0, errors.New("xray process not found")
+}
+
+// SendSignalToXray 发送信号给 Xray 进程
+func (s *ServerService) SendSignalToXray(sig os.Signal) error {
+	pid, _, err := s.GetXrayProcessInfo()
+	if err != nil {
+		return err
+	}
+
+	// 使用 syscall 发送信号
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return fmt.Errorf("failed to find process %d: %w", pid, err)
+	}
+
+	return process.Signal(sig)
 }
 
 // GetGeoIPInfo 获取当前 GeoIP 信息

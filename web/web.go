@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"embed"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -127,6 +128,14 @@ type Server struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	// 端口冲突自愈相关字段
+	httpListenerPaused bool                  // HTTP 监听器是否已暂停
+	savedListener      net.Listener          // 保存的监听器，用于恢复
+	router             *gin.Engine           // 保存的路由器，用于重新启动服务器
+	listenAddr         string                // 保存的监听地址
+	isHTTPS            bool                  // 是否为 HTTPS 模式
+	tlsConfig          *tls.Config           // TLS 配置（如果适用）
 }
 
 // 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来
@@ -467,6 +476,11 @@ func (s *Server) Start() (err error) {
 	}
 	s.listener = listener
 
+	// 保存路由器和监听信息，用于端口冲突自愈
+	s.router = engine
+	s.listenAddr = listenAddr
+	s.isHTTPS = (certFile != "" && keyFile != "")
+
 	// 修改 s.httpServer 的初始化代码
 	s.httpServer = &http.Server{
 		Handler: engine,
@@ -525,6 +539,132 @@ func (s *Server) GetCtx() context.Context {
 
 func (s *Server) GetCron() *cron.Cron {
 	return s.cron
+}
+
+// WebServerController 接口实现 - 端口冲突自愈
+
+// PauseHTTPListener 暂停 80 端口监听
+func (s *Server) PauseHTTPListener() error {
+	if s.httpListenerPaused {
+		return fmt.Errorf("HTTP listener is already paused")
+	}
+
+	logger.Info("Pausing HTTP listener for port 80 conflict resolution")
+
+	// 保存当前监听器
+	s.savedListener = s.listener
+
+	// 停止 HTTP 服务器
+	if s.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			logger.Warning("Error shutting down HTTP server:", err)
+			// 继续执行，即使有错误
+		}
+	}
+
+	// 标记为已暂停
+	s.httpListenerPaused = true
+	logger.Info("HTTP listener paused successfully")
+
+	return nil
+}
+
+// ResumeHTTPListener 恢复 80 端口监听
+func (s *Server) ResumeHTTPListener() error {
+	if !s.httpListenerPaused {
+		return fmt.Errorf("HTTP listener is not paused")
+	}
+
+	logger.Info("Resuming HTTP listener after port 80 conflict resolution")
+
+	// 重新创建监听器
+	baseListener, err := net.Listen("tcp", s.listenAddr)
+	if err != nil {
+		return fmt.Errorf("failed to recreate listener: %w", err)
+	}
+
+	listener := s.setupListener(baseListener)
+
+	// 如果是 HTTPS 模式，配置 TLS
+	if s.isHTTPS {
+		certFile, err := s.settingService.GetCertFile()
+		if err != nil {
+			return fmt.Errorf("failed to get cert file: %w", err)
+		}
+		keyFile, err := s.settingService.GetKeyFile()
+		if err != nil {
+			return fmt.Errorf("failed to get key file: %w", err)
+		}
+
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return fmt.Errorf("failed to load certificates: %w", err)
+		}
+
+		c := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			},
+			PreferServerCipherSuites: true,
+			SessionTicketsDisabled:   false,
+			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				return &cert, nil
+			},
+		}
+		listener = network.NewAutoHttpsListener(listener)
+		listener = tls.NewListener(listener, c)
+	}
+
+	// 更新服务器和监听器
+	s.listener = listener
+	s.httpServer = &http.Server{
+		Handler:      s.router,
+		ReadTimeout:  120 * time.Second,
+		WriteTimeout: 120 * time.Second,
+	}
+
+	// 重新启动服务器
+	go func() {
+		s.httpServer.Serve(listener)
+	}()
+
+	// 重置暂停状态
+	s.httpListenerPaused = false
+	s.savedListener = nil
+
+	logger.Info("HTTP listener resumed successfully")
+	return nil
+}
+
+// IsListeningOnPort80 检查当前配置是否启用了 80 端口监听
+func (s *Server) IsListeningOnPort80() bool {
+	port, err := s.settingService.GetPort()
+	if err != nil {
+		logger.Warning("Failed to get port setting:", err)
+		return false
+	}
+	return port == 80 && !s.httpListenerPaused
+}
+
+// setupListener 设置监听器（复用 Start 方法中的逻辑）
+func (s *Server) setupListener(baseListener net.Listener) net.Listener {
+	tcpListener, ok := baseListener.(*net.TCPListener)
+	if !ok {
+		logger.Warning("监听器不是 TCPListener 类型, 无法设置 Keep-Alive。")
+		return baseListener
+	}
+
+	kaListener := &keepAliveListener{
+		TCPListener:     tcpListener,
+		KeepAlivePeriod: 5 * time.Second,
+	}
+	return net.Listener(kaListener)
 }
 
 // isInternalIP 判断是否为私网或回环IP（支持IPv4和IPv6）

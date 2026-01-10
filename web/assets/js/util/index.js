@@ -11,8 +11,15 @@ class HttpUtil {
         if (!(msg instanceof Msg) || msg.msg === "") {
             return;
         }
+
+        // 检查是否为证书错误，并获取本地化消息
+        let displayMessage = msg.msg;
+        if (!msg.success && window.CertErrorHandler) {
+            displayMessage = window.CertErrorHandler.getCertErrorMessage(msg.msg) || msg.msg;
+        }
+
         const messageType = msg.success ? 'success' : 'error';
-        Vue.prototype.$message[messageType](msg.msg);
+        Vue.prototype.$message[messageType](displayMessage);
     }
 
     static _respToMsg(resp) {
@@ -23,9 +30,19 @@ class HttpUtil {
         if (data == null) {
             return new Msg(true);
         }
+
+        // 处理标准响应格式
         if (typeof data === 'object' && 'success' in data) {
-            return new Msg(data.success, data.msg, data.obj);
+            let message = data.msg || '';
+
+            // 如果响应包含错误对象，优先使用错误码
+            if (!data.success && data.error && data.error.code) {
+                message = data.error.code; // 传递错误码，让 _handleMsg 处理本地化
+            }
+
+            return new Msg(data.success, message, data.obj);
         }
+
         return typeof data === 'object' ? data : new Msg(false, 'unknown data:', data);
     }
 

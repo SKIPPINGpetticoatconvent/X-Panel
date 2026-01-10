@@ -641,7 +641,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 		errorMsg := fmt.Sprintf("创建基础内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg := "✅ 基础内核参数配置文件已创建"
 	output.WriteString(successMsg + "\n")
@@ -658,7 +658,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 		errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg = "✅ 基础内核参数已应用"
 	output.WriteString(successMsg + "\n")
@@ -895,7 +895,7 @@ fs.file-max = 1000000
 		errorMsg := fmt.Sprintf("创建内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg := "✅ 内核参数配置文件已创建"
 	output.WriteString(successMsg + "\n")
@@ -912,7 +912,7 @@ fs.file-max = 1000000
 		errorMsg := fmt.Sprintf("应用内核参数失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg = "✅ 内核参数已应用"
 	output.WriteString(successMsg + "\n")

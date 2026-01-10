@@ -111,6 +111,12 @@ func runWebServer() {
 	//    注入证书服务
 	serverService.SetCertService(certService)
 
+	// 注入依赖到证书服务 (用于 IP 证书改进模块)
+	certService.SetServerService(&serverService)
+	if tgBotService != nil {
+		certService.SetTgbot(tgBotService)
+	}
+
 	var server *web.Server
 
 	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。

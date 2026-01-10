@@ -673,6 +673,18 @@
 "FailedResetTraffic" = "📧 ایمیل: {{ .ClientEmail }}\n🏁 نتیجه: ❌ ناموفق \n\n🛠️ خطا: [ {{ .ErrorMessage }} ]"
 "FinishProcess" = "🔚 فرآیند بازنشانی ترافیک برای همه مشتریان به پایان رسید."
 
+[cert_errors]
+CERT_E001 = "Port 80 is occupied by another process"
+CERT_E002 = "Port 80 is occupied by external process (e.g., Nginx)"
+CERT_E003 = "CA server timeout"
+CERT_E004 = "CA server refused the request"
+CERT_E005 = "DNS resolution failed"
+CERT_E006 = "Certificate has expired"
+CERT_E007 = "Certificate renewal failed"
+CERT_E008 = "Xray core reload failed"
+CERT_E009 = "Fallback mode activated"
+CERT_E010 = "Permission denied"
+
 [tgbot.buttons]
 "closeKeyboard" = "❌ بستن کیبورد"
 "cancel" = "❌ لغو"

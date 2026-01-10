@@ -752,6 +752,18 @@
 "SuccessResetTraffic" = "📧 **用户：** `{{ .ClientEmail }}`\r\n✅ **状态：** 重置成功"
 "FailedResetTraffic" = "📧 **用户：** `{{ .ClientEmail }}`\r\n❌ **状态：** 重置失败\r\n\r\n🛠️ **错误详情：** `{{ .ErrorMessage }}`"
 "FinishProcess" = "🎉 **批量操作完成**\r\n\r\n所有客户端流量重置任务已完成"
+
+[cert_errors]
+CERT_E001 = "80 端口被占用"
+CERT_E002 = "80 端口被外部进程占用（如：Nginx）"
+CERT_E003 = "CA 服务器超时"
+CERT_E004 = "CA 服务器拒绝请求"
+CERT_E005 = "DNS 解析失败"
+CERT_E006 = "证书已过期"
+CERT_E007 = "证书续期失败"
+CERT_E008 = "Xray 核心重载失败"
+CERT_E009 = "回退机制已激活"
+CERT_E010 = "权限不足"
 "updateConfirm" = "🔄 **面板更新确认**\r\n\r\n⚠️ **注意：** 此操作将：\r\n• 自动从 GitHub 拉取最新代码\r\n• 重启面板服务（期间无法访问）\r\n\r\n是否确认更新？"
 "restartPanelConfirm" = "🔄 **重启面板确认**\r\n\r\n⚠️ **注意：** 此操作将：\r\n• 重启 X-Panel 面板服务\r\n• 同时重启 Xray Core\r\n• 面板将在短时间内无法访问\r\n\r\n是否确认重启？"
 "updateFailed" = "❌ **面板更新失败**\r\n\r\n更新命令执行失败，请检查：\r\n• 服务器权限设置\r\n• 网络连接状态\r\n• 错误日志详情"

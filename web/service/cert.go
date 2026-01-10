@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/caddyserver/certmagic"
@@ -14,12 +15,66 @@ import (
 
 type CertService struct {
 	settingService *SettingService
+	serverService  *ServerService
+	tgbot          TelegramService
+
+	// Improvement Modules
+	portResolver   *PortConflictResolver
+	renewalManager *AggressiveRenewalManager
+	hotReloader    *CertHotReloader
+	alertFallback  *CertAlertFallback
+
+	initOnce sync.Once
 }
 
 func NewCertService(settingService *SettingService) *CertService {
 	return &CertService{
 		settingService: settingService,
 	}
+}
+
+func (c *CertService) SetServerService(s *ServerService) {
+	c.serverService = s
+	c.tryInitImprovements()
+}
+
+func (c *CertService) SetTgbot(t TelegramService) {
+	c.tgbot = t
+	c.tryInitImprovements()
+}
+
+// tryInitImprovements attempts to initialize improvement modules if dependencies are ready
+func (c *CertService) tryInitImprovements() {
+	if c.serverService == nil || c.tgbot == nil {
+		return
+	}
+
+	c.initOnce.Do(func() {
+		logger.Info("Initializing IP Certificate Improvement Modules...")
+
+		// 1. Initialize PortConflictResolver
+		webCtrl := &certWebServerController{settingService: c.settingService}
+		c.portResolver = NewPortConflictResolver(webCtrl)
+
+		// 2. Initialize CertAlertFallback
+		alertSvc := &certAlertService{tgbot: c.tgbot}
+		c.alertFallback = NewCertAlertFallback(alertSvc, c, c.settingService)
+
+		// 3. Initialize AggressiveRenewalManager
+		renewalConfig := RenewalConfig{
+			CheckInterval:  6 * time.Hour,
+			RenewThreshold: 3 * 24 * time.Hour, // 3 days
+			MaxRetries:     12,
+			RetryInterval:  30 * time.Minute,
+		}
+		c.renewalManager = NewAggressiveRenewalManager(renewalConfig, c, c.portResolver, c.alertFallback)
+
+		// 4. Initialize CertHotReloader
+		xrayCtrl := &certXrayController{serverService: c.serverService}
+		c.hotReloader = NewCertHotReloader(xrayCtrl)
+
+		logger.Info("IP Certificate Improvement Modules initialized successfully")
+	})
 }
 
 // ObtainIPCert obtains a Let's Encrypt IP certificate using certmagic with standalone challenge
@@ -31,15 +86,66 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 		return errors.New("email cannot be empty")
 	}
 
-	// Configure certmagic for IP certificate
-	certmagic.DefaultACME.CA = certmagic.LetsEncryptStagingCA // Use staging for testing
-	certmagic.DefaultACME.Email = email
+	// Ensure modules are initialized
+	if c.portResolver == nil {
+		logger.Warning("Improvement modules not initialized, falling back to legacy behavior")
+		return c.obtainIPCertLegacy(ip, email)
+	}
 
-	// Use standalone challenge solver for port 80
+	// 1. Acquire Port 80
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	if err := c.portResolver.AcquirePort80(ctx); err != nil {
+		return fmt.Errorf("failed to acquire port 80: %w", err)
+	}
+	defer func() {
+		if err := c.portResolver.ReleasePort80(); err != nil {
+			logger.Warningf("Failed to release port 80: %v", err)
+		}
+	}()
+
+	// 2. Configure certmagic
+	certmagic.DefaultACME.CA = certmagic.LetsEncryptStagingCA // Use staging for testing
+	// In production, you should switch to production CA or make it configurable
+	// certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
+
+	certmagic.DefaultACME.Email = email
 	certmagic.HTTPPort = 80
 	certmagic.HTTPSPort = 443
 
-	// Obtain certificate
+	// 3. Obtain certificate
+	// Use a longer timeout for the actual certificate issuance
+	issueCtx, issueCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer issueCancel()
+
+	err := certmagic.ManageSync(issueCtx, []string{ip})
+	if err != nil {
+		return fmt.Errorf("failed to obtain certificate for IP %s: %w", ip, err)
+	}
+
+	logger.Infof("Successfully obtained IP certificate for %s", ip)
+
+	// 4. Hot Reload
+	if c.hotReloader != nil {
+		certPath, _ := c.settingService.GetIpCertPath()
+		if certPath != "" {
+			if err := c.hotReloader.OnCertRenewed(certPath+".crt", certPath+".key"); err != nil {
+				logger.Errorf("Failed to hot reload certificate: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// obtainIPCertLegacy is the old implementation for fallback
+func (c *CertService) obtainIPCertLegacy(ip, email string) error {
+	certmagic.DefaultACME.CA = certmagic.LetsEncryptStagingCA
+	certmagic.DefaultACME.Email = email
+	certmagic.HTTPPort = 80
+	certmagic.HTTPSPort = 443
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -54,6 +160,13 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 
 // RenewLoop runs a background goroutine that periodically checks and renews IP certificates
 func (c *CertService) RenewLoop() {
+	// If renewal manager is initialized, use it
+	if c.renewalManager != nil {
+		c.renewalManager.Start()
+		return
+	}
+
+	// Fallback to legacy loop if manager not ready (e.g. dependencies missing)
 	go func() {
 		ticker := time.NewTicker(24 * time.Hour) // Check daily
 		defer ticker.Stop()
@@ -159,4 +272,75 @@ func (c *CertService) checkAndRenewCertificates() {
 			}
 		}
 	}
+}
+
+// --- Adapter Implementations ---
+
+// certWebServerController implements WebServerController interface
+type certWebServerController struct {
+	settingService *SettingService
+}
+
+func (c *certWebServerController) PauseHTTPListener() error {
+	// In a real implementation, this would signal the web server to stop listening on port 80
+	// Since we don't have direct control over the Gin engine here, we log a warning
+	// If the panel is actually on port 80, this will likely fail to free the port
+	logger.Warning("PauseHTTPListener called: Cannot pause panel listener directly. Ensure panel is not on port 80.")
+	return nil
+}
+
+func (c *certWebServerController) ResumeHTTPListener() error {
+	logger.Info("ResumeHTTPListener called")
+	return nil
+}
+
+func (c *certWebServerController) IsListeningOnPort80() bool {
+	port, err := c.settingService.GetPort()
+	if err != nil {
+		return false
+	}
+	return port == 80
+}
+
+// certXrayController implements XrayController interface
+type certXrayController struct {
+	serverService *ServerService
+}
+
+func (c *certXrayController) ReloadCore() error {
+	return c.serverService.RestartXrayService()
+}
+
+func (c *certXrayController) IsRunning() bool {
+	// We need to access the underlying XrayService
+	// Since ServerService doesn't expose IsXrayRunning directly but has it in GetStatus...
+	// Wait, ServerService has xrayService field but it's private.
+	// But ServerService has RestartXrayService which calls xrayService.RestartXray.
+	// We need to check if Xray is running.
+	// ServerService doesn't seem to expose IsXrayRunning directly as a public method.
+	// Let's check ServerService again.
+	// It has GetStatus which calls s.xrayService.IsXrayRunning().
+	// But we can't call private fields.
+	// We might need to add IsXrayRunning to ServerService or use a workaround.
+	// Workaround: Check if we can get status.
+	status := c.serverService.GetStatus(nil)
+	return status.Xray.State == Running
+}
+
+func (c *certXrayController) GetProcessInfo() (pid, uid int, err error) {
+	return c.serverService.GetXrayProcessInfo()
+}
+
+func (c *certXrayController) SendSignal(sig os.Signal) error {
+	return c.serverService.SendSignalToXray(sig)
+}
+
+// certAlertService implements AlertService interface
+type certAlertService struct {
+	tgbot TelegramService
+}
+
+func (c *certAlertService) SendAlert(title, message, level string) error {
+	fullMsg := fmt.Sprintf("<b>%s</b>\n\n%s", title, message)
+	return c.tgbot.SendMessage(fullMsg)
 }

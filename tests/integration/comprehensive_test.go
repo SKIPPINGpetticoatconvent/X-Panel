@@ -316,36 +316,4 @@ func commandExists(cmd string) bool {
 	return err == nil
 }
 
-// 示例：如何运行特定类型的测试
-func ExampleRunSpecificTests() {
-	// 只运行Web界面测试
-	fmt.Println("示例: 只运行Web界面测试")
-	fmt.Println("go test -v -run TestInbound ./web/controller/")
-	fmt.Println()
 
-	// 只运行数据库测试
-	fmt.Println("示例: 只运行数据库测试")
-	fmt.Println("go test -v ./web/service/ -run TestDatabase")
-	fmt.Println()
-
-	// 运行特定测试方法
-	fmt.Println("示例: 运行特定测试方法")
-	fmt.Println("go test -v -run TestUserService_CreateUser")
-	fmt.Println()
-
-	// 运行基准测试
-	fmt.Println("示例: 运行基准测试")
-	fmt.Println("go test -bench=. -benchmem")
-	fmt.Println()
-
-	// 运行并发安全测试
-	fmt.Println("示例: 运行并发安全测试")
-	fmt.Println("go test -race -v")
-	fmt.Println()
-
-	// 生成覆盖率报告
-	fmt.Println("示例: 生成覆盖率报告")
-	fmt.Println("go test -coverprofile=coverage.out ./...")
-	fmt.Println("go tool cover -html=coverage.out -o coverage.html")
-	fmt.Println()
-}
