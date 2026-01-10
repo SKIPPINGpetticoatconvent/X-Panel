@@ -178,6 +178,18 @@
       saveBtnDisable: true,
       user: {},
       lang: LanguageManager.getLanguage(),
+      certStatus: {
+        enabled: false,
+        targetIp: '',
+        certPath: '',
+        certExists: false,
+        notBefore: '',
+        notAfter: '',
+        issuer: '',
+        subject: '',
+        daysRemaining: 0
+      },
+      applyingCert: false,
       remarkModels: { i: 'Inbound', e: 'Email', o: 'Other' },
       remarkSeparators: [' ', '-', '_', '@', ':', '~', '|', ',', '.', '/'],
       datepickerList: [{ name: 'Gregorian (Standard)', value: 'gregorian' }, { name: 'Jalalian (شمسی)', value: 'jalalian' }],
@@ -336,18 +348,62 @@
           sendUpdateUserRequest();
         }
       },
-      async applyIPCert() {
-        this.loading(true);
-        const msg = await HttpUtil.post("/xui/setting/cert/apply", {
-          email: this.allSetting.ipCertEmail,
-          targetIp: this.allSetting.ipCertTarget
-        });
-        this.loading(false);
+      // 获取证书状态
+      async getCertStatus() {
+        const msg = await HttpUtil.get('/setting/cert/status');
         if (msg.success) {
-          Vue.prototype.$message['success']('证书申请成功');
-        } else {
-          Vue.prototype.$message['error'](msg.msg || '证书申请失败');
+          this.certStatus = msg.obj;
         }
+      },
+
+      // 申请 IP 证书
+      async applyIPCert() {
+        // 前端验证
+        if (!this.allSetting.ipCertEmail) {
+          this.$message.error('{{ i18n "pages.settings.ipCert.emailRequired" }}');
+          return;
+        }
+        if (!this.validateEmail(this.allSetting.ipCertEmail)) {
+          this.$message.error('{{ i18n "pages.settings.ipCert.invalidEmail" }}');
+          return;
+        }
+        if (!this.allSetting.ipCertTarget) {
+          this.$message.error('{{ i18n "pages.settings.ipCert.ipRequired" }}');
+          return;
+        }
+        if (!this.validateIPv4(this.allSetting.ipCertTarget)) {
+          this.$message.error('{{ i18n "pages.settings.ipCert.invalidIp" }}');
+          return;
+        }
+
+        this.applyingCert = true;
+        try {
+          const msg = await HttpUtil.post('/setting/cert/apply', {
+            targetIp: this.allSetting.ipCertTarget  // 注意：使用 targetIp（驼峰命名）
+          });
+          if (msg.success) {
+            this.$message.success('{{ i18n "pages.settings.ipCert.applySuccess" }}');
+            await this.getCertStatus();
+          } else {
+            this.$message.error(msg.msg);
+          }
+        } finally {
+          this.applyingCert = false;
+        }
+      },
+
+      // 验证邮箱格式
+      validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+      },
+
+      // 验证 IPv4 格式
+      validateIPv4(ip) {
+        const re = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!re.test(ip)) return false;
+        const parts = ip.split('.');
+        return parts.every(part => parseInt(part) >= 0 && parseInt(part) <= 255);
       },
       async restartPanel() {
         await new Promise(resolve => {
@@ -604,6 +660,7 @@
     },
     async mounted() {
       await this.getAllSetting();
+      await this.getCertStatus();
 
       while (true) {
         await PromiseUtil.sleep(1000);

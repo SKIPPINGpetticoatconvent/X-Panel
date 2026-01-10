@@ -461,6 +461,28 @@
 "language" = "语言"
 "telegramBotLanguage" = "Telegram 机器人语言"
 
+[pages.settings.ipCert]
+title = "Let's Encrypt IP 证书"
+enable = "启用 IP 证书"
+enableDesc = "启用 Let's Encrypt IP 证书自动申请"
+email = "邮箱地址"
+emailDesc = "Let's Encrypt 证书注册邮箱"
+targetIp = "目标 IPv4 地址"
+targetIpDesc = "要申请证书的 IPv4 地址"
+applyBtn = "申请证书"
+status = "证书状态"
+validFrom = "生效时间"
+validUntil = "到期时间"
+issuer = "颁发者"
+daysRemaining = "剩余天数"
+noCert = "未找到证书"
+port80Warning = "警告：如果面板运行在端口 80，证书申请可能会失败，因为 ACME 挑战需要端口 80。"
+emailRequired = "请输入邮箱地址"
+invalidEmail = "邮箱格式不正确"
+ipRequired = "请输入目标 IP 地址"
+invalidIp = "IPv4 地址格式不正确"
+applySuccess = "证书申请成功"
+
 [pages.xray]
 "title" = "Xray 配置"
 "save" = "保存"

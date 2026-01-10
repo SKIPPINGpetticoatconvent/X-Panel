@@ -113,32 +113,51 @@
                 <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/cert/域名/privkey.pem" class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
+        <!-- IP 证书设置区域 -->
         <a-setting-list-item paddings="small">
-            <template #title>Let's Encrypt IP 证书</template>
-            <template #description>启用 IP 证书自动申请</template>
+            <template #title>{{ i18n "pages.settings.ipCert.enable" }}</template>
+            <template #description>{{ i18n "pages.settings.ipCert.enableDesc" }}</template>
             <template #control>
                 <a-switch v-model="allSetting.ipCertEnable"></a-switch>
             </template>
         </a-setting-list-item>
-        <a-setting-list-item paddings="small">
-            <template #title>邮箱</template>
-            <template #description>Let's Encrypt 证书申请邮箱</template>
+
+        <!-- 端口 80 警告提示 -->
+        <a-alert v-if="allSetting.webPort == 80" type="warning" :message='{{ i18n "pages.settings.ipCert.port80Warning" }}' show-icon style="margin: 16px 0;"></a-alert>
+        <!-- 邮箱输入 -->
+        <a-setting-list-item paddings="small" v-if="allSetting.ipCertEnable">
+            <template #title>{{ i18n "pages.settings.ipCert.email" }}</template>
+            <template #description>{{ i18n "pages.settings.ipCert.emailDesc" }}</template>
             <template #control>
-                <a-input type="email" v-model="allSetting.ipCertEmail" placeholder="your@example.com"></a-input>
+                <a-input type="email" v-model.trim="allSetting.ipCertEmail" placeholder="your@example.com"></a-input>
             </template>
         </a-setting-list-item>
-        <a-setting-list-item paddings="small">
-            <template #title>目标 IP</template>
-            <template #description>要申请证书的 IP 地址</template>
+        <!-- 目标 IP 输入 -->
+        <a-setting-list-item paddings="small" v-if="allSetting.ipCertEnable">
+            <template #title>{{ i18n "pages.settings.ipCert.targetIp" }}</template>
+            <template #description>{{ i18n "pages.settings.ipCert.targetIpDesc" }}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.ipCertTarget" placeholder="1.2.3.4"></a-input>
+                <a-input type="text" v-model.trim="allSetting.ipCertTarget" placeholder="192.168.1.1"></a-input>
             </template>
         </a-setting-list-item>
-        <a-list-item>
+        <!-- 申请按钮 -->
+        <a-list-item v-if="allSetting.ipCertEnable">
             <a-space direction="horizontal" :style="{ padding: '0 20px' }">
-                <a-button type="primary" @click="applyIPCert">{{ i18n "pages.settings.applyCert" }}</a-button>
+                <a-button type="primary" @click="applyIPCert" :loading="applyingCert">{{ i18n "pages.settings.ipCert.applyBtn" }}</a-button>
             </a-space>
         </a-list-item>
+
+        <!-- 证书状态显示 -->
+        <a-card v-if="allSetting.ipCertEnable && certStatus.certExists" :title='{{ i18n "pages.settings.ipCert.status" }}' size="small" style="margin: 16px 0;">
+            <p><strong>{{ i18n "pages.settings.ipCert.validFrom" }}:</strong> [[ certStatus.notBefore ]]</p>
+            <p><strong>{{ i18n "pages.settings.ipCert.validUntil" }}:</strong> [[ certStatus.notAfter ]]</p>
+            <p><strong>{{ i18n "pages.settings.ipCert.issuer" }}:</strong> [[ certStatus.issuer ]]</p>
+            <p><strong>{{ i18n "pages.settings.ipCert.daysRemaining" }}:</strong>
+                <a-tag :color="certStatus.daysRemaining < 3 ? 'red' : certStatus.daysRemaining < 7 ? 'orange' : 'green'">
+                    [[ certStatus.daysRemaining ]] {{ i18n "days" }}
+                </a-tag>
+            </p>
+        </a-card>
     </a-collapse-panel>
     <a-collapse-panel key="4" header='{{ i18n "pages.settings.externalTraffic" }}'>
         <a-setting-list-item paddings="small">

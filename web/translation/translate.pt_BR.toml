@@ -739,7 +739,6 @@
 "askToAddUserId" = "Sua configuração não foi encontrada!\r\nPeça ao seu administrador para usar seu Telegram ChatID em suas configurações.\r\n\r\nSeu ChatID: <code>{{ .TgUserID }}</code>"
 "chooseClient" = "Escolha um cliente para Inbound {{ .Inbound }}"
 "chooseInbound" = "Escolha um Inbound"
--e 
 [cert_errors]
 CERT_E001 = "Port 80 is occupied by another process"
 CERT_E002 = "Port 80 is occupied by external process (e.g., Nginx)"

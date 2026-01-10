@@ -443,6 +443,28 @@
 "language" = "Language"
 "telegramBotLanguage" = "Telegram Bot Language"
 
+[pages.settings.ipCert]
+title = "Let's Encrypt IP Certificate"
+enable = "Enable IP Certificate"
+enableDesc = "Enable automatic Let's Encrypt IP certificate application"
+email = "Email Address"
+emailDesc = "Email address for Let's Encrypt certificate registration"
+targetIp = "Target IPv4 Address"
+targetIpDesc = "The IPv4 address for which to apply the certificate"
+applyBtn = "Apply Certificate"
+status = "Certificate Status"
+validFrom = "Valid From"
+validUntil = "Valid Until"
+issuer = "Issuer"
+daysRemaining = "Days Remaining"
+noCert = "No certificate found"
+port80Warning = "Warning: If the panel runs on port 80, certificate application may fail because port 80 is required for ACME challenge."
+emailRequired = "Email address is required"
+invalidEmail = "Invalid email format"
+ipRequired = "Target IP address is required"
+invalidIp = "Invalid IPv4 address format"
+applySuccess = "Certificate applied successfully"
+
 [pages.xray]
 "title" = "Xray Configs"
 "save" = "Save"

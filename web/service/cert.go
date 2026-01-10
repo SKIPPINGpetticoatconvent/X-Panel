@@ -106,9 +106,7 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 	}()
 
 	// 2. Configure certmagic
-	certmagic.DefaultACME.CA = certmagic.LetsEncryptStagingCA // Use staging for testing
-	// In production, you should switch to production CA or make it configurable
-	// certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
+	certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
 
 	certmagic.DefaultACME.Email = email
 	certmagic.HTTPPort = 80
@@ -126,9 +124,14 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 
 	logger.Infof("Successfully obtained IP certificate for %s", ip)
 
+	// Set IP cert path for future reference
+	certPath := fmt.Sprintf("%s/.local/share/certmagic/certificates/acme-v02.api.letsencrypt.org-directory/%s/%s", os.Getenv("HOME"), ip, ip)
+	if err := c.settingService.SetIpCertPath(certPath); err != nil {
+		logger.Warningf("Failed to set IP cert path: %v", err)
+	}
+
 	// 4. Hot Reload
 	if c.hotReloader != nil {
-		certPath, _ := c.settingService.GetIpCertPath()
 		if certPath != "" {
 			if err := c.hotReloader.OnCertRenewed(certPath+".crt", certPath+".key"); err != nil {
 				logger.Errorf("Failed to hot reload certificate: %v", err)
@@ -141,7 +144,7 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 
 // obtainIPCertLegacy is the old implementation for fallback
 func (c *CertService) obtainIPCertLegacy(ip, email string) error {
-	certmagic.DefaultACME.CA = certmagic.LetsEncryptStagingCA
+	certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
 	certmagic.DefaultACME.Email = email
 	certmagic.HTTPPort = 80
 	certmagic.HTTPSPort = 443
@@ -155,6 +158,11 @@ func (c *CertService) obtainIPCertLegacy(ip, email string) error {
 	}
 
 	logger.Infof("Successfully obtained IP certificate for %s", ip)
+
+	// Set IP cert path for future reference
+	certPath := fmt.Sprintf("%s/.local/share/certmagic/certificates/acme-v02.api.letsencrypt.org-directory/%s/%s", os.Getenv("HOME"), ip, ip)
+	c.settingService.SetIpCertPath(certPath)
+
 	return nil
 }
 

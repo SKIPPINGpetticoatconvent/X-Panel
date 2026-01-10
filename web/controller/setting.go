@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"os"
 	"time"
 
 	"x-ui/util/crypto"
@@ -44,6 +47,7 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/restartPanel", a.restartPanel)
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
 	g.POST("/cert/apply", a.applyIPCert)
+	g.GET("/cert/status", a.getCertStatus)
 }
 
 func (a *SettingController) getAllSetting(c *gin.Context) {
@@ -116,7 +120,7 @@ func (a *SettingController) getDefaultXrayConfig(c *gin.Context) {
 
 type applyIPCertForm struct {
 	Email string `json:"email" binding:"required"`
-	IP    string `json:"target_ip" binding:"required"`
+	IP    string `json:"targetIp" binding:"required"`
 }
 
 func (a *SettingController) applyIPCert(c *gin.Context) {
@@ -154,4 +158,70 @@ func (a *SettingController) applyIPCert(c *gin.Context) {
 	}
 
 	jsonMsg(c, "IP certificate obtained successfully", nil)
+}
+
+type certStatus struct {
+	Enabled        bool   `json:"enabled"`
+	TargetIp       string `json:"targetIp"`
+	CertPath       string `json:"certPath"`
+	CertExists     bool   `json:"certExists"`
+	NotBefore      string `json:"notBefore,omitempty"`
+	NotAfter       string `json:"notAfter,omitempty"`
+	Issuer         string `json:"issuer,omitempty"`
+	Subject        string `json:"subject,omitempty"`
+	DaysRemaining  int    `json:"daysRemaining,omitempty"`
+}
+
+func (a *SettingController) getCertStatus(c *gin.Context) {
+	status := &certStatus{}
+
+	// 获取启用状态
+	enabled, err := a.settingService.GetIpCertEnable()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
+		return
+	}
+	status.Enabled = enabled
+
+	// 获取目标 IP
+	targetIp, err := a.settingService.GetIpCertTarget()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
+		return
+	}
+	status.TargetIp = targetIp
+
+	// 获取证书路径
+	certPath, err := a.settingService.GetIpCertPath()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
+		return
+	}
+	status.CertPath = certPath
+
+	// 检查证书是否存在并解析信息
+	if certPath != "" {
+		certFile := certPath + ".crt"
+		keyFile := certPath + ".key"
+
+		if _, err := os.Stat(certFile); err == nil {
+			status.CertExists = true
+
+			// 加载并解析证书
+			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+			if err == nil && len(cert.Certificate) > 0 {
+				parsedCert, err := x509.ParseCertificate(cert.Certificate[0])
+				if err == nil {
+					status.NotBefore = parsedCert.NotBefore.Format("2006-01-02 15:04:05")
+					status.NotAfter = parsedCert.NotAfter.Format("2006-01-02 15:04:05")
+					status.Issuer = parsedCert.Issuer.CommonName
+					status.Subject = parsedCert.Subject.CommonName
+					duration := time.Until(parsedCert.NotAfter)
+					status.DaysRemaining = int(duration.Hours() / 24)
+				}
+			}
+		}
+	}
+
+	jsonObj(c, status, nil)
 }
