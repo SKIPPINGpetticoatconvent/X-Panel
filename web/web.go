@@ -119,6 +119,7 @@ type Server struct {
 	xrayService    service.XrayService
 	settingService service.SettingService
 	tgbotService   service.TelegramService
+	certService    *service.CertService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService service.ServerService
 
@@ -131,6 +132,11 @@ type Server struct {
 // 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来
 func (s *Server) SetTelegramService(tgService service.TelegramService) {
 	s.tgbotService = tgService
+}
+
+// SetCertService 设置证书服务实例
+func (s *Server) SetCertService(certService *service.CertService) {
+	s.certService = certService
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
@@ -280,7 +286,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	s.index = controller.NewIndexController(g)
 	// 〔中文注释〕: 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
 	s.server = controller.NewServerController(g, s.serverService)
-	s.panel = controller.NewXUIController(g)
+	s.panel = controller.NewXUIController(g, s.certService)
 	s.api = controller.NewAPIController(g, s.serverService)
 
 	return engine, nil

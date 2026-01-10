@@ -113,6 +113,32 @@
                 <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/cert/域名/privkey.pem" class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
+        <a-setting-list-item paddings="small">
+            <template #title>Let's Encrypt IP 证书</template>
+            <template #description>启用 IP 证书自动申请</template>
+            <template #control>
+                <a-switch v-model="allSetting.ipCertEnable"></a-switch>
+            </template>
+        </a-setting-list-item>
+        <a-setting-list-item paddings="small">
+            <template #title>邮箱</template>
+            <template #description>Let's Encrypt 证书申请邮箱</template>
+            <template #control>
+                <a-input type="email" v-model="allSetting.ipCertEmail" placeholder="your@example.com"></a-input>
+            </template>
+        </a-setting-list-item>
+        <a-setting-list-item paddings="small">
+            <template #title>目标 IP</template>
+            <template #description>要申请证书的 IP 地址</template>
+            <template #control>
+                <a-input type="text" v-model="allSetting.ipCertTarget" placeholder="1.2.3.4"></a-input>
+            </template>
+        </a-setting-list-item>
+        <a-list-item>
+            <a-space direction="horizontal" :style="{ padding: '0 20px' }">
+                <a-button type="primary" @click="applyIPCert">{{ i18n "pages.settings.applyCert" }}</a-button>
+            </a-space>
+        </a-list-item>
     </a-collapse-panel>
     <a-collapse-panel key="4" header='{{ i18n "pages.settings.externalTraffic" }}'>
         <a-setting-list-item paddings="small">

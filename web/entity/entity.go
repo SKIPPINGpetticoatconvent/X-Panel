@@ -65,6 +65,10 @@ type AllSetting struct {
 	SubJsonMux                  string `json:"subJsonMux" form:"subJsonMux"`
 	SubJsonRules                string `json:"subJsonRules" form:"subJsonRules"`
 	Datepicker                  string `json:"datepicker" form:"datepicker"`
+	IpCertEnable                bool   `json:"ipCertEnable" form:"ipCertEnable"`
+	IpCertEmail                 string `json:"ipCertEmail" form:"ipCertEmail"`
+	IpCertTarget                string `json:"ipCertTarget" form:"ipCertTarget"`
+	IpCertPath                  string `json:"ipCertPath" form:"ipCertPath"`
 }
 
 func (s *AllSetting) CheckValid() error {

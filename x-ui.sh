@@ -1419,6 +1419,40 @@ run_speedtest() {
     speedtest
 }
 
+request_ip_cert() {
+    echo -e "${green}申请 IP 证书${plain}"
+    echo ""
+
+    # Prompt for IP address
+    read -rp "请输入 IP 地址: " cert_ip
+    if [[ -z "$cert_ip" ]]; then
+        LOGE "IP 地址不能为空"
+        before_show_menu
+        return
+    fi
+
+    # Prompt for email
+    read -rp "请输入邮箱地址: " cert_email
+    if [[ -z "$cert_email" ]]; then
+        LOGE "邮箱地址不能为空"
+        before_show_menu
+        return
+    fi
+
+    LOGI "正在申请 IP 证书: $cert_ip ($cert_email)"
+
+    # Call the Go program
+    /usr/local/x-ui/x-ui cert-request-ip -ip "$cert_ip" -email "$cert_email"
+
+    if [[ $? == 0 ]]; then
+        LOGI "IP 证书申请成功"
+    else
+        LOGE "IP 证书申请失败"
+    fi
+
+    before_show_menu
+}
+
 
 iplimit_main() {
     echo -e "\n${green}\t1.${plain} 安装 Fail2ban 并配置 IP 限制"
@@ -1788,7 +1822,7 @@ show_menu() {
 
 "
     show_status
-    echo && read -p "请输入选项 [0-25]: " num
+    echo && read -p "请输入选项 [0-26]: " num
 
     case "${num}" in
     0)
@@ -1869,8 +1903,11 @@ show_menu() {
     25)
         subconverter
         ;;
+    26)
+        request_ip_cert
+        ;;
     *)
-        LOGE "请输入正确的数字选项 [0-25]"
+        LOGE "请输入正确的数字选项 [0-26]"
         ;;
     esac
 }

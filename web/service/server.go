@@ -95,6 +95,7 @@ type ServerService struct {
 	xrayService    XrayService
 	inboundService InboundService
 	tgService      TelegramService
+	certService    *CertService
 	cachedIPv4     string
 	cachedIPv6     string
 	noIPv6         bool
@@ -110,6 +111,11 @@ type ServerService struct {
 // 【新增方法】: 用于从外部注入 TelegramService 实例
 func (s *ServerService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
+}
+
+// SetCertService 设置证书服务实例
+func (s *ServerService) SetCertService(certService *CertService) {
+	s.certService = certService
 }
 
 func getPublicIP(url string) string {
@@ -1707,6 +1713,12 @@ func (s *ServerService) initSNISelector() {
 	if s.geoIPService == nil {
 		s.geoIPService = NewGeoIPService()
 		logger.Info("GeoIP service initialized in ServerService")
+	}
+
+	// 初始化证书服务并启动续期循环
+	if s.certService != nil {
+		s.certService.RenewLoop()
+		logger.Info("Certificate service RenewLoop started")
 	}
 
 	// 获取服务器地理位置

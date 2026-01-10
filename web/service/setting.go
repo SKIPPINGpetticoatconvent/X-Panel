@@ -75,6 +75,10 @@ var defaultValueMap = map[string]string{
 	"subJsonRules":       "",
 	"datepicker":         "gregorian",
 	"warp":               "",
+	"ipCertEnable":       "false",
+	"ipCertEmail":        "",
+	"ipCertTarget":       "",
+	"ipCertPath":         "",
 }
 
 type SettingService struct{}
@@ -649,6 +653,38 @@ func (s *SettingService) GetWarp() (string, error) {
 
 func (s *SettingService) SetWarp(data string) error {
 	return s.setString("warp", data)
+}
+
+func (s *SettingService) GetIpCertEnable() (bool, error) {
+	return s.getBool("ipCertEnable")
+}
+
+func (s *SettingService) SetIpCertEnable(value bool) error {
+	return s.setBool("ipCertEnable", value)
+}
+
+func (s *SettingService) GetIpCertEmail() (string, error) {
+	return s.getString("ipCertEmail")
+}
+
+func (s *SettingService) SetIpCertEmail(value string) error {
+	return s.setString("ipCertEmail", value)
+}
+
+func (s *SettingService) GetIpCertTarget() (string, error) {
+	return s.getString("ipCertTarget")
+}
+
+func (s *SettingService) SetIpCertTarget(value string) error {
+	return s.setString("ipCertTarget", value)
+}
+
+func (s *SettingService) GetIpCertPath() (string, error) {
+	return s.getString("ipCertPath")
+}
+
+func (s *SettingService) SetIpCertPath(value string) error {
+	return s.setString("ipCertPath", value)
 }
 
 func (s *SettingService) GetIpLimitEnable() (bool, error) {

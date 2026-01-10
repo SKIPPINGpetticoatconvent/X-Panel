@@ -37,6 +37,9 @@ class AllSetting {
         this.externalTrafficInformURI = "";
         this.subCertFile = "";
         this.subKeyFile = "";
+        this.ipCertEnable = false;
+        this.ipCertEmail = "";
+        this.ipCertTarget = "";
         this.subUpdates = 12;
         this.subEncrypt = true;
         this.subShowInfo = true;

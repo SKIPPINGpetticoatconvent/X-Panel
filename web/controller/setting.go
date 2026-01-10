@@ -23,10 +23,13 @@ type SettingController struct {
 	settingService service.SettingService
 	userService    service.UserService
 	panelService   service.PanelService
+	certService    *service.CertService
 }
 
-func NewSettingController(g *gin.RouterGroup) *SettingController {
-	a := &SettingController{}
+func NewSettingController(g *gin.RouterGroup, certService *service.CertService) *SettingController {
+	a := &SettingController{
+		certService: certService,
+	}
 	a.initRouter(g)
 	return a
 }
@@ -40,6 +43,7 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/updateUser", a.updateUser)
 	g.POST("/restartPanel", a.restartPanel)
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
+	g.POST("/cert/apply", a.applyIPCert)
 }
 
 func (a *SettingController) getAllSetting(c *gin.Context) {
@@ -108,4 +112,46 @@ func (a *SettingController) getDefaultXrayConfig(c *gin.Context) {
 		return
 	}
 	jsonObj(c, defaultJsonConfig, nil)
+}
+
+type applyIPCertForm struct {
+	Email string `json:"email" binding:"required"`
+	IP    string `json:"target_ip" binding:"required"`
+}
+
+func (a *SettingController) applyIPCert(c *gin.Context) {
+	var form applyIPCertForm
+	err := c.ShouldBindJSON(&form)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+		return
+	}
+
+	// 保存配置
+	err = a.settingService.SetIpCertEnable(true)
+	if err != nil {
+		jsonMsg(c, "Failed to enable IP cert", err)
+		return
+	}
+
+	err = a.settingService.SetIpCertEmail(form.Email)
+	if err != nil {
+		jsonMsg(c, "Failed to set IP cert email", err)
+		return
+	}
+
+	err = a.settingService.SetIpCertTarget(form.IP)
+	if err != nil {
+		jsonMsg(c, "Failed to set IP cert target", err)
+		return
+	}
+
+	// 申请证书
+	err = a.certService.ObtainIPCert(form.IP, form.Email)
+	if err != nil {
+		jsonMsg(c, "Failed to obtain IP certificate", err)
+		return
+	}
+
+	jsonMsg(c, "IP certificate obtained successfully", nil)
 }

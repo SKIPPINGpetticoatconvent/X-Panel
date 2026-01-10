@@ -336,6 +336,19 @@
           sendUpdateUserRequest();
         }
       },
+      async applyIPCert() {
+        this.loading(true);
+        const msg = await HttpUtil.post("/xui/setting/cert/apply", {
+          email: this.allSetting.ipCertEmail,
+          targetIp: this.allSetting.ipCertTarget
+        });
+        this.loading(false);
+        if (msg.success) {
+          Vue.prototype.$message['success']('证书申请成功');
+        } else {
+          Vue.prototype.$message['error'](msg.msg || '证书申请失败');
+        }
+      },
       async restartPanel() {
         await new Promise(resolve => {
           this.$confirm({

@@ -73,6 +73,9 @@ func runWebServer() {
 	inboundService := service.InboundService{}
 	lastStatus := service.Status{}
 
+	// 初始化证书服务
+	certService := service.NewCertService(&settingService)
+
 	// 创建 Xray API 实例
 	xrayApi := xray.XrayAPI{}
 
@@ -105,6 +108,8 @@ func runWebServer() {
 	serverService.SetTelegramService(tgBotService)
 	//    同理，也为 InboundService 注入
 	inboundService.SetTelegramService(tgBotService)
+	//    注入证书服务
+	serverService.SetCertService(certService)
 
 	var server *web.Server
 
@@ -116,6 +121,8 @@ func runWebServer() {
 		// 同时，也确保了 Web 层的回调处理能使用到这个完整的 Bot 实例
 		server.SetTelegramService(tgBotService)
 	}
+	// 注入证书服务
+	server.SetCertService(certService)
 
 	global.SetWebServer(server)
 	err = server.Start()
@@ -560,6 +567,34 @@ func GetListenIP(getListen bool) {
 	}
 }
 
+func requestIPCert(ip, email string) {
+	if ip == "" {
+		fmt.Println("IP address is required ---->>需要 IP 地址")
+		return
+	}
+	if email == "" {
+		fmt.Println("Email is required ---->>需要邮箱")
+		return
+	}
+
+	err := database.InitDB(config.GetDBPath())
+	if err != nil {
+		fmt.Println("Error initializing database:", err)
+		return
+	}
+
+	settingService := service.SettingService{}
+	certService := service.NewCertService(&settingService)
+
+	err = certService.ObtainIPCert(ip, email)
+	if err != nil {
+		fmt.Printf("Failed to obtain IP certificate: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Successfully obtained IP certificate for %s\n", ip)
+}
+
 func migrateDb() {
 	inboundService := service.InboundService{}
 
@@ -584,6 +619,8 @@ func main() {
 	runCmd := flag.NewFlagSet("run", flag.ExitOnError)
 
 	settingCmd := flag.NewFlagSet("setting", flag.ExitOnError)
+
+	certRequestIPCmd := flag.NewFlagSet("cert-request-ip", flag.ExitOnError)
 	var port int
 	var username string
 	var password string
@@ -600,6 +637,8 @@ func main() {
 	var show bool
 	var getCert bool
 	var resetTwoFactor bool
+	var certRequestIP string
+	var certRequestEmail string
 	settingCmd.BoolVar(&reset, "reset", false, "Reset all settings")
 	settingCmd.BoolVar(&show, "show", false, "Display current settings")
 	settingCmd.IntVar(&port, "port", 0, "Set panel port number")
@@ -616,6 +655,8 @@ func main() {
 	settingCmd.StringVar(&tgbotRuntime, "tgbotRuntime", "", "Set cron time for Telegram bot notifications")
 	settingCmd.StringVar(&tgbotchatid, "tgbotchatid", "", "Set chat ID for Telegram bot notifications")
 	settingCmd.BoolVar(&enabletgbot, "enabletgbot", false, "Enable notifications via Telegram bot")
+	certRequestIPCmd.StringVar(&certRequestIP, "ip", "", "IP address for certificate request")
+	certRequestIPCmd.StringVar(&certRequestEmail, "email", "", "Email for certificate request")
 
 	oldUsage := flag.Usage
 	flag.Usage = func() {
@@ -625,6 +666,7 @@ func main() {
 		fmt.Println("    run            run web panel")
 		fmt.Println("    migrate        migrate form other/old x-ui")
 		fmt.Println("    setting        set settings")
+		fmt.Println("    cert-request-ip request IP certificate")
 	}
 
 	flag.Parse()
@@ -680,11 +722,19 @@ func main() {
 		} else {
 			updateCert(webCertFile, webKeyFile)
 		}
+	case "cert-request-ip":
+		err := certRequestIPCmd.Parse(os.Args[2:])
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		requestIPCert(certRequestIP, certRequestEmail)
 	default:
 		fmt.Println("Invalid subcommands ----->>无效命令")
 		fmt.Println()
 		runCmd.Usage()
 		fmt.Println()
 		settingCmd.Usage()
+		certRequestIPCmd.Usage()
 	}
 }
