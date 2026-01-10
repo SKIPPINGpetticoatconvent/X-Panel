@@ -43,6 +43,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 | 订阅转换 | Clash/Surge 等格式 |
 | 备份恢复 | 自动/手动数据库备份 |
 | 多语言 | 中文/英文/波斯语 等 11 种 |
+| 自动 IP 证书 | Let's Encrypt IP 证书自动化申请与管理 |
 
 ## 📱 使用指南
 
@@ -66,8 +67,9 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 - **SNI 优化**: 系统会自动轮询使用不同的 SNI 域名，避免重复。无论是在面板还是Telegram Bot中使用一键配置，都会享受同样的SNI优化效果。详见 [SNI 选择机制](docs/features/sni_selection.md)。
 
 ### 4. 证书安装
-- 脚本 `x-ui > 18` (ACME/Certbot/Cloudflare)
-- 保存路径到面板设置
+- **域名证书**: 脚本 `x-ui > 18` (ACME/Certbot/Cloudflare)
+- **IP 证书**: 在面板设置 > 安全设置 中启用 "Let's Encrypt IP 证书"，输入邮箱和目标 IP 地址，点击 "申请证书"。或使用命令行 `x-ui > 26` 申请 IP 证书。系统将自动申请并管理 Short-lived IP 证书（有效期约 7 天），后台自动续期。
+- 保存证书路径到面板设置
 
 ### 5. 备份/恢复
 - 开启 TG 自动备份
@@ -106,6 +108,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 | 服务启动失败 (exit-code 2) | 检查日志 `journalctl -u x-ui -e`, 常见 nil 指针已修复 |
 | 无法访问面板 | 检查端口放行, SSH 转发或证书 |
 | 子域名被墙 | 更换子域名, 重新申请证书 |
+| IP 证书申请失败 | 检查 80 端口开放，IP 地址正确，邮箱有效 |
 | 节点无法上网 | 检查协议/流控, Ping 端口通畅 |
 
 完整日志: `journalctl -u x-ui.service -f`
