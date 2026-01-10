@@ -249,12 +249,12 @@
 "reviewHint" = "如需修改請返回上一步"
 "unlimited" = "無限制"
 "deviceLimit" = "裝置限制"
-"deviceLimitDesc"="請輸入具體數量，\r\n0表示不限制（留空也表示不限制）"
-"speedLimit"="獨立限速"
-"speedLimitDesc"="設定該使用者的最大〔上傳/下載速度〕，\r\n單位 KB/s，0 表示不限速"
-"oneClickConfig"="一鍵配置"
-"is_subConversion"="訂閱轉換"
-"confirmCreate"="確認提交創建"
+"deviceLimitDesc" = "請輸入具體數量，\r\n0表示不限制（留空也表示不限制）"
+"speedLimit" = "獨立限速"
+"speedLimitDesc" = "設定該使用者的最大〔上傳/下載速度〕，\r\n單位 KB/s，0 表示不限速"
+"oneClickConfig" = "一鍵配置"
+"is_subConversion" = "訂閱轉換"
+"confirmCreate" = "確認提交創建"
 
 [pages.client]
 "add" = "新增客戶端"
@@ -734,9 +734,9 @@
 "inbound_client_data_id" = "🔄 入站：{{ .InboundRemark }}\n\n🔑 ID：{{ .ClientId }}\n📧 電子郵件：{{ .ClientEmail }}\n📊 流量：{{ .ClientTraffic }}\n📅 到期日期：{{ .ClientExp }}\n🌐 IP 限制：{{ .IpLimit }}\n💬 備註：{{ .ClientComment }}\n\n您現在可以將客戶新增到入站了！"
 "inbound_client_data_pass" = "🔄 入站：{{ .InboundRemark }}\n\n🔑 密碼：{{ .ClientPass }}\n📧 電子郵件：{{ .ClientEmail }}\n📊 流量：{{ .ClientTraffic }}\n📅 到期日期：{{ .ClientExp }}\n🌐 IP 限制：{{ .IpLimit }}\n💬 備註：{{ .ClientComment }}\n\n您現在可以將客戶新增到入站了！"
 "cancel" = "❌ 流程已取消！\n\n您可以隨時使用 /start 重新開始。 🔄"
-"error_add_client"  = "⚠️ 錯誤：\n\n {{ .error }}"
-"using_default_value"  = "好的，我會使用預設值。 😊"
-"incorrect_input" ="您的輸入無效。\n片語應連續輸入，不能有空格。\n正確範例：aaaaaa\n錯誤範例：aaa aaa 🚫"
+"error_add_client" = "⚠️ 錯誤：\n\n {{ .error }}"
+"using_default_value" = "好的，我會使用預設值。 😊"
+"incorrect_input" = "您的輸入無效。\n片語應連續輸入，不能有空格。\n正確範例：aaaaaa\n錯誤範例：aaa aaa 🚫"
 "AreYouSure" = "您確定嗎？🤔"
 "SuccessResetTraffic" = "📧 電子郵件：{{ .ClientEmail }}\n🏁 結果：✅ 成功"
 "FailedResetTraffic" = "📧 電子郵件：{{ .ClientEmail }}\n🏁 結果：❌ 失敗 \n\n🛠️ 錯誤：[ {{ .ErrorMessage }} ]"
@@ -789,6 +789,7 @@
 "subconverter" = "🔄 訂閱轉換"
 
 [tgbot.answers]
+[cert_errors]
 "successfulOperation" = "✅ 成功！"
 "errorOperation" = "❗ 操作錯誤。"
 "getInboundsFailed" = "❌ 獲取入站資訊失敗。"
@@ -810,8 +811,6 @@
 "askToAddUserId" = "找不到您的設定！\r\n請向管理員詢問，在您的設定中使用您的 Telegram 用戶 ChatID。\r\n\r\n您的用戶 ChatID：<code>{{ .TgUserID }}</code>"
 "chooseClient" = "為入站 {{ .Inbound }} 選擇一個客戶"
 "chooseInbound" = "選擇一個入站"
--e 
-[cert_errors]
 CERT_E001 = "Port 80 is occupied by another process"
 CERT_E002 = "Port 80 is occupied by external process (e.g., Nginx)"
 CERT_E003 = "CA server timeout"

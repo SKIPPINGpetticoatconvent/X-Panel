@@ -665,9 +665,9 @@
 "inbound_client_data_id" = "🔄 Kết nối vào: {{ .InboundRemark }}\n\n🔑 ID: {{ .ClientId }}\n📧 Email: {{ .ClientEmail }}\n📊 Dung lượng: {{ .ClientTraffic }}\n📅 Ngày hết hạn: {{ .ClientExp }}\n🌐 Giới hạn IP: {{ .IpLimit }}\n💬 Ghi chú: {{ .ClientComment }}\n\nBây giờ bạn có thể thêm khách hàng vào inbound!"
 "inbound_client_data_pass" = "🔄 Kết nối vào: {{ .InboundRemark }}\n\n🔑 Mật khẩu: {{ .ClientPass }}\n📧 Email: {{ .ClientEmail }}\n📊 Dung lượng: {{ .ClientTraffic }}\n📅 Ngày hết hạn: {{ .ClientExp }}\n🌐 Giới hạn IP: {{ .IpLimit }}\n💬 Ghi chú: {{ .ClientComment }}\n\nBây giờ bạn có thể thêm khách hàng vào inbound!"
 "cancel" = "❌ Quá trình đã bị hủy! \n\nBạn có thể bắt đầu lại bất cứ lúc nào bằng cách nhập /start. 🔄"
-"error_add_client"  = "⚠️ Lỗi:\n\n {{ .error }}"
-"using_default_value"  = "Được rồi, tôi sẽ sử dụng giá trị mặc định. 😊"
-"incorrect_input" ="Dữ liệu bạn nhập không hợp lệ.\nCác chuỗi phải liền mạch và không có dấu cách.\nVí dụ đúng: aaaaaa\nVí dụ sai: aaa aaa 🚫"
+"error_add_client" = "⚠️ Lỗi:\n\n {{ .error }}"
+"using_default_value" = "Được rồi, tôi sẽ sử dụng giá trị mặc định. 😊"
+"incorrect_input" = "Dữ liệu bạn nhập không hợp lệ.\nCác chuỗi phải liền mạch và không có dấu cách.\nVí dụ đúng: aaaaaa\nVí dụ sai: aaa aaa 🚫"
 "AreYouSure" = "Bạn có chắc không? 🤔"
 "SuccessResetTraffic" = "📧 Email: {{ .ClientEmail }}\n🏁 Kết quả: ✅ Thành công"
 "FailedResetTraffic" = "📧 Email: {{ .ClientEmail }}\n🏁 Kết quả: ❌ Thất bại \n\n🛠️ Lỗi: [ {{ .ErrorMessage }} ]"
@@ -740,7 +740,6 @@
 "chooseClient" = "Chọn một Khách hàng cho Inbound {{ .Inbound }}"
 "chooseInbound" = "Chọn một Inbound"
 
--e 
 [cert_errors]
 CERT_E001 = "Port 80 is occupied by another process"
 CERT_E002 = "Port 80 is occupied by external process (e.g., Nginx)"

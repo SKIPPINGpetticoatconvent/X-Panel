@@ -92,7 +92,7 @@
 "invalidFormData" = "تنسيق البيانات المدخلة مش صحيح."
 "emptyUsername" = "اسم المستخدم مطلوب"
 "emptyPassword" = "الباسورد مطلوب"
-"wrongUsernameOrPassword" = "اسم المستخدم أو كلمة المرور أو كود المصادقة الثنائية غير صحيح."  
+"wrongUsernameOrPassword" = "اسم المستخدم أو كلمة المرور أو كود المصادقة الثنائية غير صحيح."
 "successLogin" = "لقد تم تسجيل الدخول إلى حسابك بنجاح."
 
 [pages.index]
@@ -542,9 +542,9 @@
 
 [pages.settings.security]
 "admin" = "بيانات الأدمن"
-"twoFactor" = "المصادقة الثنائية"  
-"twoFactorEnable" = "تفعيل المصادقة الثنائية"  
-"twoFactorEnableDesc" = "يضيف طبقة إضافية من المصادقة لتعزيز الأمان."  
+"twoFactor" = "المصادقة الثنائية"
+"twoFactorEnable" = "تفعيل المصادقة الثنائية"
+"twoFactorEnableDesc" = "يضيف طبقة إضافية من المصادقة لتعزيز الأمان."
 "twoFactorModalSetTitle" = "تفعيل المصادقة الثنائية"
 "twoFactorModalDeleteTitle" = "تعطيل المصادقة الثنائية"
 "twoFactorModalSteps" = "لإعداد المصادقة الثنائية، قم ببعض الخطوات:"
