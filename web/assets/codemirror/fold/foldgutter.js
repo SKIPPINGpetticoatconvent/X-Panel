@@ -2,12 +2,14 @@
 // Distributed under an MIT license: https://codemirror.net/5/LICENSE
 
 (function(mod) {
-  if (typeof exports == "object" && typeof module == "object") // CommonJS
+  if (typeof exports == "object" && typeof module == "object") { // CommonJS
     mod(require("../../lib/codemirror"), require("./foldcode"));
-  else if (typeof define == "function" && define.amd) // AMD
+  } else if (typeof define == "function" && define.amd) { // AMD
     define(["../../lib/codemirror", "./foldcode"], mod);
-  else // Plain browser env
+  } // Plain browser env
+  else {
     mod(CodeMirror);
+  }
 })(function(CodeMirror) {
   "use strict";
 
@@ -56,8 +58,9 @@
     for (var i = 0; i < marks.length; ++i) {
       if (marks[i].__isFold) {
         var fromPos = marks[i].find(-1);
-        if (fromPos && fromPos.line === line)
+        if (fromPos && fromPos.line === line) {
           return marks[i];
+        }
       }
     }
   }
@@ -101,7 +104,9 @@
   }
 
   // copied from CodeMirror/src/util/dom.js
-  function classTest(cls) { return new RegExp("(^|\\s)" + cls + "(?:$|\\s)\\s*") }
+  function classTest(cls) {
+    return new RegExp("(^|\\s)" + cls + "(?:$|\\s)\\s*");
+  }
 
   function updateInViewport(cm) {
     var vp = cm.getViewport(), state = cm.state.foldGutter;
@@ -109,7 +114,8 @@
     cm.operation(function() {
       updateFoldInfo(cm, vp.from, vp.to);
     });
-    state.from = vp.from; state.to = vp.to;
+    state.from = vp.from;
+    state.to = vp.to;
   }
 
   function onGutterClick(cm, line, gutter) {
@@ -123,7 +129,7 @@
   }
 
   function optionChange(cm, option) {
-    if (option == "mode") onChange(cm)
+    if (option == "mode") onChange(cm);
   }
 
   function onChange(cm) {
@@ -132,7 +138,9 @@
     var opts = state.options;
     state.from = state.to = 0;
     clearTimeout(state.changeUpdate);
-    state.changeUpdate = setTimeout(function() { updateInViewport(cm); }, opts.foldOnChangeTimeSpan || 600);
+    state.changeUpdate = setTimeout(function() {
+      updateInViewport(cm);
+    }, opts.foldOnChangeTimeSpan || 600);
   }
 
   function onViewportChange(cm) {
@@ -163,7 +171,8 @@
     var state = cm.state.foldGutter;
     if (!state) return;
     var line = from.line;
-    if (line >= state.from && line < state.to)
+    if (line >= state.from && line < state.to) {
       updateFoldInfo(cm, line, line + 1);
+    }
   }
 });

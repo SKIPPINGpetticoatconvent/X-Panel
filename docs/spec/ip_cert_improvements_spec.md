@@ -14,11 +14,13 @@
 ### 2.1 端口冲突自愈模块 (PortConflictResolver)
 
 #### 2.1.1 功能规格
+
 该模块负责在申请/续期证书前确保 80 端口可用。
-1.  **检测**: 检查 80 端口是否被占用。
-2.  **识别**: 区分占用者是 X-Panel 自身还是外部进程。
-3.  **接管**: 如果是 X-Panel 占用，临时释放端口供 `certmagic` 使用，验证完成后恢复。
-4.  **避让**: 如果是外部占用，返回特定错误，不强行杀进程。
+
+1. **检测**: 检查 80 端口是否被占用。
+2. **识别**: 区分占用者是 X-Panel 自身还是外部进程。
+3. **接管**: 如果是 X-Panel 占用，临时释放端口供 `certmagic` 使用，验证完成后恢复。
+4. **避让**: 如果是外部占用，返回特定错误，不强行杀进程。
 
 #### 2.1.2 接口定义 (Go)
 
@@ -153,10 +155,12 @@ func (p *PortConflictResolver) ReleasePort80() error {
 ### 2.2 激进续期策略模块 (AggressiveRenewalManager)
 
 #### 2.2.1 功能规格
+
 针对 IP 证书有效期短（通常 7 天）的特点，实施高频检查和提前续期。
-1.  **配置**: 续期阈值设为 3 天（有效期 < 3 天即续期）。
-2.  **调度**: 每 6 小时检查一次。
-3.  **重试**: 失败后采用指数退避策略，避免短时间内频繁请求 CA。
+
+1. **配置**: 续期阈值设为 3 天（有效期 < 3 天即续期）。
+2. **调度**: 每 6 小时检查一次。
+3. **重试**: 失败后采用指数退避策略，避免短时间内频繁请求 CA。
 
 #### 2.2.2 接口定义
 
@@ -250,10 +254,12 @@ func (r *AggressiveRenewer) attemptRenewWithBackoff() {
 ### 2.3 证书热加载模块 (CertHotReloader)
 
 #### 2.3.1 功能规格
+
 证书文件更新后，无需重启整个面板，仅通知 Xray 核心重载配置。
-1.  **监听**: 监听证书更新成功事件。
-2.  **动作**: 发送 `SIGHUP` 信号给 Xray 进程，或调用 Xray API（如果可用）。
-3.  **验证**: 检查 Xray 是否存活。
+
+1. **监听**: 监听证书更新成功事件。
+2. **动作**: 发送 `SIGHUP` 信号给 Xray 进程，或调用 Xray API（如果可用）。
+3. **验证**: 检查 Xray 是否存活。
 
 #### 2.3.2 接口定义
 
@@ -328,9 +334,11 @@ func (s *XrayService) ReloadCore() error {
 ### 2.4 告警与回退模块 (AlertAndFallback)
 
 #### 2.4.1 功能规格
+
 当续期彻底失败且证书即将过期时，通知管理员并采取保底措施。
-1.  **告警**: 通过 Telegram Bot 发送详细告警（剩余时间、失败原因）。
-2.  **回退**: 如果证书已过期或剩余时间极短（< 1小时），生成自签名证书覆盖，防止 Xray 启动失败。
+
+1. **告警**: 通过 Telegram Bot 发送详细告警（剩余时间、失败原因）。
+2. **回退**: 如果证书已过期或剩余时间极短（< 1小时），生成自签名证书覆盖，防止 Xray 启动失败。
 
 #### 2.4.2 接口定义
 
@@ -414,37 +422,40 @@ func generateSelfSignedCert(ip string) ([]byte, []byte, error) {
 
 ## 3. 边缘情况处理 (Edge Cases)
 
-1.  **网络隔离环境**:
-    *   *场景*: 服务器无法连接 Let's Encrypt CA。
-    *   *处理*: `AggressiveRenewer` 会重试多次后失败。`AlertAndFallback` 模块会在剩余 24 小时触发告警，最终回退到自签名证书。
+1. **网络隔离环境**:
+   - _场景_: 服务器无法连接 Let's Encrypt CA。
+   - _处理_: `AggressiveRenewer` 会重试多次后失败。`AlertAndFallback` 模块会在剩余 24 小时触发告警，最终回退到自签名证书。
 
-2.  **端口 80 被 Nginx 永久占用**:
-    *   *场景*: 用户安装了 Nginx 且未配置反代。
-    *   *处理*: `PortConflictResolver` 检测到外部占用，返回错误。日志记录 "Port 80 occupied by external process"。用户需手动干预。
+2. **端口 80 被 Nginx 永久占用**:
+   - _场景_: 用户安装了 Nginx 且未配置反代。
+   - _处理_: `PortConflictResolver` 检测到外部占用，返回错误。日志记录 "Port 80 occupied by external process"。用户需手动干预。
 
-3.  **Xray 进程僵死**:
-    *   *场景*: `CertHotReloader` 尝试发送 SIGHUP，但进程无响应。
-    *   *处理*: `ReloadCore` 应设置超时。如果信号发送无错误但服务未恢复，通常由外部守护进程（如 systemd）管理，面板侧仅记录日志。
+3. **Xray 进程僵死**:
+   - _场景_: `CertHotReloader` 尝试发送 SIGHUP，但进程无响应。
+   - _处理_: `ReloadCore` 应设置超时。如果信号发送无错误但服务未恢复，通常由外部守护进程（如 systemd）管理，面板侧仅记录日志。
 
-4.  **系统时间偏差**:
-    *   *场景*: 服务器时间错误导致证书验证失败。
-    *   *处理*: 依赖 NTP。代码层面难以完全解决，但日志中会体现 "certificate has expired or is not yet valid"。
+4. **系统时间偏差**:
+   - _场景_: 服务器时间错误导致证书验证失败。
+   - _处理_: 依赖 NTP。代码层面难以完全解决，但日志中会体现 "certificate has expired or is not yet valid"。
 
 ## 4. 测试计划 (Test Plan)
 
 ### 4.1 单元测试 (Unit Tests)
-*   `TestPortConflictResolver`: Mock `net.Dial` 和 `WebServerController`，验证占用检测和接管逻辑。
-*   `TestAggressiveRenewer`: Mock `CertService`，验证时间计算和重试计数器。
-*   `TestCertHotReloader`: 验证文件更新回调是否触发了 `ReloadCore`。
+
+- `TestPortConflictResolver`: Mock `net.Dial` 和 `WebServerController`，验证占用检测和接管逻辑。
+- `TestAggressiveRenewer`: Mock `CertService`，验证时间计算和重试计数器。
+- `TestCertHotReloader`: 验证文件更新回调是否触发了 `ReloadCore`。
 
 ### 4.2 集成测试 (Integration Tests)
-*   **模拟环境**: 使用 Docker 容器模拟端口占用。
-*   **流程验证**:
-    1.  启动模拟 Web Server 占用 80。
-    2.  触发证书申请。
-    3.  验证 Web Server 暂停 -> 证书申请 -> Web Server 恢复。
-    4.  验证 Xray 收到 SIGHUP 信号（通过日志或进程状态）。
+
+- **模拟环境**: 使用 Docker 容器模拟端口占用。
+- **流程验证**:
+  1. 启动模拟 Web Server 占用 80。
+  2. 触发证书申请。
+  3. 验证 Web Server 暂停 -> 证书申请 -> Web Server 恢复。
+  4. 验证 Xray 收到 SIGHUP 信号（通过日志或进程状态）。
 
 ### 4.3 手动验证 (Manual Verification)
-*   在真实 VPS 上部署，安装 Nginx 制造冲突，观察日志。
-*   修改系统时间模拟证书即将过期，验证 Telegram 告警。
+
+- 在真实 VPS 上部署，安装 Nginx 制造冲突，观察日志。
+- 修改系统时间模拟证书即将过期，验证 Telegram 告警。

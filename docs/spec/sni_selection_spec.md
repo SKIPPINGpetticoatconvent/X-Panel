@@ -1,6 +1,7 @@
 # SNI 域名不重复选择规格说明 (Specification)
 
 ## 1. 背景与目标
+
 目前 TG Bot 的“一键配置”功能在生成 Reality/TLS 节点时，采用完全随机的方式从列表中选择 SNI 域名。这导致用户在连续创建多个节点时，可能会遇到重复的 SNI，降低了配置的多样性和抗封锁能力。
 
 本规格说明旨在设计一个 **SNI 轮询选择器 (SNI Round-Robin Selector)**，确保在给定的 SNI 列表范围内，连续生成的节点尽可能使用不同的域名。
@@ -8,15 +9,17 @@
 **更新 (Web 集成)**：为了让网页端也能享受到“SNI 不重复”的特性，我们需要将 `SNISelector` 提升为全局共享服务，并提供 API 供前端调用。
 
 ## 2. 核心需求
-*   **全局轮询**：在 Bot 运行期间，维护一个全局的 SNI 使用状态。
-*   **自动重置**：当所有可用 SNI 都被使用过一次后，自动重新开始新的一轮（可选择重新洗牌）。
-*   **线程安全**：支持并发请求（虽然 TG Bot 主要是串行处理消息，但作为服务应保证并发安全）。
-*   **回退机制**：如果列表为空，应有合理的默认行为。
-*   **Web 端集成**：网页端在生成配置（如 Reality/TLS）时，应能获取到下一个不重复的 SNI。
+
+- **全局轮询**：在 Bot 运行期间，维护一个全局的 SNI 使用状态。
+- **自动重置**：当所有可用 SNI 都被使用过一次后，自动重新开始新的一轮（可选择重新洗牌）。
+- **线程安全**：支持并发请求（虽然 TG Bot 主要是串行处理消息，但作为服务应保证并发安全）。
+- **回退机制**：如果列表为空，应有合理的默认行为。
+- **Web 端集成**：网页端在生成配置（如 Reality/TLS）时，应能获取到下一个不重复的 SNI。
 
 ## 3. 架构设计
 
 ### 3.1 数据结构
+
 引入 `SNISelector` 结构体，负责管理 SNI 列表和选择逻辑。
 
 ```go
@@ -28,25 +31,28 @@ type SNISelector struct {
 ```
 
 ### 3.2 接口定义
+
 在 `Tgbot` 或相关服务中集成 `SNISelector`。
 
-*   `NewSNISelector(domains []string) *SNISelector`: 初始化选择器。
-*   `Next() string`: 获取下一个不重复的 SNI。
+- `NewSNISelector(domains []string) *SNISelector`: 初始化选择器。
+- `Next() string`: 获取下一个不重复的 SNI。
 
 ### 3.3 交互流程
-1.  Bot 启动或加载 SNI 列表时，初始化 `SNISelector`。
-2.  当用户请求 `/oneclick` 生成节点时：
-    *   调用 `SNISelector.Next()` 获取 SNI。
-    *   使用获取到的 SNI 构建 `Inbound` 配置。
-3.  `SNISelector` 内部：
-    *   检查 `index` 是否越界。
-    *   如果越界（`index >= len(domains)`），重置 `index = 0` （可选：重新洗牌 `domains` 以增加随机性）。
-    *   返回 `domains[index]`，并执行 `index++`。
+
+1. Bot 启动或加载 SNI 列表时，初始化 `SNISelector`。
+2. 当用户请求 `/oneclick` 生成节点时：
+   - 调用 `SNISelector.Next()` 获取 SNI。
+   - 使用获取到的 SNI 构建 `Inbound` 配置。
+3. `SNISelector` 内部：
+   - 检查 `index` 是否越界。
+   - 如果越界（`index >= len(domains)`），重置 `index = 0` （可选：重新洗牌 `domains` 以增加随机性）。
+   - 返回 `domains[index]`，并执行 `index++`。
 
 ## 4. 约束条件
-*   **无持久化要求**：重启后重置为初始状态即可，无需数据库存储状态。
-*   **性能**：操作应在纳秒/微秒级完成，不阻塞主线程。
-*   **配置源**：SNI 列表来源保持不变（`serverService` 或硬编码列表），本模块只负责“选择”逻辑。
+
+- **无持久化要求**：重启后重置为初始状态即可，无需数据库存储状态。
+- **性能**：操作应在纳秒/微秒级完成，不阻塞主线程。
+- **配置源**：SNI 列表来源保持不变（`serverService` 或硬编码列表），本模块只负责“选择”逻辑。
 
 ---
 
@@ -222,22 +228,22 @@ func (a *ServerController) getNewSNI(c *gin.Context) {
 
 // 在生成默认配置或点击“随机 SNI”按钮时
 async function fetchNewSNI() {
-    const response = await HttpUtil.get("/server/getNewSNI");
-    if (response.success) {
-        return response.data;
-    }
-    return "www.google.com"; // Fallback
+  const response = await HttpUtil.get("/server/getNewSNI");
+  if (response.success) {
+    return response.data;
+  }
+  return "www.google.com"; // Fallback
 }
 ```
 
 ## 4. 测试计划 (TDD Anchors)
 
-1.  **`TestServerService_SNI_Singleton`**:
-    *   验证 `ServerService` 中的 `sniSelector` 是否为单例。
-    *   验证多次调用 `GetNextSNI` 是否按预期轮询。
+1. **`TestServerService_SNI_Singleton`**:
+   - 验证 `ServerService` 中的 `sniSelector` 是否为单例。
+   - 验证多次调用 `GetNextSNI` 是否按预期轮询。
 
-2.  **`TestTgbot_Uses_Shared_SNI`**:
-    *   验证 `Tgbot` 生成节点时，是否调用了 `ServerService.GetNextSNI`。
+2. **`TestTgbot_Uses_Shared_SNI`**:
+   - 验证 `Tgbot` 生成节点时，是否调用了 `ServerService.GetNextSNI`。
 
-3.  **`TestAPI_GetNewSNI`**:
-    *   验证 `/server/getNewSNI` 接口是否返回有效的 SNI 字符串。
+3. **`TestAPI_GetNewSNI`**:
+   - 验证 `/server/getNewSNI` 接口是否返回有效的 SNI 字符串。

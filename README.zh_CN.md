@@ -2,7 +2,6 @@
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
-
 [![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
 [![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/commits/main)
 [![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg?style=for-the-badge)](#)
@@ -28,59 +27,98 @@
 - BSC/BEP20 ---->>> `0xd20eBE429c2398793178e015B2ca1Dc42601f3Eb`
 
 ## [【X-Panel面板】交流群：https://t.me/XUI_CN](https://t.me/XUI_CN)
+
 ## [【X-Panel面板】详细安装流程步骤：https://xeefei.blogspot.com/2025/09/x-panel.html](https://xeefei.blogspot.com/2025/09/x-panel.html)
 
-------------
+---
+
 ## ✰〔X-Panel面板〕跟原版3X-UI的区别？✰
+
 ### 大部分功能基于原版3X-UI进行汉化优化，主要的优化内容如下：
+
 #### 1、最大限度地汉化了面板项目，更适合中文宝宝的体质，包括：
+
 ##### ①优化在VPS中进行〔脚本安装过程〕的汉化提示，增加相应的安装中文提示，让中文用户能明白清楚自己安装到了哪个环节？在细节方面，增加了安装成功之后的〔用户设置信息〕提示，在脚本中加入〔面板登录地址〕显示，
+
 ##### ②管理后台进行了相应的〔图标和按钮〕汉化，让中文宝宝能够看得懂，
+
 ##### ③安装成功后〔自动更改〕后台管理界面和电报机器人界面默认为〔中文〕，
+
 ##### ④在管理后台中〔设置证书处〕，增加了acme方式填入路径的提示；
+
 #### 2、为了保证登录面板的安全性，脚本强制 “https”〔ssh转发〕；
+
 #### 3、新增〔设备限制〕功能，可配合脚本中的〔IPlimit〕使用；
+
 #### 4、新增〔订阅转换〕功能，进入脚本用选项【25】去安装使用；
+
 #### 5、新增〔一键配置〕功能，在【TG端】和面板后台都可去使用；
+
 #### 6、〔一键配置〕功能，已经实现【三端打通】，简单直接，快捷配置；
+
 #### 7、新增〔TG端机器人〕--->>【抽奖游戏】，每日幸运抽奖全凭手气；
+
 #### 8、创建了〔X-Panel面板〕交流群，各位中文宝宝可以一起讨论交流；
+
 #### 9、管理后台中增加了〔实用导航〕页面，里面包含实用内容；
+
 #### 10、优化了后台〔二维码〕显示模式，点击打开会更加丝滑美观；
+
 #### 11、在创建reality协议时，更改uTLS指纹默认使用chrome；更改默认目标网站为tesla.com；
+
 #### 12、更新README内容添加备份&恢复操作说明，以及更多其他图文介绍；
+
 #### 13、管理后台中增加〔端口检测〕和〔网络测速〕，点击可以跳转直达；
+
 #### 14、增加了详细的项目〔安装配置教程〕，解决小白用户不懂配置的烦恼。
 
-------------
+---
+
 ## ✰你必须要看的【重要安全提示/警告】✰
+
 #### 1、请勿使用【http明文模式】登录管理面板，因为明文会造成信息泄露；这个安全问题社区讨论过，
+
 #### 2、可使用设置【SSH端口转发功能】去登录面板或安装证书之后用https加密方式登录；两种方式选择其一，
+
 ![30](./media/30.png)
+
 #### 3、若无域名那就按照脚本提示去做【ssh转发】；有域名则可选择更加安全的【申请安装证书】方式，
+
 #### 4、Windows电脑首先通过快捷键【Win + R】调出运行窗口，在里面输入【cmd】打开本地终端服务，
+
 ![36](./media/36.png)
 ![31](./media/31.png)
 ![32](./media/32.png)
 ![33](./media/33.png)
+
 #### 5、若在搭建之前没有翻墙加密，则【http明文模式】登录面板有很大的信息泄露安全风险，那建议你第一次搭建成功之后，去修改用户/密码，和访问路径，后期则通过搭建好的代理加密访问，
+
 ![34](./media/34.png)
+
 #### 6、在做【ssh转发】过程中，本地电脑的终端不能关闭，保持打开不能断开；且每一次要登录〔X-Panel面板〕管理后台都要做【ssh转发】，因为关闭之后就失效了。
+
 ![35](./media/35.png)
+
 #### PS：上述两种方法：【ssh端口转发】或申请安装证书的目的都是为了更安全地登录面板，而至于搭建的其他流程和步骤，都是一样的；如果你已经【申请安装证书】了，并不会受到其他什么额外影响，就不用去折腾【ssh转发】了，直接用 【https://你的域名:端口/路径】 去登录你的面板管理后台就行了。
 
-------------
+---
+
 ## ✰如何从其他x-ui版本迁移到〔X-Panel面板〕？✰
+
 #### 1、若你用的是伊朗老哥的原版3X-UI，是可以直接〔覆盖安装〕的，因为〔X-Panel面板〕是fork了原版3X-UI的项目，基于原有的功能进行优化的，大功能是没有变化的，主要是进行了脚本的〔汉化处理〕，其他诸如数据库文件等位置是没有改变的，所以直接覆盖安装，并不会影响你〔原有节点及配置〕等数据；安装命令如下：
+
 ```
 bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
 ```
+
 #### 2、若你之前用的是Docker方式安装，那先进入容器里面/命令：docker exec -it 容器id /bin/sh，再执行以上脚本命令直接【覆盖安装】即可，
+
 #### 3、若你用的是之前F佬的x-ui或者其他分支版本，那直接覆盖安装的话，并不能确保一定就能够兼容？建议你先去备份〔数据库〕配置文件，再进行安装〔X-Panel面板〕。
 
+---
 
-------------
 ## 安装之前的准备
+
 - 购买一台性能还不错的VPS，可通过本页底部链接购买，
 - PS：若你不想升级系统，则可以跳过此步骤。
 - 若你需要更新/升级系统，Debian系统可用如下命令：
@@ -109,8 +147,10 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
   ```
 - 完成以上步骤之后输入reboot重启系统
 
-------------
+---
+
 ## 【搬瓦工】重装/升级系统之后SSH连不上如何解决？
+
 - 【搬瓦工】重装/升级系统会恢复默认22端口，如果需要修改SSH的端口号，您需要进行以下步骤：
 - 以管理员身份使用默认22端口登录到SSH服务器
 - 打开SSH服务器的配置文件进行编辑，SSH配置文件通常位于/etc/ssh/sshd_config
@@ -119,26 +159,30 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 - 保存文件并退出编辑器
 - 重启服务器以使更改生效
 
-------------
+---
+
 ## 安装 & 升级
+
 - 使用〔X-Panel面板〕脚本一般情况下，安装完成创建入站之后，端口是默认关闭的，所以必须进入脚本选择【22】去放行端口
 - 要使用【自动续签】证书功能，也必须放行【80】端口，保持80端口是打开的，才会每3个月自动续签一次
 
 - 【全新安装】请执行以下脚本：
+
 ```
 bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
 ```
+
 #### 如果执行了上面的代码但是报错，证明你的系统里面没有curl这个软件，请执行以下命令先安装curl软件，安装curl之后再去执行上面代码，
+
 ```
 apt update -y&&apt install -y curl&&apt install -y socat
 ```
 
 - 若要对版本进行升级，可直接通过脚本选择【2】，如下图：
-![8](./media/8.png)
-![10](./media/10.png)
+  ![8](./media/8.png)
+  ![10](./media/10.png)
 - 在到这一步必须要注意：要保留旧设置的话，需要输入【n】
-![11](./media/11.png)
-
+  ![11](./media/11.png)
 
 ## 安装指定版本
 
@@ -147,103 +191,175 @@ apt update -y&&apt install -y curl&&apt install -y socat
 ```
 VERSION=v25.10.25 && bash <(curl -Ls "https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/$VERSION/install.sh") $VERSION
 ```
-------------
+
+---
+
 ## 若你的VPS默认有防火墙，请在安装完成之后放行指定端口
+
 - 放行【面板登录端口】
 - 放行出入站管理协议端口
 - 如果要申请安装证书并每3个月【自动续签】证书，请确保80和443端口是放行打开的
 - 可通过此脚本的第【22】选项去安装防火墙进行管理，如下图：
-![9](./media/9.png)
+  ![9](./media/9.png)
 - 若要一次性放行多个端口或一整个段的端口，用英文逗号隔开。
+
 #### PS：若你的VPS没有防火墙，则所有端口都是能够ping通的，可自行选择是否进入脚本安装防火墙保证安全，但安装了防火墙必须放行相应端口。
 
-------------
+---
+
 ## 如何在〔X-Panel面板〕中使用简单快捷的【一键配置】生成功能？
+
 #### 1、进入后台，并且你已经【安装了证书】，可在【添加入站】处看到，
+
 ![53](./media/53.png)
+
 #### 2、点击【一键配置】，在弹出的页面中【按需选择】去生成协议配置即可，
+
 ![54](./media/54.png)
+
 #### 3、直接复制【链接】，导入软件；放行【相应端口】，去【入站列表】点击【启用】。
+
 ![55](./media/55.png)
+
 #### 4、若你是用【TG端电报机器人】的【一键配置】生成功能，那直接点击就用，
+
 ![56](./media/56.png)
+
 #### 5、选择好自己想要【一键创建】的协议组合类型，点击之后稍作等待，
+
 ![57](./media/57.png)
+
 #### 6、TG端【一键配置】创建成功之后，二维码和链接地址机器人会发送给你，如下：
+
 ![58](./media/58.png)
+
 #### 7、**SNI 智能优选说明**：一键配置功能现已支持基于地理位置的智能 SNI 域名选择。系统会自动检测服务器所在地理位置，选择对应国家的优化域名列表，并实现智能轮询去重。当您连续生成多个节点时，系统会自动分配不同的 SNI 域名（直至列表用尽），有效降低被针对的风险。详细机制请参阅 [SNI 域名优选与轮询](docs/features/sni_selection.md)。
 
-------------
+---
+
 ## 如何在〔X-Panel 项目〕中进行【抽奖游戏】赢奖品？
+
 #### 1、必须绑定好【TG端机器人】，怎么绑定？去看下面“绑定机器人”那部分教程，
+
 #### 2、在【TG端】直接点击【娱乐抽奖】菜单，就会弹出【每日幸运】抽奖游戏，
+
 ![59](./media/59.png)
+
 #### 3、点击【进行抽奖】，就可“全凭手气”得到随机的抽奖结果，如下图所示，
+
 ![60](./media/60.png)
+
 #### 4、在你【中奖】之后，截完整的“中奖页面”图片给交流群内管理员，即可兑奖。
+
 ![61](./media/61.png)
 
-------------
+---
+
 ## 安装证书开启https方式实现域名登录访问管理面板/----->>偷自己
+
 #### PS：如果不需要以上功能或无域名，可以跳过这步；建议申请证书，
+
 ##### 1、把自己的域名托管到CF，并解析到自己VPS的IP，不要开启【小云朵】，
+
 ##### 2、如果要申请安装证书并每3个月【自动续签】证书，请确保80和443端口是放行打开的，
+
 ##### 3、输入x-ui命令进入面板管理脚本，通过选择第【18】选项去进行安装，
+
 ##### 4、在安装证书的最后一步，请输入【y】设置面板证书路径，如下图所示：
+
 ![27](./media/27.png)
+
 ##### 5、进入后台【面板设置】—–>【常规】中，会看到脚本已经自动填好了证书公钥、私钥路径，
+
 ##### 6、点击左上角的【保存】和【重启面板】，即可用自己域名进行登录管理；也可按照后续方法实现【自己偷自己】。
 
-------------
+---
+
 ## 登录面板进行【常规】设置
+
 ### 特别是如果在安装过程中，全部都是默认【回车键】安装的话，用户名/密码/访问路径是随机的，而面板监听端口默认是2053，最好进入面板更改，
+
 ##### 1、填写自己想要设置的【面板监听端口】，并去登录SSH放行，
+
 ##### 2、更改自己想要设置的【面板登录访问路径】，后续加上路径登录访问，
+
 ![25](./media/25.png)
+
 ##### 3、其他：安全设定和电报机器人等配置，可自行根据需求去进行设置，
+
 ##### 4、建议申请证书保护并在【脚本中】设置路径，建议配置电报机器人方便管理，
+
 ![26](./media/26.png)
+
 ##### 5、面板设置【改动保存】之后，都需要点击左上角【重启面板】，才能生效。
+
 #### PS：若你在正确完成了上述步骤之后，你没有安装证书的情况下，去用【ssh转发】的方式却不能访问面板，那请检查一下是不是你的浏览器自动默认开启了https模式，需要手动调整一下改成http方式，把“s”去掉，即可访问成功；或查看一下是不是对应的端口被占用？
 
-------------
+---
+
 ## 创建【入站协议】和添加【客户端】，并测试上网
+
 ##### 1、点击左边【入站列表】，然后【添加入站】，传输方式保持【TCP】不变，尽量选择主流的vless+reality+vision协议组合，
+
 ![23](./media/23.png)
+
 ##### 2、在选择reality安全选项时，偷的域名可以使用默认的，要使用其他的，请替换尽量保持一致就行，比如Apple、Yahoo，VPS所在地区的旅游、学校网站等；如果要实现【偷自己】，请参看后续【如何偷自己】的说明部分；而私钥/公钥部分，可以直接点击下方的【Get New Cert】获取一个随机的，
+
 ##### 3、在创建reality安全选项过程中，至于其他诸如：PROXY Protocol，HTTP 伪装，TPROXY，External Proxy等等选项，若无特殊要求，保持默认设置即可，不用去动它们，
+
 ![24](./media/24.png)
+
 ##### 4、创建好入站协议之后，默认只有一个客户端，可根据自己需求继续添加；重点：并编辑客户端，选择【Flow流控】为xtls-rprx-vision-udp443，
+
 ![19](./media/19.png)
+
 ##### 5、其他：流量限制，到期时间，客户TG的ID等选项根据自己需求填写，
+
 ![4](./media/4.png)
+
 ##### 6、一定要放行端口之后，确保端口能够ping通，再导入软件，
+
 ##### 7、点击二维码或者复制链接导入到v2rayN等软件中进行测试。
 
-------------
+---
+
 ## 备份与恢复/迁移数据库（以Debian系统为例）
+
 #### 一、备份：通过配置好电报管理机器人，并去设置开启【自动备份】，每天凌晨12点会通过VPS管理机器人获取【备份配置】文件，有x-ui.db和config.json两个文件，可自行下载保存到自己电脑里面，
+
 ![14](./media/14.png)
+
 #### 二、搭建：在新的VPS中全新安装好〔X-Panel面板〕，通过脚本放行之前配置的所有端口，一次性放行多个端口请用【英文逗号】分隔，
+
 #### 三、若需要安装证书，则提前把域名解析到新的VPS对应的IP，并且去输入x-ui选择第【18】选项去安装，并记录公钥/私钥的路径，无域名则跳过这一步，
+
 #### 四、恢复：SSH登录服务器找到/etc/x-ui/x-ui.db和/usr/local/x-ui/bin/config.json文件位置，上传之前的两个备份文件，进行覆盖，
+
 ![12](./media/12.png)
+
 ##### PS：把之前通过自动备份下载得到的两个文件上传覆盖掉旧文件，重启〔X-Panel面板〕即可【迁移成功】；即使迁移过程中出现问题，你是有备份文件的，不用担心，多试几次。
+
 ![13](./media/13.png)
+
 #### 五、若安装了证书，去核对/更改一下证书的路径，一般是同一个域名的话，位置在：/root/cert/域名/fullchain.pem，路径是相同的就不用更改，
+
 #### 六、重启面板/重启服务器，让上述步骤生效即可，这时可以看到所有配置都是之前自己常用的，包括面板用户名、密码，入站、客户端，电报机器人配置等。
 
-------------
-## 安装完成后如何设置调整成【中文界面】？
-- 方法一：通过管理后台【登录页面】调整，登录时可以选择，如下图：
-![15](./media/15.png)
-- 方法二：通过在管理后台-->【面板设置】中去选择设置，如下图：
-![16](./media/16.png)
-- 【TG机器人】设置中文：通过在管理后台-->【面板设置】-->【机器人配置】中去选择设置，并建议打开数据库备份和登录通知，如下图：
-![17](./media/17.png)
+---
 
-------------
+## 安装完成后如何设置调整成【中文界面】？
+
+- 方法一：通过管理后台【登录页面】调整，登录时可以选择，如下图：
+  ![15](./media/15.png)
+- 方法二：通过在管理后台-->【面板设置】中去选择设置，如下图：
+  ![16](./media/16.png)
+- 【TG机器人】设置中文：通过在管理后台-->【面板设置】-->【机器人配置】中去选择设置，并建议打开数据库备份和登录通知，如下图：
+  ![17](./media/17.png)
+
+---
+
 ## 用〔X-Panel面板〕如何实现【自己偷自己】？
+
 - 其实很简单，只要你为面板设置了证书，
 - 开启了HTTPS登录，就可以将〔X-Panel面板〕自身作为Web Server，
 - 无需Nginx等，这里给一个示例：
@@ -254,96 +370,158 @@ VERSION=v25.10.25 && bash <(curl -Ls "https://raw.githubusercontent.com/SKIPPING
 - 需要说明的是，如果您处于白名单地区，自己“偷”自己并不适合你；
 - 其次，可选域名一项实际上可以填写任意SNI，只要客户端保持一致即可，不过并不推荐这样做。
 - 配置方法如下图所示：
-![18](./media/18.png)
+  ![18](./media/18.png)
 
-------------
+---
+
 ## 〔子域名〕被墙针对特征
+
 #### 网络表现：
+
 ##### 1、可以Ping通域名和IP地址，
+
 ##### 2、子域名无法打开〔X-Panel面板〕管理界面，
+
 ##### 3、什么都正常就是不能上网；
 
 #### 问题：
+
 ##### 你的子域名被墙针对了：无法上网！
 
 #### 解决方案：
+
 ##### 1、更换为新的子域名，
+
 ##### 2、解析新的子域名到VPS的IP，
+
 ##### 3、重新去安装新证书，
+
 ##### 4、重启〔X-Panel面板〕和服务器，
+
 ##### 5、重新去获取链接并测试上网。
+
 #### PS：若通过以上步骤还是不能正常上网，则重装VPS服务器OS系统，以及〔X-Panel面板〕全部重新安装，之后就正常了！
 
-------------
+---
+
 ## 用〔X-Panel面板〕如何开启【设备限制】功能？
+
 ##### 1、进入后台在【添加入站】的时候，弹出来的页面就能有【设备数量】输入框，
+
 ![37](./media/37.png)
+
 ##### 2、通过步骤1设置完成后，在后台的【入站列表】页面也有对应的同步数据显示。
+
 ![38](./media/38.png)
+
 ##### 3、具体要查看【设备限制】功能的封禁情况，就进入〔X-Panel面板〕后台用日志查看。
+
 ![39](./media/39.png)
+
 ##### 4、以下图片里面，详细阐述了我们的〔设备限制〕功能，跟3X-UI原本就有的〔IP Limit〕之间的区别对比。
+
 ![40](./media/40.png)
 
-------------
+---
+
 ## 用〔X-Panel面板〕如何开启【独立限速】功能？
+
 ##### 1、进入后台在【添加入站】的时候，弹出来的页面在【客户/用户】那里就能输入具体数字，
+
 ![47](./media/47.png)
+
 ##### 2、也可以在添加好一个【入站】之后，点击【添加客户端】去找到【独立限速】输入框，
+
 ![48](./media/48.png)
+
 ##### 3、当你想批量一次性创建多个【客户/用户】时，同样可以使用【独立限速】功能，
+
 ![49](./media/49.png)
 ![50](./media/50.png)
+
 ##### 4、若后期你想更改某一个【客户端/用户】的限制速率，那就自己先找到，然后点击【编辑】即可，
+
 ![51](./media/51.png)
+
 ##### 5、具体要查看【独立限速】功能的启用情况，就进入〔X-Panel面板〕后台用日志查看。
+
 ![52](./media/52.png)
 
-------------
+---
+
 ## 用〔X-Panel面板〕如何开启【每月流量自动重置】？
+
 ##### 1、进入后台的【入站列表】，选择需要设置的【客户端】，
+
 ![29](./media/29.png)
+
 ##### 2、要注意是编辑【入站】下面的【客户端】，才会有效果，
+
 ##### 2、并不是编辑【入站】，所以不要弄错对象，如下图所示：
+
 ![28](./media/28.png)
 
+---
 
-------------
 ## 在自己的VPS服务器部署【订阅转换】功能
+
 ### 如何把vless/vmess等协议转换成Clash/Surge等软件支持的格式？
+
 ##### 1、进入脚本输入x-ui命令调取面板，选择第【25】选项安装订阅转换模块，
+
 ##### 2、等待安装【订阅转换】成功之后，访问地址：https://你的域名:15268 ，
+
 ![41](./media/41.png)
+
 ##### 3、因为在转换过程中需要调取后端API，所以请确保端口 8000 和 15268 是打开放行的，
+
 ##### 4、直接复制脚本中提供的【登录地址】，进入后台，点击【节点列表】，如下图：
+
 ![42](./media/42.png)
+
 ##### 5、接下来点击左边侧边栏的【订阅列表】去【添加订阅】，按照下图中去操作，
+
 ![43](./media/43.png)
+
 ##### 6、最后一步，点击【客户端】，即可导入Clash等软件中使用。
+
 ![44](./media/44.png)
 ![45](./media/45.png)
 
-------------
+---
+
 ## 常见的翻墙软件/工具：
+
 - [1、Windows系统v2rayN：https://github.com/2dust/v2rayN](https://github.com/2dust/v2rayN)
 - [2、安卓手机版【v2rayNG】：https://github.com/2dust/v2rayNG](https://github.com/2dust/v2rayNG)
 - [3、苹果手机IOS【小火箭】：https://apple02.com/（自己购买）](https://apple02.com/)
 - [4、苹果MacOS电脑【Clash Verge】：https://github.com/clash-verge-rev/clash-verge-rev/releases](https://github.com/clash-verge-rev/clash-verge-rev/releases)
   [或v2rayN：https://github.com/2dust/v2rayN](https://github.com/2dust/v2rayN)
 
-------------
-## 如何保护自己的IP不被墙被封？
-##### 1、使用的代理协议要安全，加密是必备，推荐使用vless+reality+vision协议组合，
-##### 2、因为有时节点会共享，在不同的地区，多个省份之间不要共同连接同一个IP，
-##### 3、连接同一个IP就算了，不要同一个端口，不要同IP+同端口到处漫游，要分开，
-##### 4、同一台VPS，不要在一天内一直大流量去下载东西使用，不要流量过高要切换，
-##### 5、创建【入站协议】的时候，尽量用【高位端口】，比如40000--65000之间的端口号。
-#### 提醒：为什么在特殊时期，比如：两会，春节等被封得最严重最惨？
-##### 尼玛同一个IP+同一个端口号，多个省份去漫游，跟开飞机场一样！不封你，封谁的IP和端口？
-#### 总结：不要多终端/多省份/多个朋友/共同使用同一个IP和端口号！使用〔X-Panel面板〕多创建几个【入站】，
-####      多做几条备用，各用各的！各行其道才比较安全！GFW的思维模式是干掉机场，机场的特征个人用户不要去沾染，自然IP就保护好了。
+---
 
-------------
+## 如何保护自己的IP不被墙被封？
+
+##### 1、使用的代理协议要安全，加密是必备，推荐使用vless+reality+vision协议组合，
+
+##### 2、因为有时节点会共享，在不同的地区，多个省份之间不要共同连接同一个IP，
+
+##### 3、连接同一个IP就算了，不要同一个端口，不要同IP+同端口到处漫游，要分开，
+
+##### 4、同一台VPS，不要在一天内一直大流量去下载东西使用，不要流量过高要切换，
+
+##### 5、创建【入站协议】的时候，尽量用【高位端口】，比如40000--65000之间的端口号。
+
+#### 提醒：为什么在特殊时期，比如：两会，春节等被封得最严重最惨？
+
+##### 尼玛同一个IP+同一个端口号，多个省份去漫游，跟开飞机场一样！不封你，封谁的IP和端口？
+
+#### 总结：不要多终端/多省份/多个朋友/共同使用同一个IP和端口号！使用〔X-Panel面板〕多创建几个【入站】，
+
+#### 多做几条备用，各用各的！各行其道才比较安全！GFW的思维模式是干掉机场，机场的特征个人用户不要去沾染，自然IP就保护好了。
+
+---
+
 ## SSL 认证
 
 <details>
@@ -362,7 +540,6 @@ VERSION=v25.10.25 && bash <(curl -Ls "https://raw.githubusercontent.com/SKIPPING
    - **续签证书** ----强制续签SSL证书
    - **显示所有证书** ----显示服务器中所有能用的证书
    - **设置面板证书路径** ----指定面板要使用的证书
-
 
 ### Certbot
 
@@ -392,12 +569,12 @@ certbot renew --dry-run
    ![](media/APIKey2.png)
 
 使用时，只需输入您的“域名”、“电子邮件”和“API KEY”即可。示意图如下：
-   ![](media/DetailEnter.png)
-
+![](media/DetailEnter.png)
 
 </details>
 
-------------
+---
+
 ## 手动安装 & 升级
 
 <details>
@@ -453,7 +630,8 @@ systemctl restart x-ui
 
 </details>
 
-------------
+---
+
 ## 通过Docker安装
 
 <details>
@@ -461,13 +639,11 @@ systemctl restart x-ui
 
 #### 使用
 
-
 1. **安装Docker**
 
    ```sh
    bash <(curl -sSL https://get.docker.com)
    ```
-
 
 2. **克隆项目仓库**
 
@@ -482,7 +658,7 @@ systemctl restart x-ui
    docker compose up -d
    ```
 
-   添加 ```--pull always``` 标志使 docker 在拉取更新的镜像时自动重新创建容器。有关更多信息，请参阅：https://docs.docker.com/reference/cli/docker/container/run/#pull
+   添加 `--pull always` 标志使 docker 在拉取更新的镜像时自动重新创建容器。有关更多信息，请参阅：https://docs.docker.com/reference/cli/docker/container/run/#pull
 
    **或**
 
@@ -517,7 +693,8 @@ systemctl restart x-ui
 
 </details>
 
-------------
+---
+
 ## 建议使用的操作系统
 
 - Ubuntu 20.04+
@@ -534,8 +711,10 @@ systemctl restart x-ui
 - OpenSUSE Tubleweed
 - Amazon Linux 2023
 
-------------
+---
+
 ## 支持的架构和设备
+
 <details>
   <summary>点击查看 支持的架构和设备</summary>
 
@@ -552,15 +731,17 @@ systemctl restart x-ui
 - **armv6 / arm / arm32**: 这种架构面向非常老旧的嵌入式设备，虽然不太普遍，但仍在使用中。Raspberry Pi 1、Raspberry Pi Zero/Zero W 等设备都依赖于这种架构。
 
 - **armv5 / arm / arm32**: 它是一种主要与早期嵌入式系统相关的旧架构，目前不太常见，但仍可能出现在早期 Raspberry Pi 版本和一些旧智能手机等传统设备中。
+
 </details>
 
-------------
+---
+
 ## Languages
 
 - English（英语）
 - Farsi（伊朗语）
 - Simplified Chinese（简体中文）
-- Traditional Chinese（繁体中文）            
+- Traditional Chinese（繁体中文）
 - Russian（俄语）
 - Vietnamese（越南语）
 - Spanish（西班牙语）
@@ -569,7 +750,8 @@ systemctl restart x-ui
 - Turkish（土耳其语）
 - Português (葡萄牙语)
 
-------------
+---
+
 ## 项目特点
 
 - 系统状态查看与监控
@@ -591,15 +773,15 @@ systemctl restart x-ui
 
 <details>
 
-  <summary>点击查看 默认设置</summary>
+<summary>点击查看 默认设置</summary>
 
-  ### 默认信息
+### 默认信息
 
-- **端口** 
-    - 2053
-- **用户名 & 密码 & 访问路径** 
-    - 当您跳过设置时，这些信息会随机生成，
-    - 您也可以在安装的时候自定义访问路径。
+- **端口**
+  - 2053
+- **用户名 & 密码 & 访问路径**
+  - 当您跳过设置时，这些信息会随机生成，
+  - 您也可以在安装的时候自定义访问路径。
 - **数据库路径：**
   - /etc/x-ui/x-ui.db
 - **Xray 配置路径：**
@@ -611,7 +793,8 @@ systemctl restart x-ui
 
 </details>
 
-------------
+---
+
 ## [WARP 配置](https://github.com/fscarmen/warp)
 
 <details>
@@ -627,28 +810,28 @@ WARP 是内置的，无需额外安装；只需在面板中打开必要的配置
 
 **1.** 在 **SOCKS Proxy Mode** 模式中安装Wrap
 
-   - **Account Type (free, plus, team):** Choose the appropriate account type.
-   - **Enable/Disable WireProxy:** Toggle WireProxy on or off.
-   - **Uninstall WARP:** Remove the WARP application.
+- **Account Type (free, plus, team):** Choose the appropriate account type.
+- **Enable/Disable WireProxy:** Toggle WireProxy on or off.
+- **Uninstall WARP:** Remove the WARP application.
 
 **2.** 如果您已经安装了 warp，您可以使用以下命令卸载：
 
-   ```sh
-   warp u
-   ```
+```sh
+warp u
+```
 
 **3.** 在面板中打开您需要的配置
 
-   配置:
+配置:
 
-   - Block Ads
-   - Route Google, Netflix, Spotify, and OpenAI (ChatGPT) traffic to WARP
-   - Fix Google 403 error
-
+- Block Ads
+- Route Google, Netflix, Spotify, and OpenAI (ChatGPT) traffic to WARP
+- Fix Google 403 error
 
 </details>
 
-------------
+---
+
 ## IP 限制
 
 <details>
@@ -669,21 +852,22 @@ WARP 是内置的，无需额外安装；只需在面板中打开必要的配置
     1. 使用面板内置的 `x-ui` 指令
     2. 选择 `IP Limit Management`.
     3. 根据您的需要选择合适的选项。
-   
+
   - 确保您的 Xray 配置上有 ./access.log 。在 v2.1.3 之后，我们有一个选项。
-  
+
   ```sh
-    "log": {
-      "access": "./access.log",
-      "dnsLog": false,
-      "loglevel": "warning"
-    },
-    ```
+  "log": {
+    "access": "./access.log",
+    "dnsLog": false,
+    "loglevel": "warning"
+  },
+  ```
   - 您需要在Xray配置中手动设置〔访问日志〕的路径。
 
 </details>
 
-------------
+---
+
 ## Telegram 机器人
 
 <details>
@@ -700,7 +884,6 @@ Web 面板通过 Telegram Bot 支持每日流量、面板登录、数据库备�
 - 流量上限通知
 - 数据库备份
 - CPU 负载通知
-
 
 **参考：**
 
@@ -730,26 +913,27 @@ Web 面板通过 Telegram Bot 支持每日流量、面板登录、数据库备�
 ### 注册 Telegram bot
 
 - 与 [Botfather](https://t.me/BotFather) 对话：
-    ![Botfather](./media/botfather.png)
-  
+  ![Botfather](./media/botfather.png)
+
 - 使用 /newbot 创建新机器人：你需要提供机器人名称以及用户名，注意名称中末尾要包含“bot”
-    ![创建机器人](./media/newbot.png)
+  ![创建机器人](./media/newbot.png)
 
 - 启动您刚刚创建的机器人。可以在此处找到机器人的链接。
-    ![令牌](./media/token.png)
+  ![令牌](./media/token.png)
 
 - 输入您的面板并配置 Telegram 机器人设置，如下所示：
-    ![面板设置](./media/panel-bot-config.png)
+  ![面板设置](./media/panel-bot-config.png)
 
 在输入字段编号 3 中输入机器人令牌。
 在输入字段编号 4 中输入用户 ID。具有此 id 的 Telegram 帐户将是机器人管理员。 （您可以输入多个，只需将它们用“ ，”分开即可）
 
 - 如何获取TG ID? 使用 [bot](https://t.me/useridinfobot)， 启动机器人，它会给你 Telegram 用户 ID。
-![用户 ID](./media/user-id.png)
+  ![用户 ID](./media/user-id.png)
 
 </details>
 
-------------
+---
+
 ## API 路由
 
 <details>
@@ -760,26 +944,26 @@ Web 面板通过 Telegram Bot 支持每日流量、面板登录、数据库备�
 - `/login` 使用 `POST` 用户名称 & 密码： `{username: '', password: ''}` 登录
 - `/panel/api/inbounds` 以下操作的基础：
 
-| 方法   |  路径                               | 操作                                        |
-| :----: | ---------------------------------- | ------------------------------------------- |
-| `GET`  | `"/list"`                          | 获取所有入站                                 |
-| `GET`  | `"/get/:id"`                       | 获取所有入站以及inbound.id                   |
-| `GET`  | `"/getClientTraffics/:email"`      | 通过电子邮件获取客户端流量                    |
-| `GET`  | `"/getClientTrafficsById/:id"`     | 通过用户ID获取客户端流量                      |
-| `GET`  | `"/createbackup"`                  | Telegram 机器人向管理员发送备份               |
-| `POST` | `"/add"`                           | 添加入站                                    |
-| `POST` | `"/del/:id"`                       | 删除入站                                    |
-| `POST` | `"/update/:id"`                    | 更新入站                                    |
-| `POST` | `"/clientIps/:email"`              | 客户端 IP 地址                              | 
-| `POST` | `"/clearClientIps/:email"`         | 清除客户端 IP 地址                           |
-| `POST` | `"/addClient"`                     | 将客户端添加到入站                           |
-| `POST` | `"/:id/delClient/:clientId"`       | 通过 clientId\* 删除客户端                   |
-| `POST` | `"/updateClient/:clientId"`        | 通过 clientId\* 更新客户端                   |
-| `POST` | `"/:id/resetClientTraffic/:email"` | 重置客户端的流量                             |
-| `POST` | `"/resetAllTraffics"`              | 重置所有入站的流量                           |
-| `POST` | `"/resetAllClientTraffics/:id"`    | 重置入站中所有客户端的流量                    |
-| `POST` | `"/delDepletedClients/:id"`        | 删除入站耗尽的客户端 （-1： all）             |
-| `POST` | `"/onlines"`                       | 获取在线用户 （ 电子邮件列表 ）               |
+|  方法  | 路径                               | 操作                              |
+| :----: | ---------------------------------- | --------------------------------- |
+| `GET`  | `"/list"`                          | 获取所有入站                      |
+| `GET`  | `"/get/:id"`                       | 获取所有入站以及inbound.id        |
+| `GET`  | `"/getClientTraffics/:email"`      | 通过电子邮件获取客户端流量        |
+| `GET`  | `"/getClientTrafficsById/:id"`     | 通过用户ID获取客户端流量          |
+| `GET`  | `"/createbackup"`                  | Telegram 机器人向管理员发送备份   |
+| `POST` | `"/add"`                           | 添加入站                          |
+| `POST` | `"/del/:id"`                       | 删除入站                          |
+| `POST` | `"/update/:id"`                    | 更新入站                          |
+| `POST` | `"/clientIps/:email"`              | 客户端 IP 地址                    |
+| `POST` | `"/clearClientIps/:email"`         | 清除客户端 IP 地址                |
+| `POST` | `"/addClient"`                     | 将客户端添加到入站                |
+| `POST` | `"/:id/delClient/:clientId"`       | 通过 clientId\* 删除客户端        |
+| `POST` | `"/updateClient/:clientId"`        | 通过 clientId\* 更新客户端        |
+| `POST` | `"/:id/resetClientTraffic/:email"` | 重置客户端的流量                  |
+| `POST` | `"/resetAllTraffics"`              | 重置所有入站的流量                |
+| `POST` | `"/resetAllClientTraffics/:id"`    | 重置入站中所有客户端的流量        |
+| `POST` | `"/delDepletedClients/:id"`        | 删除入站耗尽的客户端 （-1： all） |
+| `POST` | `"/onlines"`                       | 获取在线用户 （ 电子邮件列表 ）   |
 
 - 使用`clientId` 项应该填写下列数据：
 
@@ -787,14 +971,14 @@ Web 面板通过 Telegram Bot 支持每日流量、面板登录、数据库备�
 - `client.password` for TROJAN
 - `client.email` for Shadowsocks
 
-
-
 - [API 文档](https://documenter.getpostman.com/view/16802678/2s9YkgD5jm)
 
 - [<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415%26entityType%3Dcollection%26workspaceId%3D2cd38c01-c851-4a15-a972-f181c23359d9)
+
 </details>
 
-------------
+---
+
 ## 环境变量
 
 <details>
@@ -802,7 +986,7 @@ Web 面板通过 Telegram Bot 支持每日流量、面板登录、数据库备�
 
 #### Usage
 
-| 变量            |                      Type                      | 默认          |
+| 变量           |                      Type                      | 默认          |
 | -------------- | :--------------------------------------------: | :------------ |
 | XUI_LOG_LEVEL  | `"debug"` \| `"info"` \| `"warn"` \| `"error"` | `"info"`      |
 | XUI_DEBUG      |                   `boolean`                    | `false`       |
@@ -818,7 +1002,8 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 
 </details>
 
-------------
+---
+
 ## 预览
 
 ![1](./media/1.png)
@@ -828,8 +1013,10 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 ![6](./media/6.png)
 ![7](./media/7.png)
 
-------------
-------------
+---
+
+---
+
 ## 特别感谢
 
 - [MHSanaei](https://github.com/MHSanaei/)
@@ -837,13 +1024,15 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 - [FranzKafkaYu](https://github.com/FranzKafkaYu/)
 - [vaxilu](https://github.com/vaxilu/)
 
-------------
+---
+
 ## 致谢
 
 - [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) (License: **GPL-3.0**): _Enhanced v2ray/xray and v2ray/xray-clients routing rules with built-in Iranian domains and a focus on security and adblocking._
 - [Vietnam Adblock rules](https://github.com/vuong2023/vn-v2ray-rules) (License: **GPL-3.0**): _A hosted domain hosted in Vietnam and blocklist with the most efficiency for Vietnamese._
 
-------------
+---
+
 ## Star 趋势
 
 [![Stargazers over time](https://starchart.cc/EGfrthtu/X-Panel.svg)](https://starchart.cc/EGfrthtu/X-Panel)

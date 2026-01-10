@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/caddyserver/certmagic"
 	"x-ui/logger"
 )
 
@@ -23,6 +24,7 @@ type CertService struct {
 	renewalManager *AggressiveRenewalManager
 	hotReloader    *CertHotReloader
 	alertFallback  *CertAlertFallback
+	acmeShService  *AcmeShService
 
 	initOnce sync.Once
 }
@@ -52,15 +54,18 @@ func (c *CertService) tryInitImprovements() {
 	c.initOnce.Do(func() {
 		logger.Info("Initializing IP Certificate Improvement Modules...")
 
-		// 1. Initialize PortConflictResolver
+		// 1. Initialize AcmeShService
+		c.acmeShService = NewAcmeShService()
+
+		// 2. Initialize PortConflictResolver
 		webCtrl := &certWebServerController{settingService: c.settingService}
 		c.portResolver = NewPortConflictResolver(webCtrl)
 
-		// 2. Initialize CertAlertFallback
+		// 3. Initialize CertAlertFallback
 		alertSvc := &certAlertService{tgbot: c.tgbot}
 		c.alertFallback = NewCertAlertFallback(alertSvc, c, c.settingService)
 
-		// 3. Initialize AggressiveRenewalManager
+		// 4. Initialize AggressiveRenewalManager
 		renewalConfig := RenewalConfig{
 			CheckInterval:  6 * time.Hour,
 			RenewThreshold: 3 * 24 * time.Hour, // 3 days
@@ -69,7 +74,7 @@ func (c *CertService) tryInitImprovements() {
 		}
 		c.renewalManager = NewAggressiveRenewalManager(renewalConfig, c, c.portResolver, c.alertFallback)
 
-		// 4. Initialize CertHotReloader
+		// 5. Initialize CertHotReloader
 		xrayCtrl := &certXrayController{serverService: c.serverService}
 		c.hotReloader = NewCertHotReloader(xrayCtrl)
 
@@ -77,7 +82,7 @@ func (c *CertService) tryInitImprovements() {
 	})
 }
 
-// ObtainIPCert obtains a Let's Encrypt IP certificate using certmagic with standalone challenge
+// ObtainIPCert obtains a Let's Encrypt IP certificate using acme.sh
 func (c *CertService) ObtainIPCert(ip, email string) error {
 	if ip == "" {
 		return errors.New("IP address cannot be empty")
@@ -87,84 +92,58 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 	}
 
 	// Ensure modules are initialized
-	if c.portResolver == nil {
-		logger.Warning("Improvement modules not initialized, falling back to legacy behavior")
-		return c.obtainIPCertLegacy(ip, email)
+	if c.acmeShService == nil {
+		logger.Warning("AcmeShService not initialized")
+		return errors.New("acme.sh service not available")
 	}
 
 	// 1. Acquire Port 80
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	if err := c.portResolver.AcquirePort80(ctx); err != nil {
-		return fmt.Errorf("failed to acquire port 80: %w", err)
-	}
-	defer func() {
-		if err := c.portResolver.ReleasePort80(); err != nil {
-			logger.Warningf("Failed to release port 80: %v", err)
+	if c.portResolver != nil {
+		if err := c.portResolver.AcquirePort80(ctx); err != nil {
+			return fmt.Errorf("failed to acquire port 80: %w", err)
 		}
-	}()
-
-	// 2. Configure certmagic
-	certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-
-	certmagic.DefaultACME.Email = email
-	certmagic.HTTPPort = 80
-	certmagic.HTTPSPort = 443
-
-	// 3. Obtain certificate
-	// Use a longer timeout for the actual certificate issuance
-	issueCtx, issueCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer issueCancel()
-
-	err := certmagic.ManageSync(issueCtx, []string{ip})
-	if err != nil {
-		return fmt.Errorf("failed to obtain certificate for IP %s: %w", ip, err)
+		defer func() {
+			if err := c.portResolver.ReleasePort80(); err != nil {
+				logger.Warningf("Failed to release port 80: %v", err)
+			}
+		}()
 	}
 
-	logger.Infof("Successfully obtained IP certificate for %s", ip)
+	// 2. Issue IP certificate using acme.sh
+	if err := c.acmeShService.IssueIPCert(ip, email); err != nil {
+		return fmt.Errorf("failed to issue IP certificate: %w", err)
+	}
 
-	// Set IP cert path for future reference
-	certPath := fmt.Sprintf("%s/.local/share/certmagic/certificates/acme-v02.api.letsencrypt.org-directory/%s/%s", os.Getenv("HOME"), ip, ip)
-	if err := c.settingService.SetIpCertPath(certPath); err != nil {
+	// 3. Install certificate to custom path
+	_, _ = c.acmeShService.GetCertPath(ip) // 获取原始路径（如果需要）
+	installPath := filepath.Join("/etc/ssl/certs", fmt.Sprintf("ip_%s", strings.ReplaceAll(ip, ".", "_")))
+	installCertPath := installPath + ".crt"
+	installKeyPath := installPath + ".key"
+
+	if err := c.acmeShService.InstallCert(ip, installCertPath, installKeyPath); err != nil {
+		return fmt.Errorf("failed to install certificate: %w", err)
+	}
+
+	// 4. Save certificate path to configuration
+	if err := c.settingService.SetIpCertPath(installPath); err != nil {
 		logger.Warningf("Failed to set IP cert path: %v", err)
 	}
 
-	// 4. Hot Reload
+	// 5. Trigger hot reload
 	if c.hotReloader != nil {
-		if certPath != "" {
-			if err := c.hotReloader.OnCertRenewed(certPath+".crt", certPath+".key"); err != nil {
-				logger.Errorf("Failed to hot reload certificate: %v", err)
-			}
+		if err := c.hotReloader.OnCertRenewed(installCertPath, installKeyPath); err != nil {
+			logger.Errorf("Failed to hot reload certificate: %v", err)
 		}
 	}
 
+	logger.Infof("Successfully obtained and installed IP certificate for %s", ip)
 	return nil
 }
 
-// obtainIPCertLegacy is the old implementation for fallback
-func (c *CertService) obtainIPCertLegacy(ip, email string) error {
-	certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-	certmagic.DefaultACME.Email = email
-	certmagic.HTTPPort = 80
-	certmagic.HTTPSPort = 443
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	err := certmagic.ManageSync(ctx, []string{ip})
-	if err != nil {
-		return fmt.Errorf("failed to obtain certificate for IP %s: %w", ip, err)
-	}
-
-	logger.Infof("Successfully obtained IP certificate for %s", ip)
-
-	// Set IP cert path for future reference
-	certPath := fmt.Sprintf("%s/.local/share/certmagic/certificates/acme-v02.api.letsencrypt.org-directory/%s/%s", os.Getenv("HOME"), ip, ip)
-	c.settingService.SetIpCertPath(certPath)
-
-	return nil
-}
 
 // RenewLoop runs a background goroutine that periodically checks and renews IP certificates
 func (c *CertService) RenewLoop() {

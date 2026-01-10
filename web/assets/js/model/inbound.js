@@ -43,8 +43,7 @@ const TLS_CIPHER_OPTION = {
   ECDHE_ECDSA_AES_256_GCM: "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
   ECDHE_RSA_AES_128_GCM: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
   ECDHE_RSA_AES_256_GCM: "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-  ECDHE_ECDSA_CHACHA20_POLY1305:
-    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+  ECDHE_ECDSA_CHACHA20_POLY1305: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
   ECDHE_RSA_CHACHA20_POLY1305: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 };
 
@@ -594,9 +593,7 @@ class TlsStreamSettings extends XrayCommonClass {
     let certs;
     let settings;
     if (!ObjectUtil.isEmpty(json.certificates)) {
-      certs = json.certificates.map((cert) =>
-        TlsStreamSettings.Cert.fromJson(cert),
-      );
+      certs = json.certificates.map((cert) => TlsStreamSettings.Cert.fromJson(cert));
     }
 
     if (!ObjectUtil.isEmpty(json.settings)) {
@@ -972,7 +969,7 @@ class StreamSettings extends XrayCommonClass {
     }
   }
 
-  //for Reality
+  // for Reality
   get isReality() {
     return this.security === "reality";
   }
@@ -1022,8 +1019,7 @@ class StreamSettings extends XrayCommonClass {
       kcpSettings: network === "kcp" ? this.kcp.toJson() : undefined,
       wsSettings: network === "ws" ? this.ws.toJson() : undefined,
       grpcSettings: network === "grpc" ? this.grpc.toJson() : undefined,
-      httpupgradeSettings:
-        network === "httpupgrade" ? this.httpupgrade.toJson() : undefined,
+      httpupgradeSettings: network === "httpupgrade" ? this.httpupgrade.toJson() : undefined,
       xhttpSettings: network === "xhttp" ? this.xhttp.toJson() : undefined,
       sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
     };
@@ -1047,8 +1043,8 @@ class Sniffing extends XrayCommonClass {
   static fromJson(json = {}) {
     let destOverride = ObjectUtil.clone(json.destOverride);
     if (
-      !ObjectUtil.isEmpty(destOverride) &&
-      !ObjectUtil.isArrEmpty(destOverride)
+      !ObjectUtil.isEmpty(destOverride)
+      && !ObjectUtil.isArrEmpty(destOverride)
     ) {
       if (ObjectUtil.isEmpty(destOverride[0])) {
         destOverride = ["http", "tls", "quic", "fakedns"];
@@ -1237,18 +1233,19 @@ class Inbound extends XrayCommonClass {
         Protocols.TROJAN,
         Protocols.SHADOWSOCKS,
       ].includes(this.protocol)
-    )
+    ) {
       return false;
+    }
     return ["tcp", "ws", "http", "grpc", "httpupgrade", "xhttp"].includes(
       this.network,
     );
   }
 
-  //this is used for xtls-rprx-vision
+  // this is used for xtls-rprx-vision
   canEnableTlsFlow() {
     if (
-      (this.stream.security === "tls" || this.stream.security === "reality") &&
-      this.network === "tcp"
+      (this.stream.security === "tls" || this.stream.security === "reality")
+      && this.network === "tcp"
     ) {
       return this.protocol === Protocols.VLESS;
     }
@@ -1256,8 +1253,9 @@ class Inbound extends XrayCommonClass {
   }
 
   canEnableReality() {
-    if (![Protocols.VLESS, Protocols.TROJAN].includes(this.protocol))
+    if (![Protocols.VLESS, Protocols.TROJAN].includes(this.protocol)) {
       return false;
+    }
     return ["tcp", "http", "grpc", "xhttp"].includes(this.network);
   }
 
@@ -1329,15 +1327,13 @@ class Inbound extends XrayCommonClass {
     } else if (network === "httpupgrade") {
       const httpupgrade = this.stream.httpupgrade;
       obj.path = httpupgrade.path;
-      obj.host =
-        httpupgrade.host?.length > 0
-          ? httpupgrade.host
-          : this.getHeader(httpupgrade, "host");
+      obj.host = httpupgrade.host?.length > 0
+        ? httpupgrade.host
+        : this.getHeader(httpupgrade, "host");
     } else if (network === "xhttp") {
       const xhttp = this.stream.xhttp;
       obj.path = xhttp.path;
-      obj.host =
-        xhttp.host?.length > 0 ? xhttp.host : this.getHeader(xhttp, "host");
+      obj.host = xhttp.host?.length > 0 ? xhttp.host : this.getHeader(xhttp, "host");
       obj.type = xhttp.mode;
     }
 
@@ -1766,10 +1762,9 @@ class Inbound extends XrayCommonClass {
   genAllLinks(remark = "", remarkModel = "-ieo", client) {
     let result = [];
     let email = client ? client.email : "";
-    let addr =
-      !ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0"
-        ? this.listen
-        : location.hostname;
+    let addr = !ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0"
+      ? this.listen
+      : location.hostname;
     let port = this.port;
     const separationChar = remarkModel.charAt(0);
     const orderChars = remarkModel.slice(1);
@@ -1806,10 +1801,9 @@ class Inbound extends XrayCommonClass {
   }
 
   genInboundLinks(remark = "", remarkModel = "-ieo") {
-    let addr =
-      !ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0"
-        ? this.listen
-        : location.hostname;
+    let addr = !ObjectUtil.isEmpty(this.listen) && this.listen !== "0.0.0.0"
+      ? this.listen
+      : location.hostname;
     if (this.clients) {
       let links = [];
       this.clients.forEach((client) => {
@@ -1819,8 +1813,9 @@ class Inbound extends XrayCommonClass {
       });
       return links.join("\r\n");
     } else {
-      if (this.protocol == Protocols.SHADOWSOCKS && !this.isSSMultiUser)
+      if (this.protocol == Protocols.SHADOWSOCKS && !this.isSSMultiUser) {
         return this.genSSLink(addr, this.port, "same", remark);
+      }
       if (this.protocol == Protocols.WIREGUARD) {
         let links = [];
         this.settings.peers.forEach((p, index) => {
@@ -1861,10 +1856,9 @@ class Inbound extends XrayCommonClass {
       port: this.port,
       listen: this.listen,
       protocol: this.protocol,
-      settings:
-        this.settings instanceof XrayCommonClass
-          ? this.settings.toJson()
-          : this.settings,
+      settings: this.settings instanceof XrayCommonClass
+        ? this.settings.toJson()
+        : this.settings,
       streamSettings: streamSettings,
       tag: this.tag,
       sniffing: this.sniffing.toJson(),
@@ -1957,9 +1951,7 @@ Inbound.VmessSettings = class extends Inbound.Settings {
   static fromJson(json = {}) {
     return new Inbound.VmessSettings(
       Protocols.VMESS,
-      json.clients.map((client) =>
-        Inbound.VmessSettings.VMESS.fromJson(client),
-      ),
+      json.clients.map((client) => Inbound.VmessSettings.VMESS.fromJson(client)),
     );
   }
 
@@ -2076,9 +2068,7 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
   static fromJson(json = {}) {
     const obj = new Inbound.VLESSSettings(
       Protocols.VLESS,
-      (json.clients || []).map((client) =>
-        Inbound.VLESSSettings.VLESS.fromJson(client),
-      ),
+      (json.clients || []).map((client) => Inbound.VLESSSettings.VLESS.fromJson(client)),
       json.decryption,
       json.encryption,
       Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks || []),
@@ -2252,9 +2242,7 @@ Inbound.TrojanSettings = class extends Inbound.Settings {
   static fromJson(json = {}) {
     return new Inbound.TrojanSettings(
       Protocols.TROJAN,
-      json.clients.map((client) =>
-        Inbound.TrojanSettings.Trojan.fromJson(client),
-      ),
+      json.clients.map((client) => Inbound.TrojanSettings.Trojan.fromJson(client)),
       Inbound.TrojanSettings.Fallback.fromJson(json.fallbacks),
     );
   }
@@ -2425,9 +2413,7 @@ Inbound.ShadowsocksSettings = class extends Inbound.Settings {
       json.method,
       json.password,
       json.network,
-      json.clients.map((client) =>
-        Inbound.ShadowsocksSettings.Shadowsocks.fromJson(client),
-      ),
+      json.clients.map((client) => Inbound.ShadowsocksSettings.Shadowsocks.fromJson(client)),
       json.ivCheck,
     );
   }
@@ -2606,9 +2592,7 @@ Inbound.SocksSettings = class extends Inbound.Settings {
   static fromJson(json = {}) {
     let accounts;
     if (json.auth === "password") {
-      accounts = json.accounts.map((account) =>
-        Inbound.SocksSettings.SocksAccount.fromJson(account),
-      );
+      accounts = json.accounts.map((account) => Inbound.SocksSettings.SocksAccount.fromJson(account));
     }
     return new Inbound.SocksSettings(
       Protocols.SOCKS,
@@ -2622,10 +2606,9 @@ Inbound.SocksSettings = class extends Inbound.Settings {
   toJson() {
     return {
       auth: this.auth,
-      accounts:
-        this.auth === "password"
-          ? this.accounts.map((account) => account.toJson())
-          : undefined,
+      accounts: this.auth === "password"
+        ? this.accounts.map((account) => account.toJson())
+        : undefined,
       udp: this.udp,
       ip: this.ip,
     };
@@ -2668,9 +2651,7 @@ Inbound.HttpSettings = class extends Inbound.Settings {
   static fromJson(json = {}) {
     return new Inbound.HttpSettings(
       Protocols.HTTP,
-      json.accounts.map((account) =>
-        Inbound.HttpSettings.HttpAccount.fromJson(account),
-      ),
+      json.accounts.map((account) => Inbound.HttpSettings.HttpAccount.fromJson(account)),
       json.allowTransparent,
     );
   }
@@ -2709,10 +2690,9 @@ Inbound.WireguardSettings = class extends XrayCommonClass {
     super(protocol);
     this.mtu = mtu;
     this.secretKey = secretKey;
-    this.pubKey =
-      secretKey.length > 0
-        ? Wireguard.generateKeypair(secretKey).publicKey
-        : "";
+    this.pubKey = secretKey.length > 0
+      ? Wireguard.generateKeypair(secretKey).publicKey
+      : "";
     this.peers = peers;
     this.noKernelTun = noKernelTun;
   }

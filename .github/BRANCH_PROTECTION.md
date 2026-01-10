@@ -9,6 +9,7 @@
 在 GitHub 仓库设置中，导航到 **Settings > Branches > Branch protection rules**，添加以下规则：
 
 #### 基本设置
+
 - **Branch name pattern**: `main`
 - **Require a pull request before merging**
   - ☑️ Require approvals: **1** (至少需要1个审批)
@@ -17,6 +18,7 @@
   - ☑️ Restrict who can dismiss pull request reviews: 选择仓库管理员或维护者
 
 #### 状态检查
+
 - ☑️ Require status checks to pass before merging
 - ☑️ Require branches to be up to date before merging
 - **Status checks that are required**:
@@ -27,6 +29,7 @@
   - `test` (如果有单独的测试工作流)
 
 #### 其他限制
+
 - ☑️ Include administrators
 - ☑️ Restrict pushes that create matching branches
 - ☐ Allow force pushes (保持未选中)
@@ -37,6 +40,7 @@
 对于带有 `dependencies` 标签的 PR，需要额外审查：
 
 #### 手动审查流程
+
 1. 依赖更新 PR 创建后，自动运行测试
 2. 维护者需要手动验证：
    - 所有测试通过
@@ -46,6 +50,7 @@
 3. 只有在额外审查通过后才能合并
 
 #### 依赖更新PR的识别
+
 - PR 标题包含: `chore: update Go dependencies`
 - PR 包含标签: `dependencies` 和 `automated`
 - PR 来源分支: `deps/go-updates`
@@ -94,17 +99,18 @@ git push origin test-protection
 
 ### 常见问题
 
-**Q: PR 无法合并，即使所有检查都通过了**  
+**Q: PR 无法合并，即使所有检查都通过了**\
 A: 检查是否满足最低审批数量要求
 
-**Q: 依赖更新 PR 被阻止**  
+**Q: 依赖更新 PR 被阻止**\
 A: 确保 PR 包含必要的标签和通过了所有状态检查
 
-**Q: 需要紧急部署但分支保护阻止了**  
+**Q: 需要紧急部署但分支保护阻止了**\
 A: 管理员可以临时覆盖，但应在事后记录原因
 
 ### 联系方式
 
 如果在配置过程中遇到问题，请参考：
+
 - [GitHub 分支保护文档](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/managing-a-branch-protection-rule)
 - 项目维护者

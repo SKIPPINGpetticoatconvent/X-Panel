@@ -2,12 +2,14 @@
 // Distributed under an MIT license: https://codemirror.net/5/LICENSE
 
 (function(mod) {
-  if (typeof exports == "object" && typeof module == "object") // CommonJS
+  if (typeof exports == "object" && typeof module == "object") { // CommonJS
     mod(require("../../lib/codemirror"));
-  else if (typeof define == "function" && define.amd) // AMD
+  } else if (typeof define == "function" && define.amd) { // AMD
     define(["../../lib/codemirror"], mod);
-  else // Plain browser env
+  } // Plain browser env
+  else {
     mod(CodeMirror);
+  }
 })(function(CodeMirror) {
   "use strict";
 
@@ -38,9 +40,11 @@
     }
 
     var range = getRange(true);
-    if (getOption(cm, options, "scanUp")) while (!range && pos.line > cm.firstLine()) {
-      pos = CodeMirror.Pos(pos.line - 1, 0);
-      range = getRange(false);
+    if (getOption(cm, options, "scanUp")) {
+      while (!range && pos.line > cm.firstLine()) {
+        pos = CodeMirror.Pos(pos.line - 1, 0);
+        range = getRange(false);
+      }
     }
     if (!range || range.cleared || force === "unfold") return;
 
@@ -52,7 +56,7 @@
     var myRange = cm.markText(range.from, range.to, {
       replacedWith: myWidget,
       clearOnEnter: getOption(cm, options, "clearOnEnter"),
-      __isFold: true
+      __isFold: true,
     });
     myRange.on("clear", function(from, to) {
       CodeMirror.signal(cm, "unfold", cm, from, to);
@@ -73,14 +77,16 @@
       widget.appendChild(text);
       widget.className = "CodeMirror-foldmarker";
     } else if (widget) {
-      widget = widget.cloneNode(true)
+      widget = widget.cloneNode(true);
     }
     return widget;
   }
 
   // Clumsy backwards-compatible interface
   CodeMirror.newFoldFunction = function(rangeFinder, widget) {
-    return function(cm, pos) { doFold(cm, pos, {rangeFinder: rangeFinder, widget: widget}); };
+    return function(cm, pos) {
+      doFold(cm, pos, { rangeFinder: rangeFinder, widget: widget });
+    };
   };
 
   // New-style interface
@@ -90,8 +96,9 @@
 
   CodeMirror.defineExtension("isFolded", function(pos) {
     var marks = this.findMarksAt(pos);
-    for (var i = 0; i < marks.length; ++i)
+    for (var i = 0; i < marks.length; ++i) {
       if (marks[i].__isFold) return true;
+    }
   });
 
   CodeMirror.commands.toggleFold = function(cm) {
@@ -105,14 +112,16 @@
   };
   CodeMirror.commands.foldAll = function(cm) {
     cm.operation(function() {
-      for (var i = cm.firstLine(), e = cm.lastLine(); i <= e; i++)
+      for (var i = cm.firstLine(), e = cm.lastLine(); i <= e; i++) {
         cm.foldCode(CodeMirror.Pos(i, 0), { scanUp: false }, "fold");
+      }
     });
   };
   CodeMirror.commands.unfoldAll = function(cm) {
     cm.operation(function() {
-      for (var i = cm.firstLine(), e = cm.lastLine(); i <= e; i++)
+      for (var i = cm.firstLine(), e = cm.lastLine(); i <= e; i++) {
         cm.foldCode(CodeMirror.Pos(i, 0), { scanUp: false }, "unfold");
+      }
     });
   };
 
@@ -139,17 +148,19 @@
     widget: "\u2194",
     minFoldSize: 0,
     scanUp: false,
-    clearOnEnter: true
+    clearOnEnter: true,
   };
 
   CodeMirror.defineOption("foldOptions", null);
 
   function getOption(cm, options, name) {
-    if (options && options[name] !== undefined)
+    if (options && options[name] !== undefined) {
       return options[name];
+    }
     var editorOptions = cm.options.foldOptions;
-    if (editorOptions && editorOptions[name] !== undefined)
+    if (editorOptions && editorOptions[name] !== undefined) {
       return editorOptions[name];
+    }
     return defaultOptions[name];
   }
 

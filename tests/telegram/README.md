@@ -5,16 +5,19 @@
 ## 测试覆盖范围
 
 ### 1. 命令响应测试 (TestCommandResponse)
+
 - 测试各种命令的解析和处理
 - 验证命令参数提取
 - 检查不同命令类型的响应
 
 ### 2. Webhook 处理测试 (TestWebhookHandling)
+
 - 模拟 Telegram Webhook 请求
 - 验证更新消息的正确解析
 - 测试消息路由和处理
 
 ### 3. 权限验证测试 (TestPermissionValidation)
+
 - 管理员 ID 验证
 - 非管理员用户的访问控制
 - 权限级别的功能隔离
@@ -30,16 +33,19 @@ tests/telegram/
 ## 运行测试
 
 ### 运行所有测试
+
 ```bash
 go test ./tests/telegram/ -v
 ```
 
 ### 运行基准测试
+
 ```bash
 go test ./tests/telegram/ -bench=.
 ```
 
 ### 生成覆盖率报告
+
 ```bash
 go test ./tests/telegram/ -coverprofile=coverage.out
 go tool cover -html=coverage.out -o coverage.html
@@ -48,33 +54,43 @@ go tool cover -html=coverage.out -o coverage.html
 ## 测试用例说明
 
 ### TestCommandParsing
+
 测试 Telegram 命令解析功能：
+
 - 简单命令（如 `/start`）
 - 带参数的命令（如 `/usage email@example.com`）
 - 多参数命令
 - 特殊字符处理
 
 ### TestBotTokenValidation
+
 验证 Bot Token 格式：
+
 - 有效的 Token 格式检查
 - 无效 Token 的拒绝
 - 边界情况处理
 
 ### TestAdminIdParsing
+
 管理员 ID 解析测试：
+
 - 单个管理员 ID
 - 多个管理员 ID（逗号分隔）
 - 带空格的 ID 列表
 - 无效 ID 的处理
 
 ### TestInlineKeyboard & TestReplyKeyboard
+
 键盘创建功能测试：
+
 - 内联键盘按钮布局
 - 回复键盘配置
 - 键盘属性验证
 
 ### TestMessageFormatting
+
 消息格式化测试：
+
 - 长消息分页逻辑
 - 消息长度限制处理
 - 空消息处理

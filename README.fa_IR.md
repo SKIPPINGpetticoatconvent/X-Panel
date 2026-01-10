@@ -2,7 +2,6 @@
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
-
 [![](https://img.shields.io/github/v/release/EGfrthtu/X-Panel.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/tags)
 [![](https://img.shields.io/github/actions/workflow/status/EGfrthtu/X-Panel/release.yml.svg?style=for-the-badge)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/commits/main)
 [![GO Version](https://img.shields.io/github/go-mod/go-version/EGfrthtu/X-Panel.svg?style=for-the-badge)](#)
@@ -49,4 +48,4 @@ bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Pan
 
 ## ستاره‌ها در طول زمان
 
-[![Stargazers over time](https://starchart.cc/MHSanaei/3x-ui.svg?variant=adaptive)](https://starchart.cc/MHSanaei/3x-ui) 
+[![Stargazers over time](https://starchart.cc/MHSanaei/3x-ui.svg?variant=adaptive)](https://starchart.cc/MHSanaei/3x-ui)

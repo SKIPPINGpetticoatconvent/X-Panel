@@ -151,19 +151,18 @@ class TcpStreamSettings extends CommonClass {
     return {
       header: {
         type: this.type,
-        request:
-          this.type === "http"
-            ? {
-                headers: {
-                  Host: ObjectUtil.isEmpty(this.host)
-                    ? []
-                    : this.host.split(","),
-                },
-                path: ObjectUtil.isEmpty(this.path)
-                  ? ["/"]
-                  : this.path.split(","),
-              }
-            : undefined,
+        request: this.type === "http"
+          ? {
+            headers: {
+              Host: ObjectUtil.isEmpty(this.host)
+                ? []
+                : this.host.split(","),
+            },
+            path: ObjectUtil.isEmpty(this.path)
+              ? ["/"]
+              : this.path.split(","),
+          }
+          : undefined,
       },
     };
   }
@@ -527,14 +526,12 @@ class StreamSettings extends CommonClass {
       network: network,
       security: this.security,
       tlsSettings: this.security == "tls" ? this.tls.toJson() : undefined,
-      realitySettings:
-        this.security == "reality" ? this.reality.toJson() : undefined,
+      realitySettings: this.security == "reality" ? this.reality.toJson() : undefined,
       tcpSettings: network === "tcp" ? this.tcp.toJson() : undefined,
       kcpSettings: network === "kcp" ? this.kcp.toJson() : undefined,
       wsSettings: network === "ws" ? this.ws.toJson() : undefined,
       grpcSettings: network === "grpc" ? this.grpc.toJson() : undefined,
-      httpupgradeSettings:
-        network === "httpupgrade" ? this.httpupgrade.toJson() : undefined,
+      httpupgradeSettings: network === "httpupgrade" ? this.httpupgrade.toJson() : undefined,
       xhttpSettings: network === "xhttp" ? this.xhttp.toJson() : undefined,
       sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
     };
@@ -587,8 +584,7 @@ class Outbound extends CommonClass {
     super();
     this.tag = tag;
     this._protocol = protocol;
-    this.settings =
-      settings == null ? Outbound.Settings.getSettings(protocol) : settings;
+    this.settings = settings == null ? Outbound.Settings.getSettings(protocol) : settings;
     this.stream = streamSettings;
     this.sendThrough = sendThrough;
     this.mux = mux;
@@ -612,14 +608,15 @@ class Outbound extends CommonClass {
         Protocols.Trojan,
         Protocols.Shadowsocks,
       ].includes(this.protocol)
-    )
+    ) {
       return false;
+    }
     return ["tcp", "ws", "http", "grpc", "httpupgrade", "xhttp"].includes(
       this.stream.network,
     );
   }
 
-  //this is used for xtls-rprx-vision
+  // this is used for xtls-rprx-vision
   canEnableTlsFlow() {
     if (this.stream.security != "none" && this.stream.network === "tcp") {
       return this.protocol === Protocols.VLESS;
@@ -628,8 +625,9 @@ class Outbound extends CommonClass {
   }
 
   canEnableReality() {
-    if (![Protocols.VLESS, Protocols.Trojan].includes(this.protocol))
+    if (![Protocols.VLESS, Protocols.Trojan].includes(this.protocol)) {
       return false;
+    }
     return ["tcp", "http", "grpc", "xhttp"].includes(this.stream.network);
   }
 
@@ -711,16 +709,16 @@ class Outbound extends CommonClass {
     if (this.canEnableStream()) {
       stream = this.stream.toJson();
     } else {
-      if (this.stream?.sockopt)
+      if (this.stream?.sockopt) {
         stream = { sockopt: this.stream.sockopt.toJson() };
+      }
     }
     return {
       tag: this.tag == "" ? undefined : this.tag,
       protocol: this.protocol,
-      settings:
-        this.settings instanceof CommonClass
-          ? this.settings.toJson()
-          : this.settings,
+      settings: this.settings instanceof CommonClass
+        ? this.settings.toJson()
+        : this.settings,
       streamSettings: stream,
       sendThrough: this.sendThrough != "" ? this.sendThrough : undefined,
       mux: this.mux?.enabled ? this.mux : undefined,
@@ -884,8 +882,7 @@ class Outbound extends CommonClass {
     }
     let remark = decodeURIComponent(url.hash);
     // Remove '#' from url.hash
-    remark =
-      remark.length > 0 ? remark.substring(1) : "out-" + protocol + "-" + port;
+    remark = remark.length > 0 ? remark.substring(1) : "out-" + protocol + "-" + port;
     return new Outbound(remark, protocol, settings, stream);
   }
 }
@@ -979,9 +976,7 @@ Outbound.FreedomSettings = class extends CommonClass {
         ? Outbound.FreedomSettings.Fragment.fromJson(json.fragment)
         : undefined,
       json.noises
-        ? json.noises.map((noise) =>
-            Outbound.FreedomSettings.Noise.fromJson(noise),
-          )
+        ? json.noises.map((noise) => Outbound.FreedomSettings.Noise.fromJson(noise))
         : undefined,
     );
   }
@@ -992,12 +987,10 @@ Outbound.FreedomSettings = class extends CommonClass {
         ? undefined
         : this.domainStrategy,
       redirect: ObjectUtil.isEmpty(this.redirect) ? undefined : this.redirect,
-      fragment:
-        Object.keys(this.fragment).length === 0 ? undefined : this.fragment,
-      noises:
-        this.noises.length === 0
-          ? undefined
-          : Outbound.FreedomSettings.Noise.toJsonArray(this.noises),
+      fragment: Object.keys(this.fragment).length === 0 ? undefined : this.fragment,
+      noises: this.noises.length === 0
+        ? undefined
+        : Outbound.FreedomSettings.Noise.toJsonArray(this.noises),
     };
   }
 };
@@ -1173,8 +1166,9 @@ Outbound.TrojanSettings = class extends CommonClass {
   }
 
   static fromJson(json = {}) {
-    if (ObjectUtil.isArrEmpty(json.servers))
+    if (ObjectUtil.isArrEmpty(json.servers)) {
       return new Outbound.TrojanSettings();
+    }
     return new Outbound.TrojanSettings(
       json.servers[0].address,
       json.servers[0].port,
@@ -1317,10 +1311,9 @@ Outbound.WireguardSettings = class extends CommonClass {
     super();
     this.mtu = mtu;
     this.secretKey = secretKey;
-    this.pubKey =
-      secretKey.length > 0
-        ? Wireguard.generateKeypair(secretKey).publicKey
-        : "";
+    this.pubKey = secretKey.length > 0
+      ? Wireguard.generateKeypair(secretKey).publicKey
+      : "";
     this.address = Array.isArray(address) ? address.join(",") : address;
     this.workers = workers;
     this.domainStrategy = domainStrategy;

@@ -21,7 +21,7 @@
       "port": 62789,
       "protocol": "dokodemo-door",
       "settings": {
-      "address": "127.0.0.1"
+        "address": "127.0.0.1"
       }
     }
   ],
@@ -54,7 +54,7 @@
         "downlinkOnly": 0,
         "statsUserUplink": true,
         "statsUserDownlink": true,
-        "statsUserOnline": true 
+        "statsUserOnline": true
       }
     },
     "system": {

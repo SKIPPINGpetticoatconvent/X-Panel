@@ -1,41 +1,46 @@
 # GeoIP 集成与 SNI 智能选择规格说明 (Specification)
 
 ## 1. 背景与目标
+
 为了提高节点的抗封锁能力和伪装效果，我们需要根据 VPS 所在的地理位置，自动选择符合当地特征的 SNI 域名。
 本规格说明定义了如何集成 `MyIP.la` API 来获取 VPS 的地理位置，并据此动态加载对应国家的 SNI 列表。
 
 ## 2. 核心需求
 
 ### 2.1 GeoIP 服务
-*   **主要 API 源**: 使用 `https://api.myip.la/en?json` 获取当前服务器的公网 IP 信息。
-*   **备用 API 源**: 使用 `https://api.ip.sb/geoip` 作为备用地理位置查询服务。
-*   **数据提取**: 解析 JSON 响应，提取 `country_code` 字段（例如 "US", "JP"）。
-*   **隐私与安全**: 仅使用公开 API，不发送任何敏感数据。API URL 可配置，但默认指向 MyIP.la 和 IP.sb。
-*   **容错与回退**:
-    *   设置合理的超时时间（例如 10 秒）。
-    *   如果主要 API 请求失败或解析错误，自动切换到备用 API。
-    *   如果两个 API 都失败，应返回默认的国家代码（例如 "US" 或空字符串）。
-    *   支持指数退避重试策略，提高获取成功率。
+
+- **主要 API 源**: 使用 `https://api.myip.la/en?json` 获取当前服务器的公网 IP 信息。
+- **备用 API 源**: 使用 `https://api.ip.sb/geoip` 作为备用地理位置查询服务。
+- **数据提取**: 解析 JSON 响应，提取 `country_code` 字段（例如 "US", "JP"）。
+- **隐私与安全**: 仅使用公开 API，不发送任何敏感数据。API URL 可配置，但默认指向 MyIP.la 和 IP.sb。
+- **容错与回退**:
+  - 设置合理的超时时间（例如 10 秒）。
+  - 如果主要 API 请求失败或解析错误，自动切换到备用 API。
+  - 如果两个 API 都失败，应返回默认的国家代码（例如 "US" 或空字符串）。
+  - 支持指数退避重试策略，提高获取成功率。
 
 ### 2.2 SNI 智能选择
-*   **动态加载**: `SNISelector` 初始化或更新时，应根据获取到的 `country_code` 尝试加载 `sni/{CountryCode}/sni_domains.txt`。
-*   **回退机制**:
-    *   如果对应国家的目录不存在或文件为空，回退到默认列表（例如 `sni/US/sni_domains.txt` 或硬编码列表）。
-    *   如果获取 GeoIP 失败，直接使用默认列表。
-*   **缓存**: GeoIP 信息在服务启动后获取一次即可，或者低频缓存（例如每天更新一次），避免频繁请求 API。
+
+- **动态加载**: `SNISelector` 初始化或更新时，应根据获取到的 `country_code` 尝试加载 `sni/{CountryCode}/sni_domains.txt`。
+- **回退机制**:
+  - 如果对应国家的目录不存在或文件为空，回退到默认列表（例如 `sni/US/sni_domains.txt` 或硬编码列表）。
+  - 如果获取 GeoIP 失败，直接使用默认列表。
+- **缓存**: GeoIP 信息在服务启动后获取一次即可，或者低频缓存（例如每天更新一次），避免频繁请求 API。
 
 ### 2.3 备用 API 机制
-*   **主备切换逻辑**：当主要 API (`api.myip.la`) 失败时，自动切换到备用 API (`api.ip.sb`)
-*   **数据格式兼容性**：备用 API 返回的 JSON 格式需要转换为统一的数据结构
-*   **错误处理**：两个 API 都失败时，返回统一的错误信息，触发回退逻辑
-*   **性能优化**：主 API 优先使用，只有在失败时才尝试备用 API
-*   **日志记录**：记录 API 切换过程，便于故障排查和监控
+
+- **主备切换逻辑**：当主要 API (`api.myip.la`) 失败时，自动切换到备用 API (`api.ip.sb`)
+- **数据格式兼容性**：备用 API 返回的 JSON 格式需要转换为统一的数据结构
+- **错误处理**：两个 API 都失败时，返回统一的错误信息，触发回退逻辑
+- **性能优化**：主 API 优先使用，只有在失败时才尝试备用 API
+- **日志记录**：记录 API 切换过程，便于故障排查和监控
 
 ## 3. 架构设计
 
 ### 3.1 接口定义
 
 #### `GeoIPService`
+
 负责获取地理位置信息。
 
 ```go
@@ -50,9 +55,11 @@ type GeoIPService interface {
 ```
 
 #### `SNISelector` (更新)
+
 集成 `GeoIPService`，在初始化阶段决定加载哪个列表。
 
 ### 3.2 目录结构
+
 ```text
 sni/
 ├── US/
@@ -312,38 +319,38 @@ func (s *ServerService) loadSNIByCountry(countryCode string) []string {
 
 ## 5. 测试计划 (TDD Anchors)
 
-1.  **`TestGeoIP_ParseJSON`**:
-    *   输入: `{"ip":"1.1.1.1", "country_code":"JP", ...}`
-    *   期望: `LocationInfo.CountryCode` == "JP"
+1. **`TestGeoIP_ParseJSON`**:
+   - 输入: `{"ip":"1.1.1.1", "country_code":"JP", ...}`
+   - 期望: `LocationInfo.CountryCode` == "JP"
 
-2.  **`TestGeoIP_NetworkError`**:
-    *   模拟网络超时。
-    *   期望: 返回 error，不 panic。
+2. **`TestGeoIP_NetworkError`**:
+   - 模拟网络超时。
+   - 期望: 返回 error，不 panic。
 
-3.  **`TestGeoIPService_MainAPISuccess`**:
-    *   模拟主要 API 成功响应。
-    *   期望: 正确解析并返回地理位置信息。
+3. **`TestGeoIPService_MainAPISuccess`**:
+   - 模拟主要 API 成功响应。
+   - 期望: 正确解析并返回地理位置信息。
 
-4.  **`TestGeoIPService_BackupAPISuccess`**:
-    *   模拟主要 API 失败，备用 API 成功。
-    *   期望: 自动切换到备用 API 并正确返回地理位置信息。
+4. **`TestGeoIPService_BackupAPISuccess`**:
+   - 模拟主要 API 失败，备用 API 成功。
+   - 期望: 自动切换到备用 API 并正确返回地理位置信息。
 
-5.  **`TestGeoIPService_BothAPIFail`**:
-    *   模拟主要和备用 API 都失败。
-    *   期望: 返回错误信息，触发默认回退逻辑。
+5. **`TestGeoIPService_BothAPIFail`**:
+   - 模拟主要和备用 API 都失败。
+   - 期望: 返回错误信息，触发默认回退逻辑。
 
-6.  **`TestGeoIPService_DataConversion`**:
-    *   测试备用 API 数据格式转换为主 API 格式。
-    *   期望: IPSBLocation 正确转换为 GeoIPLocation。
+6. **`TestGeoIPService_DataConversion`**:
+   - 测试备用 API 数据格式转换为主 API 格式。
+   - 期望: IPSBLocation 正确转换为 GeoIPLocation。
 
-7.  **`TestGeoIPService_RetryMechanism`**:
-    *   模拟 API 调用失败后的重试机制。
-    *   期望: 指数退避策略正常工作，最终成功或返回错误。
+7. **`TestGeoIPService_RetryMechanism`**:
+   - 模拟 API 调用失败后的重试机制。
+   - 期望: 指数退避策略正常工作，最终成功或返回错误。
 
-8.  **`TestServerService_LoadSNI_Fallback`**:
-    *   场景: `FetchLocation` 返回 "XX" (不存在的国家)。
-    *   期望: `loadSNIByCountry("XX")` 返回空 -> 触发回退逻辑 -> 加载 "US" 列表。
+8. **`TestServerService_LoadSNI_Fallback`**:
+   - 场景: `FetchLocation` 返回 "XX" (不存在的国家)。
+   - 期望: `loadSNIByCountry("XX")` 返回空 -> 触发回退逻辑 -> 加载 "US" 列表。
 
-9.  **`TestServerService_LoadSNI_Success`**:
-    *   场景: `FetchLocation` 返回 "JP"。
-    *   期望: 加载 `sni/JP/sni_domains.txt` 的内容。
+9. **`TestServerService_LoadSNI_Success`**:
+   - 场景: `FetchLocation` 返回 "JP"。
+   - 期望: 加载 `sni/JP/sni_domains.txt` 的内容。

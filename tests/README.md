@@ -124,6 +124,7 @@ web/
 **测试文件**: `tests/security_test.go`
 
 **测试内容**:
+
 - `TestSQLInjection` - SQL注入攻击防护测试
   - 备注字段SQL注入测试
   - 邮箱字段SQL注入测试
@@ -146,6 +147,7 @@ web/
   - Content-Security-Policy
 
 **运行方法**:
+
 ```bash
 go test -v ./tests/ -run TestSQLInjection
 go test -v ./tests/ -run TestXSS
@@ -159,6 +161,7 @@ go test -v ./tests/ -run TestSecurityHeaders
 **测试文件**: `web/controller/web_interface_test.go`
 
 **测试内容**:
+
 - `TestInboundController_GetInbounds` - 获取入站列表
 - `TestInboundController_AddInbound` - 添加入站配置
 - `TestInboundController_ValidateInboundData` - 入站数据验证
@@ -168,6 +171,7 @@ go test -v ./tests/ -run TestSecurityHeaders
 - `TestProtocolValidation` - 协议验证
 
 **运行方法**:
+
 ```bash
 go test -v ./web/controller/ -run TestInbound
 go test -v ./web/controller/ -run TestSetting
@@ -179,6 +183,7 @@ go test -v ./web/controller/ -run TestBase
 **测试文件**: `web/controller/api_interface_test.go`
 
 **测试内容**:
+
 - `TestInboundAPI_ResponseFormat` - API响应格式验证
 - `TestInboundAPI_DataValidation` - API数据验证
 - `TestInboundAPI_PermissionValidation` - API权限验证
@@ -189,6 +194,7 @@ go test -v ./web/controller/ -run TestBase
 - `TestAPI_ContentTypeValidation` - 内容类型验证
 
 **运行方法**:
+
 ```bash
 go test -v ./web/controller/ -run TestInboundAPI
 go test -v ./web/controller/ -run TestSettingAPI
@@ -200,6 +206,7 @@ go test -v ./web/controller/ -run TestAPI
 **测试文件**: `web/service/database_test.go`
 
 **测试内容**:
+
 - `TestUserService_CreateUser` - 用户创建
 - `TestUserService_GetUserByUsername` - 用户查询
 - `TestUserService_UpdateUser` - 用户更新
@@ -213,6 +220,7 @@ go test -v ./web/controller/ -run TestAPI
 - `TestDatabase_Concurrency` - 并发操作
 
 **运行方法**:
+
 ```bash
 go test -v ./web/service/ -run TestUserService
 go test -v ./web/service/ -run TestInboundService
@@ -225,6 +233,7 @@ go test -v ./web/service/ -run TestDatabase
 **测试文件**: `web/service/xray_integration_test.go`
 
 **测试内容**:
+
 - `TestXrayService_GetXrayConfig` - Xray配置生成
 - `TestXrayService_StartStopXray` - Xray进程管理
 - `TestXrayService_GetXrayTraffic` - 流量获取
@@ -236,6 +245,7 @@ go test -v ./web/service/ -run TestDatabase
 - `TestXrayService_XrayCrashDetection` - 崩溃检测
 
 **运行方法**:
+
 ```bash
 go test -v ./web/service/ -run TestXrayService
 go test -v ./web/service/ -run TestXray
@@ -394,23 +404,23 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.21
-    
-    - name: Run tests
-      run: |
-        go test -v -race -coverprofile=coverage.out ./...
-    
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.out
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21
+
+      - name: Run tests
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.out
 ```
 
 ## 🤝 贡献指南
@@ -425,7 +435,7 @@ jobs:
 2. **使用 testify 断言**
    ```go
    import "github.com/stretchr/testify/assert"
-   
+
    func TestExample(t *testing.T) {
        result := SomeFunction()
        assert.Equal(t, expected, result)

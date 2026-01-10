@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -212,43 +213,58 @@ func (m *AggressiveRenewalManager) CheckAndRenew() error {
 
 // getCertInfo 获取证书信息
 func (m *AggressiveRenewalManager) getCertInfo() (*CertInfo, error) {
-	// 获取证书路径
-	certPath, err := m.certService.settingService.GetIpCertPath()
+	// 获取 IP 地址
+	ip, err := m.certService.settingService.GetIpCertTarget()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get IP cert path: %w", err)
+		return nil, fmt.Errorf("failed to get IP cert target: %w", err)
 	}
-	if certPath == "" {
-		return nil, errors.New("IP cert path is empty")
-	}
-
-	certFile := certPath + ".crt"
-	keyFile := certPath + ".key"
-
-	// 检查证书文件是否存在
-	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		return nil, errors.New("certificate file does not exist")
+	if ip == "" {
+		return nil, errors.New("IP cert target is empty")
 	}
 
-	// 加载证书
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	// 使用 AcmeShService 获取证书过期时间
+	expiry, err := m.certService.acmeShService.GetCertExpiry(ip)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load certificate: %w", err)
-	}
+		logger.Warningf("Failed to get expiry from acme.sh, falling back to file parsing: %v", err)
 
-	// 解析证书获取过期时间
-	if len(cert.Certificate) == 0 {
-		return nil, errors.New("no certificate data found")
-	}
+		// 回退到文件解析方式
+		certPath, err := m.certService.settingService.GetIpCertPath()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get IP cert path: %w", err)
+		}
+		if certPath == "" {
+			return nil, errors.New("IP cert path is empty")
+		}
 
-	x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse X.509 certificate: %w", err)
-	}
+		certFile := certPath + ".crt"
+		keyFile := certPath + ".key"
 
-	expiry := x509Cert.NotAfter
+		// 检查证书文件是否存在
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			return nil, errors.New("certificate file does not exist")
+		}
+
+		// 加载证书
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load certificate: %w", err)
+		}
+
+		// 解析证书获取过期时间
+		if len(cert.Certificate) == 0 {
+			return nil, errors.New("no certificate data found")
+		}
+
+		x509Cert, err := x509.ParseCertificate(cert.Certificate[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse X.509 certificate: %w", err)
+		}
+
+		expiry = x509Cert.NotAfter
+	}
 
 	return &CertInfo{
-		Path:   certFile,
+		Path:   fmt.Sprintf("/etc/ssl/certs/ip_%s.crt", strings.ReplaceAll(ip, ".", "_")),
 		Expiry: expiry,
 	}, nil
 }

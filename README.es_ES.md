@@ -55,15 +55,15 @@ El script de gestión tiene una aplicación de certificado SSL incorporada para 
 
 **1:** Ejecuta el comando`x-ui`en la terminal, luego elige `Certificado SSL de Cloudflare`.
 
-
 ### Certbot
+
 ```
 apt-get install certbot -y
 certbot certonly --standalone --agree-tos --register-unsafely-without-email -d yourdomain.com
 certbot renew --dry-run
 ```
 
-***Consejo:*** *Certbot también está integrado en el script de gestión. Puedes ejecutar el comando `x-ui` , luego elegir `Gestión de Certificados SSL`.*
+_**Consejo:**_ _Certbot también está integrado en el script de gestión. Puedes ejecutar el comando `x-ui` , luego elegir `Gestión de Certificados SSL`._
 
 </details>
 
@@ -161,24 +161,23 @@ systemctl restart x-ui
 
 actualizar a la última versión
 
-   ```sh
-    cd 3x-ui
-    docker compose down
-    docker compose pull 3x-ui
-    docker compose up -d
-   ```
+```sh
+cd 3x-ui
+docker compose down
+docker compose pull 3x-ui
+docker compose up -d
+```
 
 eliminar 3x-ui de docker
 
-   ```sh
-    docker stop 3x-ui
-    docker rm 3x-ui
-    cd --
-    rm -r 3x-ui
-   ```
+```sh
+docker stop 3x-ui
+docker rm 3x-ui
+cd --
+rm -r 3x-ui
+```
 
 </details>
-
 
 ## SO Recomendados
 
@@ -211,6 +210,7 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
 - **armv6 / arm / arm32**: Orientada a dispositivos embebidos muy antiguos, esta arquitectura, aunque menos común, todavía se utiliza. Dispositivos como Raspberry Pi 1, Raspberry Pi Zero/Zero W, dependen de esta arquitectura.
 
 - **armv5 / arm / arm32**: Una arquitectura más antigua asociada principalmente con sistemas embebidos tempranos, es menos común hoy en día pero aún puede encontrarse en dispositivos heredados como versiones antiguas de Raspberry Pi y algunos teléfonos inteligentes más antiguos.
+
 </details>
 
 ## Idiomas
@@ -223,7 +223,6 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
 - Español
 - Indonesio
 - Ucraniano
-
 
 ## Características
 
@@ -242,7 +241,6 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
 - Soporta cambiar las configuraciones por diferentes elementos proporcionados en el panel.
 - Soporta exportar/importar base de datos desde el panel
 
-
 ## Configuración Predeterminada del Panel
 
 <details>
@@ -250,16 +248,17 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
 
 ### Nombre de Usuario & Contraseña & Ruta Base Web:
 
-  Estos se generarán aleatoriamente si no los modificas.
+Estos se generarán aleatoriamente si no los modificas.
 
-  - **Puerto:** el puerto predeterminado para el panel es `2053`
+- **Puerto:** el puerto predeterminado para el panel es `2053`
 
 ### Gestión de la Base de Datos:
 
-  Puedes realizar copias de seguridad y restauraciones de la base de datos directamente desde el panel.
+Puedes realizar copias de seguridad y restauraciones de la base de datos directamente desde el panel.
 
 ### Ruta Base Web
-  - /etc/x-ui/x-ui.db
+
+- /etc/x-ui/x-ui.db
 - **Ruta de Configuración de Xray:**
   - /usr/local/x-ui/bin/config.json
 - **Ruta del Panel Web sin Implementar SSL:**
@@ -267,7 +266,7 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
   - http://domain:2053/panel
 - **Ruta del Panel Web con Implementación de SSL:**
   - https://domain:2053/panel
- 
+
 </details>
 
 1. **Restablecer la Ruta Base Web:**
@@ -282,9 +281,11 @@ Nuestra plataforma ofrece compatibilidad con una amplia gama de arquitecturas y 
    - Para ver tu configuración actual, utiliza el comando `x-ui settings` en el terminal o selecciona `Ver Configuración Actual` en `x-ui`.
 
 ### Recomendación de Seguridad:
+
 - Para mayor seguridad, utiliza una palabra larga y aleatoria en la estructura de tu URL.
 
 **Ejemplos:**
+
 - `http://ip:port/*webbasepath*/panel`
 - `http://domain:port/*webbasepath*/panel`
 
@@ -364,7 +365,6 @@ El panel web admite tráfico diario, inicio de sesión en el panel, copia de seg
 - Copia de seguridad de la base de datos
 - Notificación de Carga de CPU
 
-
 **Sintaxis de referencia:**
 
 - `30 \* \* \* \* \*` - Notifica a los 30s de cada punto
@@ -393,22 +393,22 @@ El panel web admite tráfico diario, inicio de sesión en el panel, copia de seg
 ### Configuración del Bot de Telegram
 
 - Inicia [Botfather](https://t.me/BotFather) en tu cuenta de Telegram:
-    ![Botfather](./media/botfather.png)
-  
+  ![Botfather](./media/botfather.png)
+
 - Crea un nuevo bot usando el comando /newbot: Te hará 2 preguntas, Un nombre y un nombre de usuario para tu bot. Ten en cuenta que el nombre de usuario debe terminar con la palabra "bot".
-    ![Create new bot](./media/newbot.png)
+  ![Create new bot](./media/newbot.png)
 
 - Inicia el bot que acabas de crear. Puedes encontrar el enlace a tu bot aquí.
-    ![token](./media/token.png)
+  ![token](./media/token.png)
 
 - Ingresa a tu panel y configura los ajustes del bot de Telegram como se muestra a continuación:
-![Panel Config](./media/panel-bot-config.png)
+  ![Panel Config](./media/panel-bot-config.png)
 
 Ingresa el token de tu bot en el campo de entrada número 3.
 Ingresa el ID de chat de usuario en el campo de entrada número 4. Las cuentas de Telegram con esta ID serán los administradores del bot. (Puedes ingresar más de uno, solo sepáralos con ,)
 
 - ¿Cómo obtener el ID de chat de Telegram? Usa este [bot](https://t.me/useridinfobot), Inicia el bot y te dará el ID de chat del usuario de Telegram.
-![User ID](./media/user-id.png)
+  ![User ID](./media/user-id.png)
 
 </details>
 
@@ -448,9 +448,9 @@ Ingresa el ID de chat de usuario en el campo de entrada número 4. Las cuentas d
 - `client.password` para TROJAN
 - `client.email` para Shadowsocks
 
-
 - [Documentación de API](https://documenter.getpostman.com/view/16802678/2s9YkgD5jm)
 - [<img src="https://run.pstmn.io/button.svg" alt="Run In Postman" style="width: 128px; height: 32px;">](https://app.getpostman.com/run-collection/16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D16802678-1a4c9270-ac77-40ed-959a-7aa56dc4a415%26entityType%3Dcollection%26workspaceId%3D2cd38c01-c851-4a15-a972-f181c23359d9)
+
 </details>
 
 ## Variables de Entorno

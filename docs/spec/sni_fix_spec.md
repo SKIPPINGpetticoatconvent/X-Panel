@@ -1,12 +1,15 @@
 # 修复 Reality SNI 生成逻辑规格说明书
 
 ## 1. 背景与问题
+
 用户报告在使用 TG Bot 一键配置 Reality 协议（VLESS + TCP + Reality 或 VLESS + XHTTP + Reality）时，如果选定的 Target（目标域名）已经包含 `www.` 前缀（例如 `www.walmart.com:443`），生成的配置中 `serverNames` 列表会出现错误的 `www.www.` 前缀（例如 `www.www.walmart.com`）。
 
 ## 2. 代码分析
+
 经过检查 `web/service/tgbot.go`，问题出在 `buildRealityInbound` 和 `buildXhttpRealityInbound` 方法中。
 
 当前逻辑如下：
+
 ```go
 randomSni := strings.Split(randomDest, ":")[0]
 // ...
@@ -14,14 +17,17 @@ randomSni := strings.Split(randomDest, ":")[0]
 ```
 
 当 `randomDest` 为 `www.walmart.com:443` 时：
+
 1. `randomSni` 变为 `www.walmart.com`。
 2. 列表第一个元素为 `www.walmart.com`。
 3. 列表第二个元素为 `"www." + "www.walmart.com"` 即 `www.www.walmart.com`。
 
 ## 3. 解决方案
+
 我们需要引入一个辅助函数 `GenerateRealityServerNames` 来智能处理 SNI 列表的生成。
 
 ### 逻辑规则
+
 1. **去除端口**：首先从输入中去除端口号（如果有）。
 2. **前缀检查**：
    - 如果域名以 `www.` 开头，则列表应包含 `[原域名, 去除www.的根域名]`。
@@ -159,6 +165,7 @@ END TEST
 ```
 
 ## 6. 约束条件
+
 - **不硬编码环境变量**：所有配置应来自函数参数或服务方法调用。
 - **模块化**：SNI 生成逻辑应封装在独立函数中，便于复用和测试。
 - **安全性**：不涉及密钥变更，仅涉及 SNI 列表生成。

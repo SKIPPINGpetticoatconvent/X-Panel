@@ -5,6 +5,7 @@
 如果您需要纯 lego 库实现，lego 的高级 API 需要自定义 new-order 请求来添加 "profile": "shortlived"（基于 ACME draft），但 certmagic 已内置支持，更简单且生产级。
 
 ### 文档概述
+
 - **功能描述**：该程序实现一个命令行工具，用于申请和管理 Let's Encrypt IP 短期证书。支持自动续期（每 12 小时检查一次，如果剩余有效期 < 2 天则续期）、证书存储、加载和监控。适用于公网 IP 服务（如您的示例 107.174.245.44）。
 - **关键特性**：
   - 只需 IP 地址，无需域名。
@@ -24,6 +25,7 @@
 - **测试环境**：使用 Let's Encrypt staging 服务器（`https://acme-staging-v02.api.letsencrypt.org/directory`）测试。生产用 `https://acme-v02.api.letsencrypt.org/directory`。
 
 ### 安装指南
+
 1. 安装 Go：从 [golang.org](https://golang.org) 下载并安装。
 2. 创建项目目录：
    ```
@@ -44,6 +46,7 @@
    ```
 
 ### 使用指南
+
 - **命令行参数**：
   - `--ip`：要申请证书的公网 IP（必填，例如 `--ip 107.174.245.44`）。
   - `--email`：您的邮箱，用于 Let's Encrypt 注册（必填）。
@@ -64,6 +67,7 @@
   - certmagic 会自动处理续期，但程序需保持运行以监控。
 
 ### 实现代码 (main.go)
+
 ```go
 package main
 
@@ -165,6 +169,7 @@ func init() {
 ```
 
 ### 代码解释
+
 1. **配置 certmagic**：使用 FileStorage 存储证书。指定 ACMEIssuer 并设置 `Profile: "shortlived"` 以强制短期证书（自动处理 IP 要求）。
 2. **申请证书**：通过 `ObtainCertSync` 申请，只需提供 IP 作为 subject。certmagic 处理 http-01 验证（需 80 端口开放）。
 3. **导出 PEM**：将证书导出为标准 PEM 文件，便于其他服务使用。
@@ -172,6 +177,7 @@ func init() {
 5. **错误处理**：基本日志。如果验证失败（例如端口未开放），会输出错误。
 
 ### 潜在问题与调试
+
 - **验证失败**：确保服务器 80/443 端口公网可达。使用 `--staging` 测试。
 - **Rate Limit**：生产环境失败过多会临时限制。检查 [Let's Encrypt Rate Limits](https://letsencrypt.org/docs/rate-limits/)。
 - **IPv6 支持**：certmagic 支持，但确保 IP 格式正确（e.g., "[2001:db8::1]"）。
@@ -179,6 +185,7 @@ func init() {
 - **扩展**：如果需要集成到现有服务器，参考 certmagic 的 `TLS` 函数直接管理 HTTP server 的 TLS。
 
 ### 参考资源
+
 - certmagic 文档：https://pkg.go.dev/github.com/caddyserver/certmagic
 - Let's Encrypt Profiles：https://letsencrypt.org/docs/profiles/
 - ACME IP 支持：https://letsencrypt.org/2025/07/01/issuing-our-first-ip-address-certificate
@@ -193,10 +200,12 @@ func init() {
 为了提高 IP 证书的稳定性和可用性，我们引入了以下四个增强模块：
 
 ### 1. 端口冲突自愈模块 (`PortConflictResolver`)
+
 - **功能**：自动检测 80 端口占用情况。如果被面板自身占用，尝试暂停面板 HTTP 监听以释放端口供 ACME 验证使用，验证完成后自动恢复。
 - **优势**：解决了面板运行在 80 端口时无法申请证书的问题。
 
 ### 2. 激进续期策略模块 (`AggressiveRenewalManager`)
+
 - **功能**：针对短期证书（有效期 7 天），采用更激进的续期策略。
 - **策略**：
   - 提前 3 天开始尝试续期。
@@ -204,13 +213,16 @@ func init() {
   - 确保在证书过期前有足够的时间窗口完成续期。
 
 ### 3. 证书热加载模块 (`CertHotReloader`)
+
 - **功能**：证书续期成功后，自动触发 Xray 核心的热加载。
 - **优势**：无需重启面板或 Xray 服务即可应用新证书，确保持续服务不中断。
 
 ### 4. 告警与回退模块 (`CertAlertFallback`)
+
 - **功能**：
   - **告警**：当证书剩余有效期不足 24 小时且多次续期失败时，通过 Telegram Bot 发送紧急告警。
   - **回退**：如果续期彻底失败，自动生成自签名证书作为临时回退方案，防止服务完全不可用。
 
 ### 集成说明
+
 这些模块已集成到 `CertService` 中，并在 `main.go` 中完成了依赖注入。用户只需在面板设置中启用 IP 证书功能并配置相关参数即可享受这些增强功能。
