@@ -1448,24 +1448,14 @@ request_ip_cert() {
 
     LOGI "正在申请 IP 证书: $cert_ip ($cert_email)"
 
-    # Call the Go program
+    # 调用 Go 程序，完全信任其返回结果
     /usr/local/x-ui/x-ui cert-request-ip -ip "$cert_ip" -email "$cert_email"
 
     if [[ $? == 0 ]]; then
-        LOGI "IP 证书申请成功"
-
-        # 设置证书路径并应用到面板
-        home=$(eval echo ~$USER)
-        cert_path="$home/.local/share/certmagic/certificates/acme-v02.api.letsencrypt.org-directory/$cert_ip/$cert_ip"
-        if [[ -f "$cert_path.crt" && -f "$cert_path.key" ]]; then
-            /usr/local/x-ui/x-ui cert -webCert "$cert_path.crt" -webCertKey "$cert_path.key"
-            LOGI "证书已应用到面板"
-            confirm_restart
-        else
-            LOGE "证书文件未找到，请手动检查 certmagic 存储路径"
-        fi
+        LOGI "IP 证书申请成功，证书已自动配置到面板"
+        confirm_restart
     else
-        LOGE "IP 证书申请失败"
+        LOGE "IP 证书申请失败，请查看面板日志获取详细信息"
     fi
 
     before_show_menu
