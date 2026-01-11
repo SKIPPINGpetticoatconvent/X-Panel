@@ -32,3 +32,12 @@ curl https://get.acme.sh | sh -s email=my@example.com
 /root/.acme.sh/64.23.194.105_ecc/64.23.194.105.key （私钥）
 /root/.acme.sh/64.23.194.105_ecc/fullchain.cer （完整证书链）
 ```
+
+自动续签
+因为证书有效期很短，所以需要设置一个 crontab 定时：
+```bash
+crontab -e
+0 0 * * * /root/.acme.sh/acme.sh --cron --home /root/.acme.sh > /dev/null
+
+```
+就好了。（续签只能解决证书更新的问题，还要记得定时重启你的 Web 服务器啊）
