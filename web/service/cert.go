@@ -47,23 +47,28 @@ func (c *CertService) SetTgbot(t TelegramService) {
 
 // tryInitImprovements attempts to initialize improvement modules if dependencies are ready
 func (c *CertService) tryInitImprovements() {
-	if c.serverService == nil || c.tgbot == nil {
-		return
-	}
-
 	c.initOnce.Do(func() {
 		logger.Info("Initializing IP Certificate Improvement Modules...")
 
 		// 1. Initialize AcmeShService
 		c.acmeShService = NewAcmeShService()
+		logger.Info("AcmeShService initialized")
 
 		// 2. Initialize PortConflictResolver
 		webCtrl := &certWebServerController{settingService: c.settingService}
 		c.portResolver = NewPortConflictResolver(webCtrl)
+		logger.Info("PortConflictResolver initialized")
 
 		// 3. Initialize CertAlertFallback
-		alertSvc := &certAlertService{tgbot: c.tgbot}
-		c.alertFallback = NewCertAlertFallback(alertSvc, c, c.settingService)
+		var alertSvc AlertService
+		if c.tgbot != nil {
+			alertSvc = &certAlertService{tgbot: c.tgbot}
+			c.alertFallback = NewCertAlertFallback(alertSvc, c, c.settingService)
+			logger.Info("CertAlertFallback initialized with Telegram")
+		} else {
+			c.alertFallback = NewCertAlertFallback(nil, c, c.settingService)
+			logger.Info("CertAlertFallback initialized in silent mode")
+		}
 
 		// 4. Initialize AggressiveRenewalManager
 		renewalConfig := RenewalConfig{
@@ -73,10 +78,22 @@ func (c *CertService) tryInitImprovements() {
 			RetryInterval:  30 * time.Minute,
 		}
 		c.renewalManager = NewAggressiveRenewalManager(renewalConfig, c, c.portResolver, c.alertFallback)
+		logger.Info("AggressiveRenewalManager initialized")
 
 		// 5. Initialize CertHotReloader
-		xrayCtrl := &certXrayController{serverService: c.serverService}
-		c.hotReloader = NewCertHotReloader(xrayCtrl)
+		if c.serverService != nil {
+			xrayCtrl := &certXrayController{serverService: c.serverService}
+			c.hotReloader = NewCertHotReloader(xrayCtrl)
+			logger.Info("CertHotReloader initialized")
+		} else {
+			logger.Info("CertHotReloader skipped (no ServerService)")
+		}
+
+		// 6. Start automatic renewal loop if core services are available
+		if c.acmeShService != nil && c.portResolver != nil {
+			go c.RenewLoop()
+			logger.Info("Certificate renewal loop started")
+		}
 
 		logger.Info("IP Certificate Improvement Modules initialized successfully")
 	})
