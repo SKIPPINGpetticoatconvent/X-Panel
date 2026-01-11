@@ -28,6 +28,9 @@ type CertService struct {
 	hotReloader         *CertHotReloader
 	alertFallback       *CertAlertFallback
 
+	// TLS Certificate Manager for dynamic loading
+	tlsCertManager      *TLSCertManager
+
 	initOnce sync.Once
 	mutex    sync.RWMutex // 细粒度并发锁
 }
@@ -48,6 +51,22 @@ func (c *CertService) SetServerService(s *ServerService) {
 func (c *CertService) SetTgbot(t TelegramService) {
 	c.tgbot = t
 	c.tryInitImprovements()
+}
+
+// SetTLSCertManager 设置 TLS 证书管理器
+func (c *CertService) SetTLSCertManager(manager *TLSCertManager) {
+	c.tlsCertManager = manager
+}
+
+// CreateTLSCertManager 创建 TLS 证书管理器并设置告警服务
+func (c *CertService) CreateTLSCertManager() *TLSCertManager {
+	var alertSvc AlertService
+	if c.tgbot != nil {
+		alertSvc = &certAlertService{tgbot: c.tgbot}
+	}
+	manager := NewTLSCertManager(alertSvc)
+	c.tlsCertManager = manager
+	return manager
 }
 
 // tryInitImprovements attempts to initialize improvement modules if dependencies are ready
@@ -141,6 +160,16 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 	installPath := strings.TrimSuffix(result.CertPath, ".pem")
 	if err := c.settingService.SetIpCertPath(installPath); err != nil {
 		logger.Warningf("Failed to set IP cert path: %v", err)
+	}
+
+	// 触发 TLS 证书重载
+	if c.tlsCertManager != nil {
+		certPath := installPath + ".crt"
+		keyPath := installPath + ".key"
+		c.tlsCertManager.SetCertPaths(certPath, keyPath)
+		if err := c.tlsCertManager.ReloadCert(); err != nil {
+			logger.Warningf("Failed to reload IP certificate in TLS manager: %v", err)
+		}
 	}
 
 	logger.Info("Successfully obtained IP certificate")
@@ -288,6 +317,16 @@ func (c *CertService) checkAndRenewCertificates() {
 			logger.Infof("Certificate for IP %s is older than 7 days, renewing", ip)
 			if err := c.ObtainIPCert(ip, email); err != nil {
 				logger.Errorf("Failed to renew certificate for IP %s: %v", ip, err)
+			} else {
+				// 证书续期成功后，触发 TLS 证书重载
+				if c.tlsCertManager != nil {
+					certPath := certPath + ".crt"
+					keyPath := certPath + ".key"
+					c.tlsCertManager.SetCertPaths(certPath, keyPath)
+					if err := c.tlsCertManager.ReloadCert(); err != nil {
+						logger.Warningf("Failed to reload renewed IP certificate in TLS manager: %v", err)
+					}
+				}
 			}
 		}
 	}

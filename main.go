@@ -117,6 +117,9 @@ func runWebServer() {
 		certService.SetTgbot(tgBotService)
 	}
 
+	// 初始化 TLS Certificate Manager 并注入到证书服务
+	certService.CreateTLSCertManager()
+
 	var server *web.Server
 
 	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
