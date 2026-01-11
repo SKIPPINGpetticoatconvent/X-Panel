@@ -1,9 +1,5 @@
 {{define "form/wireguard"}}
-<a-form
-  :colon="false"
-  :label-col="{ md: {span:8} }"
-  :wrapper-col="{ md: {span:14} }"
->
+<a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
   <a-form-item>
     <template slot="label">
       <a-tooltip>
@@ -11,10 +7,7 @@
           <span>{{ i18n "reset" }}</span>
         </template>
         {{ i18n "pages.xray.wireguard.secretKey" }}
-        <a-icon
-          type="sync"
-          @click="[inbound.settings.pubKey, inbound.settings.secretKey] = Object.values(Wireguard.generateKeypair())"
-        ></a-icon>
+        <a-icon type="sync" @click="[inbound.settings.pubKey, inbound.settings.secretKey] = Object.values(Wireguard.generateKeypair())"></a-icon>
       </a-tooltip>
     </template>
     <a-input v-model.trim="inbound.settings.secretKey"></a-input>
@@ -22,33 +15,17 @@
   <a-form-item label='{{ i18n "pages.xray.wireguard.publicKey" }}'>
     <a-input disabled v-model="inbound.settings.pubKey"></a-input>
   </a-form-item>
-  <a-form-item label="MTU">
+  <a-form-item label='MTU'>
     <a-input-number v-model.number="inbound.settings.mtu"></a-input-number>
   </a-form-item>
-  <a-form-item label="No Kernel Tun">
+  <a-form-item label='No Kernel Tun'>
     <a-switch v-model="inbound.settings.noKernelTun"></a-switch>
   </a-form-item>
   <a-form-item label="Peers">
-    <a-button
-      icon="plus"
-      type="primary"
-      size="small"
-      @click="inbound.settings.addPeer()"
-    ></a-button>
+    <a-button icon="plus" type="primary" size="small" @click="inbound.settings.addPeer()"></a-button>
   </a-form-item>
-  <a-form
-    v-for="(peer, index) in inbound.settings.peers"
-    :colon="false"
-    :label-col="{ md: {span:8} }"
-    :wrapper-col="{ md: {span:14} }"
-  >
-    <a-divider :style="{ margin: '0' }">
-      Peer [[ index + 1 ]] <a-icon
-        v-if="inbound.settings.peers.length>1"
-        type="delete"
-        @click="() => inbound.settings.delPeer(index)"
-        :style="{ color: 'rgb(255, 77, 79)', cursor: 'pointer' }"
-      ></a-icon>
+  <a-form v-for="(peer, index) in inbound.settings.peers" :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
+    <a-divider :style="{ margin: '0' }"> Peer [[ index + 1 ]] <a-icon v-if="inbound.settings.peers.length>1" type="delete" @click="() => inbound.settings.delPeer(index)" :style="{ color: 'rgb(255, 77, 79)', cursor: 'pointer' }"></a-icon>
     </a-divider>
     <a-form-item>
       <template slot="label">
@@ -57,10 +34,7 @@
             <span>{{ i18n "reset" }}</span>
           </template>
           {{ i18n "pages.xray.wireguard.secretKey" }}
-          <a-icon
-            @click="[peer.publicKey, peer.privateKey] = Object.values(Wireguard.generateKeypair())"
-            type="sync"
-          ></a-icon>
+          <a-icon @click="[peer.publicKey, peer.privateKey] = Object.values(Wireguard.generateKeypair())" type="sync"></a-icon>
         </a-tooltip>
       </template>
       <a-input v-model.trim="peer.privateKey"></a-input>
@@ -78,10 +52,7 @@
             <span>{{ i18n "reset" }}</span>
           </template>
           {{ i18n "pages.xray.wireguard.psk" }}
-          <a-icon
-            @click="peer.psk = Wireguard.keyToBase64(Wireguard.generatePresharedKey())"
-            type="sync"
-          ></a-icon>
+          <a-icon @click="peer.psk = Wireguard.keyToBase64(Wireguard.generatePresharedKey())" type="sync"></a-icon>
         </a-tooltip>
       </template>
       <a-input v-model.trim="peer.psk"></a-input>
@@ -89,29 +60,15 @@
     <a-form-item>
       <template slot="label">
         {{ i18n "pages.xray.wireguard.allowedIPs" }}
-        <a-button
-          icon="plus"
-          type="primary"
-          size="small"
-          @click="peer.allowedIPs.push('')"
-        ></a-button>
+        <a-button icon="plus" type="primary" size="small" @click="peer.allowedIPs.push('')"></a-button>
       </template>
-      <template
-        v-for="(aip, index) in peer.allowedIPs"
-        :style="{ marginBottom: '10px' }"
-      >
+      <template v-for="(aip, index) in peer.allowedIPs" :style="{ marginBottom: '10px' }">
         <a-input v-model.trim="peer.allowedIPs[index]">
-          <a-button
-            icon="minus"
-            v-if="peer.allowedIPs.length>1"
-            slot="addonAfter"
-            size="small"
-            @click="peer.allowedIPs.splice(index, 1)"
-          ></a-button>
+          <a-button icon="minus" v-if="peer.allowedIPs.length>1" slot="addonAfter" size="small" @click="peer.allowedIPs.splice(index, 1)"></a-button>
         </a-input>
       </template>
     </a-form-item>
-    <a-form-item label="Keep Alive">
+    <a-form-item label='Keep Alive'>
       <a-input-number v-model.number="peer.keepAlive" :min="0"></a-input-number>
     </a-form-item>
   </a-form>
