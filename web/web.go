@@ -299,7 +299,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	s.index = controller.NewIndexController(g)
 	// 〔中文注释〕: 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
 	s.server = controller.NewServerController(g, s.serverService)
-	s.panel = controller.NewXUIController(g, s.certService)
+	s.panel = controller.NewXUIController(g, s.certService, s.serverService)
 	s.api = controller.NewAPIController(g, s.serverService)
 
 	return engine, nil
