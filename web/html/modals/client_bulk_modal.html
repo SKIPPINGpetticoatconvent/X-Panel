@@ -239,158 +239,158 @@
 </a-modal>
 <script>
 const clientsBulkModal = {
-  visible: false,
-  confirmLoading: false,
-  title: "",
-  okText: "",
-  confirm: null,
-  dbInbound: new DBInbound(),
-  inbound: new Inbound(),
-  quantity: 1,
-  totalGB: 0,
-  limitIp: 0,
+    visible: false,
+    confirmLoading: false,
+    title: "",
+    okText: "",
+    confirm: null,
+    dbInbound: new DBInbound(),
+    inbound: new Inbound(),
+    quantity: 1,
+    totalGB: 0,
+    limitIp: 0,
 
-  // 中文注释: 在这里为批量添加对象增加 speedLimit 属性 -->
-  speedLimit: 0,
+    // 中文注释: 在这里为批量添加对象增加 speedLimit 属性 -->
+    speedLimit: 0,
 
-  expiryTime: "",
-  emailMethod: 0,
-  firstNum: 1,
-  lastNum: 1,
-  emailPrefix: "",
-  emailPostfix: "",
-  subId: "",
-  tgId: "",
-  security: "auto",
-  flow: "",
-  delayedStart: false,
-  reset: 0,
-  ok() {
-    clients = [];
-    method = clientsBulkModal.emailMethod;
-    if (method > 1) {
-      start = clientsBulkModal.firstNum;
-      end = clientsBulkModal.lastNum + 1;
-    } else {
-      start = 0;
-      end = clientsBulkModal.quantity;
-    }
-    prefix = (method > 0 && clientsBulkModal.emailPrefix.length > 0)
-      ? clientsBulkModal.emailPrefix
-      : "";
-    useNum = method > 1;
-    postfix = (method > 2 && clientsBulkModal.emailPostfix.length > 0)
-      ? clientsBulkModal.emailPostfix
-      : "";
-    for (let i = start; i < end; i++) {
-      newClient = clientsBulkModal.newClient(
-        clientsBulkModal.dbInbound.protocol,
-      );
-      if (method == 4) newClient.email = "";
-      newClient.email += useNum
-        ? prefix + i.toString() + postfix
-        : prefix + postfix;
-      if (clientsBulkModal.subId.length > 0) {
-        newClient.subId = clientsBulkModal.subId;
+    expiryTime: "",
+    emailMethod: 0,
+    firstNum: 1,
+    lastNum: 1,
+    emailPrefix: "",
+    emailPostfix: "",
+    subId: "",
+    tgId: "",
+    security: "auto",
+    flow: "",
+    delayedStart: false,
+    reset: 0,
+    ok() {
+      clients = [];
+      method = clientsBulkModal.emailMethod;
+      if (method > 1) {
+        start = clientsBulkModal.firstNum;
+        end = clientsBulkModal.lastNum + 1;
+      } else {
+        start = 0;
+        end = clientsBulkModal.quantity;
       }
-      newClient.tgId = clientsBulkModal.tgId;
-
-      // 中文注释: 在这里为每个新生成的 client 对象赋值 speedLimit -->
-      newClient.speedLimit = clientsBulkModal.speedLimit;
-
-      newClient.security = clientsBulkModal.security;
-      newClient.limitIp = clientsBulkModal.limitIp;
-      newClient._totalGB = clientsBulkModal.totalGB;
-      newClient._expiryTime = clientsBulkModal.expiryTime;
-      if (clientsBulkModal.inbound.canEnableTlsFlow()) {
-        newClient.flow = clientsBulkModal.flow;
-      }
-      newClient.reset = clientsBulkModal.reset;
-      clients.push(newClient);
-    }
-    ObjectUtil.execute(
-      clientsBulkModal.confirm,
-      clients,
-      clientsBulkModal.dbInbound.id,
-    );
-  },
-  show({
-    title = "",
-    okText = '{{ i18n "sure" }}',
-    dbInbound = null,
-    confirm = (inbound, dbInbound) => {},
-  }) {
-    this.visible = true;
-    this.title = title;
-    this.okText = okText;
-    this.confirm = confirm;
-    this.quantity = 1;
-
-    // 中文注释: 在这里重置 speedLimit 的值 -->
-    this.speedLimit = 0;
-
-    this.totalGB = 0;
-    this.expiryTime = 0;
-    this.emailMethod = 0;
-    this.limitIp = 0;
-    this.firstNum = 1;
-    this.lastNum = 1;
-    this.emailPrefix = "";
-    this.emailPostfix = "";
-    this.subId = "";
-    this.tgId = "";
-    this.security = "auto";
-    this.flow = "";
-    this.dbInbound = new DBInbound(dbInbound);
-    this.inbound = dbInbound.toInbound();
-    this.delayedStart = false;
-    this.reset = 0;
-  },
-  newClient(protocol) {
-    switch (protocol) {
-      case Protocols.VMESS:
-        return new Inbound.VmessSettings.VMESS();
-      case Protocols.VLESS:
-        return new Inbound.VLESSSettings.VLESS();
-      case Protocols.TROJAN:
-        return new Inbound.TrojanSettings.Trojan();
-      case Protocols.SHADOWSOCKS:
-        return new Inbound.ShadowsocksSettings.Shadowsocks(
-          clientsBulkModal.inbound.settings.shadowsockses[0].method,
+      prefix = (method > 0 && clientsBulkModal.emailPrefix.length > 0)
+        ? clientsBulkModal.emailPrefix
+        : "";
+      useNum = method > 1;
+      postfix = (method > 2 && clientsBulkModal.emailPostfix.length > 0)
+        ? clientsBulkModal.emailPostfix
+        : "";
+      for (let i = start; i < end; i++) {
+        newClient = clientsBulkModal.newClient(
+          clientsBulkModal.dbInbound.protocol,
         );
-      default:
-        return null;
-    }
-  },
-  close() {
-    clientsBulkModal.visible = false;
-    clientsBulkModal.loading(false);
-  },
-  loading(loading = true) {
-    clientsBulkModal.confirmLoading = loading;
-  },
-};
+        if (method == 4) newClient.email = "";
+        newClient.email += useNum
+          ? prefix + i.toString() + postfix
+          : prefix + postfix;
+        if (clientsBulkModal.subId.length > 0) {
+          newClient.subId = clientsBulkModal.subId;
+        }
+        newClient.tgId = clientsBulkModal.tgId;
 
-const clientsBulkModalApp = new Vue({
-  delimiters: ["[[", "]]"],
-  el: "#client-bulk-modal",
-  data: {
-    clientsBulkModal,
-    get inbound() {
-      return this.clientsBulkModal.inbound;
+        // 中文注释: 在这里为每个新生成的 client 对象赋值 speedLimit -->
+        newClient.speedLimit = clientsBulkModal.speedLimit;
+
+        newClient.security = clientsBulkModal.security;
+        newClient.limitIp = clientsBulkModal.limitIp;
+        newClient._totalGB = clientsBulkModal.totalGB;
+        newClient._expiryTime = clientsBulkModal.expiryTime;
+        if (clientsBulkModal.inbound.canEnableTlsFlow()) {
+          newClient.flow = clientsBulkModal.flow;
+        }
+        newClient.reset = clientsBulkModal.reset;
+        clients.push(newClient);
+      }
+      ObjectUtil.execute(
+        clientsBulkModal.confirm,
+        clients,
+        clientsBulkModal.dbInbound.id,
+      );
     },
-    get delayedExpireDays() {
-      return this.clientsBulkModal.expiryTime < 0
-        ? this.clientsBulkModal.expiryTime / -86400000
-        : 0;
+    show({
+      title = "",
+      okText = '{{ i18n "sure" }}',
+      dbInbound = null,
+      confirm = (inbound, dbInbound) => { },
+    }) {
+      this.visible = true;
+      this.title = title;
+      this.okText = okText;
+      this.confirm = confirm;
+      this.quantity = 1;
+
+      // 中文注释: 在这里重置 speedLimit 的值 -->
+      this.speedLimit = 0;
+
+      this.totalGB = 0;
+      this.expiryTime = 0;
+      this.emailMethod = 0;
+      this.limitIp = 0;
+      this.firstNum = 1;
+      this.lastNum = 1;
+      this.emailPrefix = "";
+      this.emailPostfix = "";
+      this.subId = "";
+      this.tgId = "";
+      this.security = "auto";
+      this.flow = "";
+      this.dbInbound = new DBInbound(dbInbound);
+      this.inbound = dbInbound.toInbound();
+      this.delayedStart = false;
+      this.reset = 0;
     },
-    get datepicker() {
-      return app.datepicker;
+    newClient(protocol) {
+      switch (protocol) {
+        case Protocols.VMESS:
+          return new Inbound.VmessSettings.VMESS();
+        case Protocols.VLESS:
+          return new Inbound.VLESSSettings.VLESS();
+        case Protocols.TROJAN:
+          return new Inbound.TrojanSettings.Trojan();
+        case Protocols.SHADOWSOCKS:
+          return new Inbound.ShadowsocksSettings.Shadowsocks(
+            clientsBulkModal.inbound.settings.shadowsockses[0].method,
+          );
+        default:
+          return null;
+      }
     },
-    set delayedExpireDays(days) {
-      this.clientsBulkModal.expiryTime = -86400000 * days;
+    close() {
+      clientsBulkModal.visible = false;
+      clientsBulkModal.loading(false);
     },
-  },
-});
+    loading(loading = true) {
+      clientsBulkModal.confirmLoading = loading;
+    },
+  };
+
+  const clientsBulkModalApp = new Vue({
+    delimiters: ["[[", "]]"],
+    el: "#client-bulk-modal",
+    data: {
+      clientsBulkModal,
+      get inbound() {
+        return this.clientsBulkModal.inbound;
+      },
+      get delayedExpireDays() {
+        return this.clientsBulkModal.expiryTime < 0
+          ? this.clientsBulkModal.expiryTime / -86400000
+          : 0;
+      },
+      get datepicker() {
+        return app.datepicker;
+      },
+      set delayedExpireDays(days) {
+        this.clientsBulkModal.expiryTime = -86400000 * days;
+      },
+    },
+  });
 </script>
 {{end}}

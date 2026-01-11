@@ -51,7 +51,7 @@ func BackupFile(filePath string) error {
 func AtomicWriteFile(filePath string, content []byte, perm os.FileMode) error {
 	// 确保目标目录存在
 	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("创建目录失败: %v", err)
 	}
 
@@ -162,7 +162,7 @@ func WriteConfigBlock(filePath, startMarker, endMarker, content string) error {
 	newContent := strings.Join(newLines, "\n")
 
 	// 获取现有文件的权限，如果不存在则使用默认权限
-	var perm os.FileMode = 0644
+	var perm os.FileMode = 0o644
 	if info, err := os.Stat(filePath); err == nil {
 		perm = info.Mode().Perm()
 	}

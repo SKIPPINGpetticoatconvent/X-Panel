@@ -57,8 +57,8 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtest
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgtest
 -----END PRIVATE KEY-----`
 
-	os.WriteFile(certFile, []byte(certContent), 0644)
-	os.WriteFile(keyFile, []byte(keyContent), 0600)
+	os.WriteFile(certFile, []byte(certContent), 0o644)
+	os.WriteFile(keyFile, []byte(keyContent), 0o600)
 	defer os.Remove(certFile)
 	defer os.Remove(keyFile)
 

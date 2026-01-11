@@ -18,9 +18,9 @@ var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 type ServerController struct {
 	BaseController
 
-	serverService     service.ServerService
-	settingService    service.SettingService
-	publicIPDetector  *service.PublicIPDetector
+	serverService    service.ServerService
+	settingService   service.SettingService
+	publicIPDetector *service.PublicIPDetector
 
 	lastStatus        *service.Status
 	lastGetStatusTime time.Time
@@ -35,8 +35,8 @@ func NewServerController(g *gin.RouterGroup, serverService service.ServerService
 		lastGetStatusTime: time.Now(),
 		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。
 		//    这样一来，这个 Controller 内部使用的就是我们在 main.go 中创建的那个功能完整的服务了。
-		serverService:     serverService,
-		publicIPDetector:  service.NewPublicIPDetector(),
+		serverService:    serverService,
+		publicIPDetector: service.NewPublicIPDetector(),
 	}
 	a.initRouter(g)
 	a.startTask()
@@ -161,7 +161,7 @@ func (a *ServerController) getXrayLogs(c *gin.Context) {
 	var freedoms []string
 	var blackholes []string
 
-	//getting tags for freedom and blackhole outbounds
+	// getting tags for freedom and blackhole outbounds
 	config, err := a.settingService.GetDefaultXrayConfig()
 	if err == nil && config != nil {
 		if cfgMap, ok := config.(map[string]interface{}); ok {
@@ -345,11 +345,8 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 	jsonObj(c, history, nil)
 }
 
-
-
 // 【新增接口实现】: 前端放行端口
 func (a *ServerController) openPort(c *gin.Context) {
-
 	// 直接使用 c.PostForm("port") 获取表单数据
 	port := c.PostForm("port")
 

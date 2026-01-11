@@ -2139,7 +2139,6 @@ func (s *InboundService) GetClientTrafficByID(id string) ([]xray.ClientTraffic, 
 		WHERE
 	  	JSON_EXTRACT(client.value, '$.id') in (?)
 		)`, id).Find(&traffics).Error
-
 	if err != nil {
 		logger.Debug(err)
 		return nil, err
@@ -2258,7 +2257,6 @@ func (s *InboundService) MigrationRequirements() {
 		SET all_time = IFNULL(up, 0) + IFNULL(down, 0)
 		WHERE IFNULL(all_time, 0) = 0 AND (IFNULL(up, 0) + IFNULL(down, 0)) > 0
 	`).Error
-
 	if err != nil {
 		return
 	}
@@ -2449,5 +2447,4 @@ func (s *InboundService) FilterAndSortClientEmails(emails []string) ([]string, [
 	}
 
 	return validEmails, extraEmails, nil
-
 }

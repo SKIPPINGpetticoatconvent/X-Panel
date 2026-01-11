@@ -50,7 +50,8 @@
 .cm-s-xq span.cm-variable-2 {
   color: #000;
 }
-.cm-s-xq span.cm-variable-3, .cm-s-xq span.cm-type {
+.cm-s-xq span.cm-variable-3,
+.cm-s-xq span.cm-type {
   color: #000;
 }
 .cm-s-xq span.cm-property {
@@ -150,7 +151,8 @@
 .dark .cm-s-xq span.cm-variable-2 {
   color: #eee;
 }
-.dark .cm-s-xq span.cm-variable-3, .dark .cm-s-xq span.cm-type {
+.dark .cm-s-xq span.cm-variable-3,
+.dark .cm-s-xq span.cm-type {
   color: #ddd;
 }
 .dark .cm-s-xq span.cm-property {

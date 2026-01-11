@@ -11,7 +11,7 @@ import (
 
 // PortStatus 表示端口状态
 type PortStatus struct {
-	Occupied   bool
+	Occupied     bool
 	OwnedByPanel bool
 }
 

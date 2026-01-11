@@ -173,8 +173,8 @@ func TestCertAlertFallback_CertBackup(t *testing.T) {
 	// 创建测试证书文件
 	certFile := "/tmp/test_cert.crt"
 	keyFile := "/tmp/test_cert.key"
-	os.WriteFile(certFile, []byte("test cert"), 0644)
-	os.WriteFile(keyFile, []byte("test key"), 0600)
+	os.WriteFile(certFile, []byte("test cert"), 0o644)
+	os.WriteFile(keyFile, []byte("test key"), 0o600)
 	defer os.Remove(certFile)
 	defer os.Remove(keyFile)
 

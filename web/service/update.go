@@ -26,7 +26,7 @@ type Release struct {
 // GetPanelLatestVersion 获取面板的最新版本
 func (s *ServerService) GetPanelLatestVersion() (string, error) {
 	const (
-		XPanelURL    = "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest"
+		XPanelURL  = "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest"
 		bufferSize = 8192
 	)
 
@@ -165,7 +165,7 @@ func updateXUICommandScript() error {
 	}
 
 	// 设置执行权限
-	err = os.Chmod("/usr/bin/x-ui", 0755)
+	err = os.Chmod("/usr/bin/x-ui", 0o755)
 	if err != nil {
 		return fmt.Errorf("设置脚本执行权限失败: %v", err)
 	}
@@ -248,7 +248,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 			}
 
 			// 设置执行权限
-			err = os.Chmod(tempBin.Name(), 0755)
+			err = os.Chmod(tempBin.Name(), 0o755)
 			if err != nil {
 				os.Remove(tempBin.Name())
 				return "", fmt.Errorf("设置临时二进制文件执行权限失败: %v", err)
@@ -261,8 +261,6 @@ func downloadAndExtractPanel(url string) (string, error) {
 	logger.Infof("压缩包中的文件列表: %v", fileNames)
 	return "", fmt.Errorf("在tar.gz中未找到x-ui二进制文件")
 }
-
-
 
 // replacePanelBinary 备份并替换面板二进制文件
 func replacePanelBinary(newBinPath string) error {
@@ -296,7 +294,7 @@ func replacePanelBinary(newBinPath string) error {
 	}
 
 	// 设置执行权限
-	err = os.Chmod(binPath, 0755)
+	err = os.Chmod(binPath, 0o755)
 	if err != nil {
 		return fmt.Errorf("设置执行权限失败: %v", err)
 	}

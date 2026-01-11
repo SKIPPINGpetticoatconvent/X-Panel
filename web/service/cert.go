@@ -143,8 +143,6 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 	return nil
 }
 
-
-
 // RenewLoop runs a background goroutine that periodically checks and renews IP certificates
 func (c *CertService) RenewLoop() {
 	// If renewal manager is initialized, use it

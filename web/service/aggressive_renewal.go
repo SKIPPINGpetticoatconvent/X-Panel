@@ -33,15 +33,15 @@ type RenewalConfig struct {
 
 // AggressiveRenewalManager 实现激进续期策略
 type AggressiveRenewalManager struct {
-	config       RenewalConfig
-	certService  *CertService
-	portResolver *PortConflictResolver
+	config        RenewalConfig
+	certService   *CertService
+	portResolver  *PortConflictResolver
 	alertFallback *CertAlertFallback
-	stopChan     chan struct{}
-	retryCount   int
-	renewMutex   sync.Mutex
-	isRenewing   bool
-	stateFile    string
+	stopChan      chan struct{}
+	retryCount    int
+	renewMutex    sync.Mutex
+	isRenewing    bool
+	stateFile     string
 }
 
 // NewAggressiveRenewalManager 创建新的激进续期管理器
@@ -83,7 +83,7 @@ func (m *AggressiveRenewalManager) saveState(state *RenewalState) error {
 		return fmt.Errorf("failed to marshal state: %w", err)
 	}
 
-	if err := os.WriteFile(m.stateFile, data, 0644); err != nil {
+	if err := os.WriteFile(m.stateFile, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write state file: %w", err)
 	}
 
@@ -133,9 +133,9 @@ func (m *AggressiveRenewalManager) Stop() {
 
 	// 保存当前状态
 	state := &RenewalState{
-		LastCheckTime:    time.Now(), // 最后检查时间设为现在，因为停止时可能正在检查
+		LastCheckTime:    time.Now(),                      // 最后检查时间设为现在，因为停止时可能正在检查
 		LastRenewalTime:  time.Now().Add(-24 * time.Hour), // 默认上次续期时间为24小时前
-		ConsecutiveFails: 0,           // 重置失败计数
+		ConsecutiveFails: 0,                               // 重置失败计数
 		IsRenewing:       false,
 	}
 	if err := m.saveState(state); err != nil {

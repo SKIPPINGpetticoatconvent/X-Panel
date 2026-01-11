@@ -70,7 +70,7 @@ func TestEnsureInstalled(t *testing.T) {
 	service.installPath = tempDir + "/acme.sh"
 
 	// 创建模拟的 acme.sh 文件
-	if err := os.WriteFile(service.installPath, []byte("#!/bin/bash\necho 'acme.sh installed'"), 0755); err != nil {
+	if err := os.WriteFile(service.installPath, []byte("#!/bin/bash\necho 'acme.sh installed'"), 0o755); err != nil {
 		t.Fatalf("Failed to create mock acme.sh: %v", err)
 	}
 
@@ -131,7 +131,7 @@ func TestGetCertExpiry(t *testing.T) {
 
 	// 创建证书目录
 	ipDir := certDir + "/192.168.1.1"
-	if err := os.MkdirAll(ipDir, 0755); err != nil {
+	if err := os.MkdirAll(ipDir, 0o755); err != nil {
 		t.Fatalf("Failed to create cert dir: %v", err)
 	}
 
@@ -141,7 +141,7 @@ MIICiTCCAg+gAwIBAgIJAJ8l4HnPq7F5MAOGA1UEBhMCVVMxCzAJBgNVBAgTAkNB
 ... (simplified for test)
 -----END CERTIFICATE-----`
 	certFile := ipDir + "/192.168.1.1.cer"
-	if err := os.WriteFile(certFile, []byte(certContent), 0644); err != nil {
+	if err := os.WriteFile(certFile, []byte(certContent), 0o644); err != nil {
 		t.Fatalf("Failed to create mock cert file: %v", err)
 	}
 

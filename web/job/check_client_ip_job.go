@@ -29,19 +29,23 @@ import (
 
 // ActiveClientIPs 中文注释: 用于在内存中跟踪每个用户的活跃IP (TTL机制)
 // 结构: map[用户email] -> map[IP地址] -> 最后活跃时间
-var ActiveClientIPs = make(map[string]map[string]time.Time)
-var activeClientsLock sync.RWMutex
+var (
+	ActiveClientIPs   = make(map[string]map[string]time.Time)
+	activeClientsLock sync.RWMutex
+)
 
 // ClientStatus 中文注释: 用于跟踪每个用户的状态（是否因为设备超限而被禁用）
 // 结构: map[用户email] -> 是否被禁用(true/false)
-var ClientStatus = make(map[string]bool)
-var clientStatusLock sync.RWMutex
+var (
+	ClientStatus     = make(map[string]bool)
+	clientStatusLock sync.RWMutex
+)
 
 // CheckDeviceLimitJob 重构后的设备限制任务，使用 LogStreamer 实现实时监控
 type CheckDeviceLimitJob struct {
-	inboundService  service.InboundService
-	xrayService     *service.XrayService
-	settingService  service.SettingService
+	inboundService service.InboundService
+	xrayService    *service.XrayService
+	settingService service.SettingService
 	// 中文注释: 新增 xrayApi 字段，用于持有 Xray API 客户端实例
 	xrayApi xray.XrayAPI
 	// 中文注释: 使用 LogStreamer 进行实时日志监控
@@ -76,8 +80,8 @@ func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService se
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &CheckDeviceLimitJob{
-		xrayService:     xrayService,
-		settingService:  settingService,
+		xrayService:    xrayService,
+		settingService: settingService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
 		// 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
@@ -336,7 +340,8 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	Limit    int
 	Tag      string
 	Protocol model.Protocol
-}) {
+},
+) {
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
@@ -408,7 +413,8 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	Limit    int
 	Tag      string
 	Protocol model.Protocol
-}) {
+},
+) {
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
@@ -537,7 +543,6 @@ func (j *CheckClientIpJob) hasLimitIp() bool {
 }
 
 func (j *CheckClientIpJob) processLogFile() bool {
-
 	ipRegex := regexp.MustCompile(`from (?:tcp:|udp:)?\[?([0-9a-fA-F\.:]+)\]?:\d+ accepted`)
 	emailRegex := regexp.MustCompile(`email: (.+)$`)
 
@@ -687,7 +692,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 	shouldCleanLog := false
 	j.disAllowedIps = []string{}
 
-	logIpFile, err := os.OpenFile(xray.GetIPLimitLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	logIpFile, err := os.OpenFile(xray.GetIPLimitLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		logger.Errorf("failed to open IP limit log file: %s", err)
 		return false

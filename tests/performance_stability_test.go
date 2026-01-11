@@ -20,7 +20,7 @@ func TestLogStreamerLogRotation(t *testing.T) {
 	logPath := filepath.Join(tempDir, "test.log")
 
 	// Create initial log file
-	err := os.WriteFile(logPath, []byte("email: test@example.com from tcp:192.168.1.1:12345 accepted\n"), 0644)
+	err := os.WriteFile(logPath, []byte("email: test@example.com from tcp:192.168.1.1:12345 accepted\n"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to create test log file: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestLogStreamerLogRotation(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Simulate log rotation by appending new content (since tail handles rotation)
-	err = os.WriteFile(logPath, []byte("email: test@example.com from tcp:192.168.1.1:12345 accepted\nemail: new@example.com from tcp:192.168.1.2:12345 accepted\n"), 0644)
+	err = os.WriteFile(logPath, []byte("email: test@example.com from tcp:192.168.1.1:12345 accepted\nemail: new@example.com from tcp:192.168.1.2:12345 accepted\n"), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to append to log file: %v", err)
 	}

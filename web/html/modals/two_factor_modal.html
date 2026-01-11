@@ -68,7 +68,7 @@ const twoFactorModal = {
       twoFactorModal.close();
     } else {
       Vue.prototype.$message["error"](
-        "{{ i18n \"pages.settings.security.twoFactorModalError\" }}",
+        "{{ i18n `pages.settings.security.twoFactorModalError\" }}",
       );
     }
   },
@@ -141,7 +141,7 @@ const twoFactorModalApp = new Vue({
       ClipboardManager
         .copyText(content)
         .then(() => {
-          app.$message.success("{{ i18n \"copied\" }}");
+          app.$message.success("{{ i18n `copied\" }}");
         });
     },
   },

@@ -262,7 +262,7 @@ const rulesColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.rules.source\"}}",
+    title: "{{ i18n `pages.xray.rules.source`}}",
     children: [
       {
         title: "IP",
@@ -272,7 +272,7 @@ const rulesColumns = [
         ellipsis: true,
       },
       {
-        title: "{{ i18n \"pages.inbounds.port\" }}",
+        title: "{{ i18n `pages.inbounds.port\" }}",
         dataIndex: "sourcePort",
         align: "center",
         width: 10,
@@ -281,7 +281,7 @@ const rulesColumns = [
     ],
   },
   {
-    title: "{{ i18n \"pages.inbounds.network\"}}",
+    title: "{{ i18n `pages.inbounds.network\"}}",
     children: [
       {
         title: "L4",
@@ -290,7 +290,7 @@ const rulesColumns = [
         width: 10,
       },
       {
-        title: "{{ i18n \"protocol\" }}",
+        title: "{{ i18n `protocol\" }}",
         dataIndex: "protocol",
         align: "center",
         width: 15,
@@ -306,7 +306,7 @@ const rulesColumns = [
     ],
   },
   {
-    title: "{{ i18n \"pages.xray.rules.dest\"}}",
+    title: "{{ i18n `pages.xray.rules.dest\"}}",
     children: [
       {
         title: "IP",
@@ -316,14 +316,14 @@ const rulesColumns = [
         ellipsis: true,
       },
       {
-        title: "{{ i18n \"pages.xray.outbound.domain\" }}",
+        title: "{{ i18n `pages.xray.outbound.domain\" }}",
         dataIndex: "domain",
         align: "center",
         width: 20,
         ellipsis: true,
       },
       {
-        title: "{{ i18n \"pages.inbounds.port\" }}",
+        title: "{{ i18n `pages.inbounds.port\" }}",
         dataIndex: "port",
         align: "center",
         width: 10,
@@ -332,17 +332,17 @@ const rulesColumns = [
     ],
   },
   {
-    title: "{{ i18n \"pages.xray.rules.inbound\"}}",
+    title: "{{ i18n `pages.xray.rules.inbound\"}}",
     children: [
       {
-        title: "{{ i18n \"pages.xray.outbound.tag\" }}",
+        title: "{{ i18n `pages.xray.outbound.tag\" }}",
         dataIndex: "inboundTag",
         align: "center",
         width: 15,
         ellipsis: true,
       },
       {
-        title: "{{ i18n \"pages.inbounds.client\" }}",
+        title: "{{ i18n `pages.inbounds.client\" }}",
         dataIndex: "user",
         align: "center",
         width: 20,
@@ -351,13 +351,13 @@ const rulesColumns = [
     ],
   },
   {
-    title: "{{ i18n \"pages.xray.rules.outbound\"}}",
+    title: "{{ i18n `pages.xray.rules.outbound\"}}",
     dataIndex: "outboundTag",
     align: "center",
     width: 17,
   },
   {
-    title: "{{ i18n \"pages.xray.rules.balancer\"}}",
+    title: "{{ i18n `pages.xray.rules.balancer\"}}",
     dataIndex: "balancerTag",
     align: "center",
     width: 15,
@@ -372,21 +372,21 @@ const rulesMobileColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.rules.inbound\"}}",
+    title: "{{ i18n `pages.xray.rules.inbound\"}}",
     align: "center",
     width: 50,
     ellipsis: true,
     scopedSlots: { customRender: "inbound" },
   },
   {
-    title: "{{ i18n \"pages.xray.rules.outbound\"}}",
+    title: "{{ i18n `pages.xray.rules.outbound\"}}",
     align: "center",
     width: 50,
     ellipsis: true,
     scopedSlots: { customRender: "outbound" },
   },
   {
-    title: "{{ i18n \"pages.xray.rules.info\"}}",
+    title: "{{ i18n `pages.xray.rules.info\"}}",
     align: "center",
     width: 50,
     ellipsis: true,
@@ -402,25 +402,25 @@ const outboundColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.outbound.tag\"}}",
+    title: "{{ i18n `pages.xray.outbound.tag\"}}",
     dataIndex: "tag",
     align: "center",
     width: 50,
   },
   {
-    title: "{{ i18n \"protocol\"}}",
+    title: "{{ i18n `protocol\"}}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "protocol" },
   },
   {
-    title: "{{ i18n \"pages.xray.outbound.address\"}}",
+    title: "{{ i18n `pages.xray.outbound.address\"}}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "address" },
   },
   {
-    title: "{{ i18n \"pages.inbounds.traffic\" }}",
+    title: "{{ i18n `pages.inbounds.traffic\" }}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "traffic" },
@@ -435,19 +435,19 @@ const reverseColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.outbound.type\"}}",
+    title: "{{ i18n `pages.xray.outbound.type\"}}",
     dataIndex: "type",
     align: "center",
     width: 50,
   },
   {
-    title: "{{ i18n \"pages.xray.outbound.tag\"}}",
+    title: "{{ i18n `pages.xray.outbound.tag\"}}",
     dataIndex: "tag",
     align: "center",
     width: 50,
   },
   {
-    title: "{{ i18n \"pages.xray.outbound.domain\"}}",
+    title: "{{ i18n `pages.xray.outbound.domain\"}}",
     dataIndex: "domain",
     align: "center",
     width: 50,
@@ -462,19 +462,19 @@ const balancerColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.balancer.tag\"}}",
+    title: "{{ i18n `pages.xray.balancer.tag\"}}",
     dataIndex: "tag",
     align: "center",
     width: 50,
   },
   {
-    title: "{{ i18n \"pages.xray.balancer.balancerStrategy\"}}",
+    title: "{{ i18n `pages.xray.balancer.balancerStrategy\"}}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "strategy" },
   },
   {
-    title: "{{ i18n \"pages.xray.balancer.balancerSelectors\"}}",
+    title: "{{ i18n `pages.xray.balancer.balancerSelectors\"}}",
     align: "center",
     width: 100,
     scopedSlots: { customRender: "selector" },
@@ -489,19 +489,19 @@ const dnsColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.outbound.address\"}}",
+    title: "{{ i18n `pages.xray.outbound.address\"}}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "address" },
   },
   {
-    title: "{{ i18n \"pages.xray.dns.domains\"}}",
+    title: "{{ i18n `pages.xray.dns.domains\"}}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "domain" },
   },
   {
-    title: "{{ i18n \"pages.xray.dns.expectIPs\"}}",
+    title: "{{ i18n `pages.xray.dns.expectIPs\"}}",
     align: "center",
     width: 50,
     scopedSlots: { customRender: "expectIPs" },
@@ -516,13 +516,13 @@ const fakednsColumns = [
     scopedSlots: { customRender: "action" },
   },
   {
-    title: "{{ i18n \"pages.xray.fakedns.ipPool\"}}",
+    title: "{{ i18n `pages.xray.fakedns.ipPool\"}}",
     dataIndex: "ipPool",
     align: "center",
     width: 50,
   },
   {
-    title: "{{ i18n \"pages.xray.fakedns.poolSize\"}}",
+    title: "{{ i18n `pages.xray.fakedns.poolSize\"}}",
     dataIndex: "poolSize",
     align: "center",
     width: 50,
@@ -923,8 +923,8 @@ const app = new Vue({
     },
     addOutbound() {
       outModal.show({
-        title: "{{ i18n \"pages.xray.outbound.addOutbound\"}}",
-        okText: "{{ i18n \"pages.xray.outbound.addOutbound\" }}",
+        title: "{{ i18n `pages.xray.outbound.addOutbound\"}}",
+        okText: "{{ i18n `pages.xray.outbound.addOutbound\" }}",
         confirm: (outbound) => {
           outModal.loading();
           if (outbound.tag.length > 0) {
@@ -941,7 +941,7 @@ const app = new Vue({
     },
     editOutbound(index) {
       outModal.show({
-        title: "{{ i18n \"pages.xray.outbound.editOutbound\"}} "
+        title: "{{ i18n `pages.xray.outbound.editOutbound\"}} "
           + (index + 1),
         outbound: app.templateSettings.outbounds[index],
         confirm: (outbound) => {
@@ -970,8 +970,8 @@ const app = new Vue({
     },
     addReverse() {
       reverseModal.show({
-        title: "{{ i18n \"pages.xray.outbound.addReverse\"}}",
-        okText: "{{ i18n \"pages.xray.outbound.addReverse\" }}",
+        title: "{{ i18n `pages.xray.outbound.addReverse\"}}",
+        okText: "{{ i18n `pages.xray.outbound.addReverse\" }}",
         confirm: (reverse, rules) => {
           reverseModal.loading();
           if (reverse.tag.length > 0) {
@@ -1022,7 +1022,7 @@ const app = new Vue({
         );
       }
       reverseModal.show({
-        title: "{{ i18n \"pages.xray.outbound.editReverse\"}} "
+        title: "{{ i18n `pages.xray.outbound.editReverse\"}} "
           + (index + 1),
         reverse: this.reverseData[index],
         rules: oldRules,
@@ -1180,8 +1180,8 @@ const app = new Vue({
     },
     addBalancer() {
       balancerModal.show({
-        title: "{{ i18n \"pages.xray.balancer.addBalancer\"}}",
-        okText: "{{ i18n \"pages.xray.balancer.addBalancer\"}}",
+        title: "{{ i18n `pages.xray.balancer.addBalancer\"}}",
+        okText: "{{ i18n `pages.xray.balancer.addBalancer\"}}",
         balancerTags: this.balancersData
           .filter((o) => !ObjectUtil.isEmpty(o.tag))
           .map((obj) => obj.tag),
@@ -1224,8 +1224,8 @@ const app = new Vue({
     editBalancer(index) {
       const oldTag = this.balancersData[index].tag;
       balancerModal.show({
-        title: "{{ i18n \"pages.xray.balancer.editBalancer\"}}",
-        okText: "{{ i18n \"sure\" }}",
+        title: "{{ i18n `pages.xray.balancer.editBalancer\"}}",
+        okText: "{{ i18n `sure\" }}",
         balancerTags: this.balancersData
           .filter((o) => !ObjectUtil.isEmpty(o.tag))
           .map((obj) => obj.tag),
@@ -1364,7 +1364,7 @@ const app = new Vue({
     },
     openDNSPresets() {
       dnsPresetsModal.show({
-        title: "{{ i18n \"pages.xray.dns.dnsPresetTitle\" }}",
+        title: "{{ i18n `pages.xray.dns.dnsPresetTitle\" }}",
         selected: (selectedPreset) => {
           this.dnsServers = selectedPreset;
 
@@ -1374,7 +1374,7 @@ const app = new Vue({
     },
     addDNSServer() {
       dnsModal.show({
-        title: "{{ i18n \"pages.xray.dns.add\" }}",
+        title: "{{ i18n `pages.xray.dns.add\" }}",
         confirm: (dnsServer) => {
           dnsServers = this.dnsServers;
           dnsServers.push(dnsServer);
@@ -1386,7 +1386,7 @@ const app = new Vue({
     },
     editDNSServer(index) {
       dnsModal.show({
-        title: "{{ i18n \"pages.xray.dns.edit\" }} #" + (index + 1),
+        title: "{{ i18n `pages.xray.dns.edit\" }} #" + (index + 1),
         dnsServer: this.dnsServers[index],
         confirm: (dnsServer) => {
           dnsServers = this.dnsServers;
@@ -1404,7 +1404,7 @@ const app = new Vue({
     },
     addFakedns() {
       fakednsModal.show({
-        title: "{{ i18n \"pages.xray.fakedns.add\" }}",
+        title: "{{ i18n `pages.xray.fakedns.add\" }}",
         confirm: (item) => {
           fakeDns = this.fakeDns ?? [];
           fakeDns.push(item);
@@ -1416,7 +1416,7 @@ const app = new Vue({
     },
     editFakedns(index) {
       fakednsModal.show({
-        title: "{{ i18n \"pages.xray.fakedns.edit\" }} #" + (index + 1),
+        title: "{{ i18n `pages.xray.fakedns.edit\" }} #" + (index + 1),
         fakeDns: this.fakeDns[index],
         confirm: (item) => {
           fakeDns = this.fakeDns;
@@ -1434,8 +1434,8 @@ const app = new Vue({
     },
     addRule() {
       ruleModal.show({
-        title: "{{ i18n \"pages.xray.rules.add\"}}",
-        okText: "{{ i18n \"pages.xray.rules.add\" }}",
+        title: "{{ i18n `pages.xray.rules.add\"}}",
+        okText: "{{ i18n `pages.xray.rules.add\" }}",
         confirm: (rule) => {
           ruleModal.loading();
           if (JSON.stringify(rule).length > 3) {
@@ -1451,7 +1451,7 @@ const app = new Vue({
     },
     editRule(index) {
       ruleModal.show({
-        title: "{{ i18n \"pages.xray.rules.edit\"}} " + (index + 1),
+        title: "{{ i18n `pages.xray.rules.edit\"}} " + (index + 1),
         rule: app.templateSettings.routing.rules[index],
         confirm: (rule) => {
           ruleModal.loading();

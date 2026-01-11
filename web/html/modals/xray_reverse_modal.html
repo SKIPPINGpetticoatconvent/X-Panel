@@ -72,7 +72,7 @@ const reverseModal = {
   title: "",
   visible: false,
   confirmLoading: false,
-  okText: "{{ i18n \"sure\" }}",
+  okText: "{{ i18n `sure\" }}",
   isEdit: false,
   confirm: null,
   reverse: {
@@ -107,7 +107,7 @@ const reverseModal = {
   show(
     {
       title = "",
-      okText = "{{ i18n \"sure\" }}",
+      okText = "{{ i18n `sure\" }}",
       reverse,
       rules,
       confirm = (reverse, rules) => {},
@@ -183,8 +183,8 @@ new Vue({
   data: {
     reverseModal: reverseModal,
     reverseTypes: {
-      bridge: "{{ i18n \"pages.xray.outbound.bridge\" }}",
-      portal: "{{ i18n \"pages.xray.outbound.portal\" }}",
+      bridge: "{{ i18n `pages.xray.outbound.bridge\" }}",
+      portal: "{{ i18n `pages.xray.outbound.portal\" }}",
     },
   },
 });

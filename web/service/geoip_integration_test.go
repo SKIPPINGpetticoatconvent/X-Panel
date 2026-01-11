@@ -146,7 +146,6 @@ func TestGeoIPServiceRetry(t *testing.T) {
 
 	// 测试带重试的获取
 	location, err := geoIPService.FetchLocationWithRetry(3)
-
 	if err != nil {
 		t.Errorf("FetchLocationWithRetry(3) 失败: %v", err)
 	}

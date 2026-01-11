@@ -8,25 +8,25 @@ import (
 
 // Certificate Error Codes - 标准化错误码常量
 const (
-	ErrCodePort80Occupied     = "CERT_E001" // 80 端口被占用
-	ErrCodePort80External     = "CERT_E002" // 80 端口被外部进程占用
-	ErrCodeCATimeout          = "CERT_E003" // CA 服务器超时
-	ErrCodeCARefused          = "CERT_E004" // CA 服务器拒绝
-	ErrCodeDNSResolution      = "CERT_E005" // DNS 解析失败
-	ErrCodeCertExpired        = "CERT_E006" // 证书已过期
-	ErrCodeRenewalFailed      = "CERT_E007" // 续期失败
-	ErrCodeXrayReloadFailed   = "CERT_E008" // Xray 重载失败
-	ErrCodeFallbackActivated  = "CERT_E009" // 回退机制已激活
-	ErrCodePermissionDenied   = "CERT_E010" // 权限不足
+	ErrCodePort80Occupied    = "CERT_E001" // 80 端口被占用
+	ErrCodePort80External    = "CERT_E002" // 80 端口被外部进程占用
+	ErrCodeCATimeout         = "CERT_E003" // CA 服务器超时
+	ErrCodeCARefused         = "CERT_E004" // CA 服务器拒绝
+	ErrCodeDNSResolution     = "CERT_E005" // DNS 解析失败
+	ErrCodeCertExpired       = "CERT_E006" // 证书已过期
+	ErrCodeRenewalFailed     = "CERT_E007" // 续期失败
+	ErrCodeXrayReloadFailed  = "CERT_E008" // Xray 重载失败
+	ErrCodeFallbackActivated = "CERT_E009" // 回退机制已激活
+	ErrCodePermissionDenied  = "CERT_E010" // 权限不足
 )
 
 // CertError 标准化证书错误结构
 type CertError struct {
-	Code        string // 错误码
-	Message     string // 用户友好消息（中文）
-	MessageEn   string // 用户友好消息（英文）
-	Technical   string // 技术详情
-	Cause       error  // 底层错误
+	Code      string // 错误码
+	Message   string // 用户友好消息（中文）
+	MessageEn string // 用户友好消息（英文）
+	Technical string // 技术详情
+	Cause     error  // 底层错误
 }
 
 // Error 实现 error 接口

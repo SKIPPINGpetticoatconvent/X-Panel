@@ -1,4 +1,4 @@
-{{define "modals/clientsModal"}}
+{{define "modals/clientsModal`}}
 <a-modal
   id="client-modal"
   v-model="clientModal.visible"
@@ -18,7 +18,7 @@
       :style="{ marginBottom: '10px', display: 'block', textAlign: 'center' }"
     >Account is (Expired|Traffic Ended) And Disabled</a-tag>
   </template>
-  {{template "form/client"}}
+  {{template "form/client`}}
 </a-modal>
 <script>
 const clientModal = {
@@ -199,11 +199,11 @@ const clientModalApp = new Vue({
     },
     resetClientTraffic(email, dbInboundId, iconElement) {
       this.$confirm({
-        title: "{{ i18n \"pages.inbounds.resetTraffic\"}}",
-        content: "{{ i18n \"pages.inbounds.resetTrafficContent\"}}",
+        title: "{{ i18n `pages.inbounds.resetTraffic\`}}",
+        content: "{{ i18n `pages.inbounds.resetTrafficContent\`}}",
         class: themeSwitcher.currentTheme,
-        okText: "{{ i18n \"reset\"}}",
-        cancelText: "{{ i18n \"cancel\"}}",
+        okText: "{{ i18n `reset\`}}",
+        cancelText: "{{ i18n `cancel\`}}",
         onOk: async () => {
           iconElement.disabled = true;
           const msg = await HttpUtil.postWithModal(

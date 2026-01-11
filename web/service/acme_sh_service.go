@@ -22,7 +22,7 @@ type AcmeShService struct {
 func NewAcmeShService() *AcmeShService {
 	return &AcmeShService{
 		installPath: "/usr/local/bin/acme.sh", // 默认安装路径
-		certDir:     "/root/.acme.sh",        // 默认证书目录
+		certDir:     "/root/.acme.sh",         // 默认证书目录
 	}
 }
 
@@ -147,7 +147,7 @@ func (a *AcmeShService) InstallCert(ip, certPath, keyPath string) error {
 	}
 
 	// 设置私钥文件权限为 0600
-	if err := os.Chmod(keyPath, 0600); err != nil {
+	if err := os.Chmod(keyPath, 0o600); err != nil {
 		logger.Warningf("Failed to set key file permissions: %v", err)
 	}
 

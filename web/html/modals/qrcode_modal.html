@@ -248,7 +248,7 @@ const qrModalApp = new Vue({
       ClipboardManager
         .copyText(content)
         .then(() => {
-          app.$message.success("{{ i18n \"copied\" }}");
+          app.$message.success("{{ i18n `copied\" }}");
         });
     },
     setQrCode(elementId, content) {

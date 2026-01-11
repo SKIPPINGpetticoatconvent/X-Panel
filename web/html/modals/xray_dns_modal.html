@@ -123,7 +123,7 @@ const defaultDnsObject = {
 const dnsModal = {
   title: "",
   visible: false,
-  okText: "{{ i18n \"confirm\" }}",
+  okText: "{{ i18n `confirm\" }}",
   isEdit: false,
   confirm: null,
   dnsServer: { ...defaultDnsObject },
@@ -132,7 +132,7 @@ const dnsModal = {
   },
   show({
     title = "",
-    okText = "{{ i18n \"confirm\" }}",
+    okText = "{{ i18n `confirm\" }}",
     dnsServer,
     confirm = (dnsServer) => {},
     isEdit = false,

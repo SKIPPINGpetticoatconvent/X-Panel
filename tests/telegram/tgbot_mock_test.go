@@ -67,10 +67,10 @@ func (m *MockBot) Reset() {
 // TestCommandHandling 测试命令处理功能
 func TestCommandHandling(t *testing.T) {
 	tests := []struct {
-		name           string
-		command        string
-		isAdmin        bool
-		shouldProcess  bool
+		name          string
+		command       string
+		isAdmin       bool
+		shouldProcess bool
 	}{
 		{
 			name:          "Start command - admin",
@@ -187,7 +187,7 @@ func TestCommandHandling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// 模拟命令解析
 			command, _, _ := tu.ParseCommand(tt.command)
-			
+
 			// 验证命令解析
 			if command == "" {
 				t.Errorf("Failed to parse command: %s", tt.command)
@@ -345,13 +345,13 @@ func TestMessageSending(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockBot.shouldFail = tt.shouldFail
-			
+
 			err := mockBot.SendMessage(tt.chatID, tt.message)
-			
+
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
 			}
-			
+
 			if !tt.expectError && err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
@@ -547,11 +547,11 @@ func TestComplexScenarios(t *testing.T) {
 	t.Run("Sequential commands with state", func(t *testing.T) {
 		// 模拟用户状态管理
 		userStates := make(map[int64]string)
-		
+
 		// 用户1开始会话
 		chatID1 := int64(123456789)
 		userStates[chatID1] = "waiting_for_input"
-		
+
 		// 发送多个命令
 		commands := []string{"/start", "/help", "/status", "/id"}
 		for _, cmd := range commands {
@@ -563,13 +563,13 @@ func TestComplexScenarios(t *testing.T) {
 				mockBot.SendMessage(chatID1, "Help message")
 			}
 		}
-		
+
 		// 验证消息数量
 		messages := mockBot.GetMessages()
 		if len(messages) < 2 {
 			t.Errorf("Expected at least 2 messages, got %d", len(messages))
 		}
-		
+
 		// 清理状态
 		delete(userStates, chatID1)
 	})
@@ -578,12 +578,12 @@ func TestComplexScenarios(t *testing.T) {
 		// 创建新的mock bot实例避免消息污染
 		localMockBot := NewMockBot()
 		chatIDs := []int64{111, 222, 333}
-		
+
 		for _, chatID := range chatIDs {
 			// 每个用户发送命令
 			localMockBot.SendMessage(chatID, "User message")
 		}
-		
+
 		messages := localMockBot.GetMessages()
 		if len(messages) != len(chatIDs) {
 			t.Errorf("Expected %d messages, got %d", len(chatIDs), len(messages))
@@ -597,7 +597,7 @@ func TestComplexScenarios(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error but got none")
 		}
-		
+
 		// 恢复正常
 		mockBot.shouldFail = false
 		err = mockBot.SendMessage(123, "This should work")
@@ -610,7 +610,7 @@ func TestComplexScenarios(t *testing.T) {
 // BenchmarkCommandProcessing 基准测试命令处理性能
 func BenchmarkCommandProcessing(b *testing.B) {
 	mockBot := NewMockBot()
-	
+
 	commands := []string{
 		"/start",
 		"/help",
@@ -749,19 +749,19 @@ func TestEdgeCases(t *testing.T) {
 func TestIntegrationScenarios(t *testing.T) {
 	t.Run("Complete user workflow", func(t *testing.T) {
 		mockBot := NewMockBot()
-		
+
 		// 1. 用户启动机器人
 		mockBot.SendMessage(123456789, "Welcome")
-		
+
 		// 2. 用户请求帮助
 		mockBot.SendMessage(123456789, "Help")
-		
+
 		// 3. 用户查询状态
 		mockBot.SendMessage(123456789, "Status")
-		
+
 		// 4. 用户查询ID
 		mockBot.SendMessage(123456789, "ID")
-		
+
 		// 验证所有消息都已发送
 		messages := mockBot.GetMessages()
 		if len(messages) != 4 {
@@ -772,7 +772,7 @@ func TestIntegrationScenarios(t *testing.T) {
 	t.Run("Admin-only workflow", func(t *testing.T) {
 		mockBot := NewMockBot()
 		adminID := int64(123456789)
-		
+
 		// 管理员执行高级操作
 		commands := []string{
 			"/inbound 123",
@@ -780,13 +780,13 @@ func TestIntegrationScenarios(t *testing.T) {
 			"/oneclick",
 			"/restartx",
 		}
-		
+
 		for _, cmd := range commands {
 			_, _, _ = tu.ParseCommand(cmd)
 			// 模拟管理员权限检查通过
 			mockBot.SendMessage(adminID, "Admin command executed")
 		}
-		
+
 		messages := mockBot.GetMessages()
 		if len(messages) != len(commands) {
 			t.Errorf("Expected %d messages, got %d", len(commands), len(messages))
@@ -795,14 +795,14 @@ func TestIntegrationScenarios(t *testing.T) {
 
 	t.Run("Error handling workflow", func(t *testing.T) {
 		mockBot := NewMockBot()
-		
+
 		// 模拟网络错误
 		mockBot.shouldFail = true
 		err := mockBot.SendMessage(123456789, "Test")
 		if err == nil {
 			t.Error("Expected network error")
 		}
-		
+
 		// 恢复并重试
 		mockBot.shouldFail = false
 		err = mockBot.SendMessage(123456789, "Retry")

@@ -35,7 +35,7 @@ const fakednsDefaultData = {
 const fakednsModal = {
   title: "",
   visible: false,
-  okText: "{{ i18n \"confirm\" }}",
+  okText: "{{ i18n `confirm\" }}",
   isEdit: false,
   confirm: null,
   fakeDns: { ...fakednsDefaultData },
@@ -45,7 +45,7 @@ const fakednsModal = {
   show(
     {
       title = "",
-      okText = "{{ i18n \"confirm\" }}",
+      okText = "{{ i18n `confirm\" }}",
       fakeDns,
       confirm = (fakeDns) => {},
       isEdit = false,

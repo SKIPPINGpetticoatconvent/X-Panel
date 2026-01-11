@@ -376,9 +376,9 @@ const app = new Vue({
       if (this.allSetting.twoFactorEnable) {
         twoFactorModal.show({
           title:
-            "{{ i18n \"pages.settings.security.twoFactorModalChangeCredentialsTitle\" }}",
+            "{{ i18n `pages.settings.security.twoFactorModalChangeCredentialsTitle` }}",
           description:
-            "{{ i18n \"pages.settings.security.twoFactorModalChangeCredentialsStep\" }}",
+            "{{ i18n `pages.settings.security.twoFactorModalChangeCredentialsStep` }}",
           token: this.allSetting.twoFactorToken,
           type: "confirm",
           confirm: (success) => {
@@ -404,22 +404,22 @@ const app = new Vue({
       // 前端验证
       if (!this.allSetting.ipCertEmail) {
         this.$message.error(
-          "{{ i18n \"pages.settings.ipCert.emailRequired\" }}",
+          "{{ i18n `pages.settings.ipCert.emailRequired` }}",
         );
         return;
       }
       if (!this.validateEmail(this.allSetting.ipCertEmail)) {
         this.$message.error(
-          "{{ i18n \"pages.settings.ipCert.invalidEmail\" }}",
+          "{{ i18n `pages.settings.ipCert.invalidEmail` }}",
         );
         return;
       }
       if (!this.allSetting.ipCertTarget) {
-        this.$message.error("{{ i18n \"pages.settings.ipCert.ipRequired\" }}");
+        this.$message.error("{{ i18n `pages.settings.ipCert.ipRequired` }}");
         return;
       }
       if (!this.validateIPv4(this.allSetting.ipCertTarget)) {
-        this.$message.error("{{ i18n \"pages.settings.ipCert.invalidIp\" }}");
+        this.$message.error("{{ i18n `pages.settings.ipCert.invalidIp` }}");
         return;
       }
 
@@ -430,7 +430,7 @@ const app = new Vue({
         });
         if (msg.success) {
           this.$message.success(
-            "{{ i18n \"pages.settings.ipCert.applySuccess\" }}",
+            "{{ i18n `pages.settings.ipCert.applySuccess` }}",
           );
           await this.getCertStatus();
         } else {
@@ -457,11 +457,11 @@ const app = new Vue({
     async restartPanel() {
       await new Promise(resolve => {
         this.$confirm({
-          title: "{{ i18n \"pages.settings.restartPanel\" }}",
-          content: "{{ i18n \"pages.settings.restartPanelDesc\" }}",
+          title: "{{ i18n `pages.settings.restartPanel` }}",
+          content: "{{ i18n `pages.settings.restartPanelDesc` }}",
           class: themeSwitcher.currentTheme,
-          okText: "{{ i18n \"sure\" }}",
-          cancelText: "{{ i18n \"cancel\" }}",
+          okText: "{{ i18n `sure` }}",
+          cancelText: "{{ i18n `cancel` }}",
           onOk: () => resolve(),
         });
       });
@@ -497,13 +497,13 @@ const app = new Vue({
 
         twoFactorModal.show({
           title:
-            "{{ i18n \"pages.settings.security.twoFactorModalSetTitle\" }}",
+            "{{ i18n `pages.settings.security.twoFactorModalSetTitle` }}",
           token: newTwoFactorToken,
           type: "set",
           confirm: (success) => {
             if (success) {
               Vue.prototype.$message["success"](
-                "{{ i18n \"pages.settings.security.twoFactorModalSetSuccess\" }}",
+                "{{ i18n `pages.settings.security.twoFactorModalSetSuccess` }}",
               );
 
               this.allSetting.twoFactorToken = newTwoFactorToken;
@@ -515,15 +515,15 @@ const app = new Vue({
       } else {
         twoFactorModal.show({
           title:
-            "{{ i18n \"pages.settings.security.twoFactorModalDeleteTitle\" }}",
+            "{{ i18n `pages.settings.security.twoFactorModalDeleteTitle` }}",
           description:
-            "{{ i18n \"pages.settings.security.twoFactorModalRemoveStep\" }}",
+            "{{ i18n `pages.settings.security.twoFactorModalRemoveStep` }}",
           token: this.allSetting.twoFactorToken,
           type: "confirm",
           confirm: (success) => {
             if (success) {
               Vue.prototype.$message["success"](
-                "{{ i18n \"pages.settings.security.twoFactorModalDeleteSuccess\" }}",
+                "{{ i18n `pages.settings.security.twoFactorModalDeleteSuccess` }}",
               );
 
               this.allSetting.twoFactorEnable = false;
@@ -756,25 +756,25 @@ const app = new Vue({
         if (!this.allSetting) return [];
         var alerts = [];
         if (window.location.protocol !== "https:") {
-          alerts.push("{{ i18n \"secAlertSSL\" }}");
+          alerts.push("{{ i18n `secAlertSSL` }}");
         }
         if (this.allSetting.webPort === 2053) {
-          alerts.push("{{ i18n \"secAlertPanelPort\" }}");
+          alerts.push("{{ i18n `secAlertPanelPort` }}");
         }
         panelPath = window.location.pathname.split("/").length < 4;
         if (panelPath && this.allSetting.webBasePath == "/") {
-          alerts.push("{{ i18n \"secAlertPanelURI\" }}");
+          alerts.push("{{ i18n `secAlertPanelURI` }}");
         }
         if (this.allSetting.subEnable) {
           subPath = this.allSetting.subURI.length > 0
             ? new URL(this.allSetting.subURI).pathname
             : this.allSetting.subPath;
-          if (subPath == "/sub/") alerts.push("{{ i18n \"secAlertSubURI\" }}");
+          if (subPath == "/sub/") alerts.push("{{ i18n `secAlertSubURI` }}");
           subJsonPath = this.allSetting.subJsonURI.length > 0
             ? new URL(this.allSetting.subJsonURI).pathname
             : this.allSetting.subJsonPath;
           if (subJsonPath == "/json/") {
-            alerts.push("{{ i18n \"secAlertSubJsonURI\" }}");
+            alerts.push("{{ i18n `secAlertSubJsonURI` }}");
           }
         }
         return alerts;

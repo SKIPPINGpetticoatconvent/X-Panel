@@ -130,12 +130,12 @@ type Server struct {
 	cancel context.CancelFunc
 
 	// 端口冲突自愈相关字段
-	httpListenerPaused bool                  // HTTP 监听器是否已暂停
-	savedListener      net.Listener          // 保存的监听器，用于恢复
-	router             *gin.Engine           // 保存的路由器，用于重新启动服务器
-	listenAddr         string                // 保存的监听地址
-	isHTTPS            bool                  // 是否为 HTTPS 模式
-	tlsConfig          *tls.Config           // TLS 配置（如果适用）
+	httpListenerPaused bool         // HTTP 监听器是否已暂停
+	savedListener      net.Listener // 保存的监听器，用于恢复
+	router             *gin.Engine  // 保存的路由器，用于重新启动服务器
+	listenAddr         string       // 保存的监听地址
+	isHTTPS            bool         // 是否为 HTTPS 模式
+	tlsConfig          *tls.Config  // TLS 配置（如果适用）
 }
 
 // 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来

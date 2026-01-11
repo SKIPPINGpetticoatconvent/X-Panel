@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 
 	// 创建测试配置目录
 	testConfigDir := filepath.Join(os.TempDir(), "x-ui-test-config")
-	os.MkdirAll(testConfigDir, 0755)
+	os.MkdirAll(testConfigDir, 0o755)
 	os.Setenv("TEST_CONFIG_DIR", testConfigDir)
 
 	fmt.Println("🚀 X-Panel 综合测试套件")
@@ -315,5 +315,3 @@ func commandExists(cmd string) bool {
 	_, err = os.Stat("/usr/local/bin/" + cmd)
 	return err == nil
 }
-
-

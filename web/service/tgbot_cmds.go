@@ -119,8 +119,6 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 			handleUnknownCommand()
 		}
 
-
-
 	// 〔中文注释〕: 【新增代码】: 处理 /restartx 指令，用于重启面板
 	case "restartx":
 		onlyMessage = true

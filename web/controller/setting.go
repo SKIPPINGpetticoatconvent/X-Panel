@@ -161,15 +161,15 @@ func (a *SettingController) applyIPCert(c *gin.Context) {
 }
 
 type certStatus struct {
-	Enabled        bool   `json:"enabled"`
-	TargetIp       string `json:"targetIp"`
-	CertPath       string `json:"certPath"`
-	CertExists     bool   `json:"certExists"`
-	NotBefore      string `json:"notBefore,omitempty"`
-	NotAfter       string `json:"notAfter,omitempty"`
-	Issuer         string `json:"issuer,omitempty"`
-	Subject        string `json:"subject,omitempty"`
-	DaysRemaining  int    `json:"daysRemaining,omitempty"`
+	Enabled       bool   `json:"enabled"`
+	TargetIp      string `json:"targetIp"`
+	CertPath      string `json:"certPath"`
+	CertExists    bool   `json:"certExists"`
+	NotBefore     string `json:"notBefore,omitempty"`
+	NotAfter      string `json:"notAfter,omitempty"`
+	Issuer        string `json:"issuer,omitempty"`
+	Subject       string `json:"subject,omitempty"`
+	DaysRemaining int    `json:"daysRemaining,omitempty"`
 }
 
 func (a *SettingController) getCertStatus(c *gin.Context) {

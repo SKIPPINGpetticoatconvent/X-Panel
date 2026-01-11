@@ -31,10 +31,10 @@ type LogForwarder struct {
 
 // LogMessage 表示要转发的日志消息
 type LogMessage struct {
-	Level       logging.Level
-	Message     string
-	Formatted   string
-	Timestamp   time.Time
+	Level     logging.Level
+	Message   string
+	Formatted string
+	Timestamp time.Time
 }
 
 // NewLogForwarder 创建新的日志转发器
@@ -68,11 +68,11 @@ func NewLogForwarder(settingService *SettingService, telegramService TelegramSer
 		telegramService: telegramService,
 		isEnabled:       false,
 		forwardLevel:    forwardLevel,
-		logBuffer:       make(chan *LogMessage, 200), 
+		logBuffer:       make(chan *LogMessage, 200),
 		bufferSize:      200,
-		workerCount:     1, 
-		batchSize:       10, 
-		maxBatchDelay:   10 * time.Second, 
+		workerCount:     1,
+		batchSize:       10,
+		maxBatchDelay:   10 * time.Second,
 		ctx:             ctx,
 		cancel:          cancel,
 	}
@@ -243,7 +243,7 @@ func (lf *LogForwarder) worker(id int) {
 			batch = append(batch, logMsg)
 			if len(batch) >= lf.batchSize {
 				lf.flushLogs(batch)
-				batch = batch[:0] // 重置批次
+				batch = batch[:0]              // 重置批次
 				ticker.Reset(lf.maxBatchDelay) // 重置定时器
 			}
 

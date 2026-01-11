@@ -30,12 +30,12 @@ type FallbackManager interface {
 
 // CertAlertFallback 证书告警与回退管理器
 type CertAlertFallback struct {
-	alertService    AlertService
-	certService     *CertService
-	settingService  *SettingService
+	alertService        AlertService
+	certService         *CertService
+	settingService      *SettingService
 	consecutiveFailures int
-	lastSuccessTime time.Time
-	inFallbackMode  bool
+	lastSuccessTime     time.Time
+	inFallbackMode      bool
 }
 
 // NewCertAlertFallback 创建新的告警与回退管理器
@@ -190,11 +190,11 @@ func (c *CertAlertFallback) SwitchToSelfSigned(certPath, ip string) error {
 	certFile := certPath + ".crt"
 	keyFile := certPath + ".key"
 
-	if err := os.WriteFile(certFile, certPEM, 0644); err != nil {
+	if err := os.WriteFile(certFile, certPEM, 0o644); err != nil {
 		return fmt.Errorf("failed to write certificate file: %w", err)
 	}
 
-	if err := os.WriteFile(keyFile, keyPEM, 0600); err != nil {
+	if err := os.WriteFile(keyFile, keyPEM, 0o600); err != nil {
 		return fmt.Errorf("failed to write key file: %w", err)
 	}
 
@@ -281,7 +281,7 @@ func (c *CertAlertFallback) copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	return os.WriteFile(dst, data, 0o644)
 }
 
 // getCertInfo 获取证书信息

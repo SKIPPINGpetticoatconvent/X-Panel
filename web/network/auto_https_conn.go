@@ -44,7 +44,6 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 	// 尝试读取少量数据来判断协议
 	c.firstBuf = make([]byte, 512) // 减小缓冲区大小
 	n, err := c.Conn.Read(c.firstBuf)
-
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			logger.Warning("Read timeout during protocol detection, treating as HTTPS")
@@ -78,7 +77,6 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 	reader := bytes.NewReader(c.firstBuf)
 	bufReader := bufio.NewReader(reader)
 	request, err := http.ReadRequest(bufReader)
-
 	if err != nil {
 		// 无法解析为HTTP请求，检查是否是TLS握手（可能有额外数据）
 		if n >= 3 && c.firstBuf[0] == 0x16 {

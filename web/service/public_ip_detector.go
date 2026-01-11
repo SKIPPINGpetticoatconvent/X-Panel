@@ -112,9 +112,9 @@ func (d *PublicIPDetector) isPrivateIP(ip net.IP) bool {
 		"192.168.0.0/16",
 		"127.0.0.0/8",
 		"169.254.0.0/16", // Link-local
-		"::1/128",         // IPv6 loopback
-		"fe80::/10",       // IPv6 link-local
-		"fc00::/7",        // IPv6 unique local
+		"::1/128",        // IPv6 loopback
+		"fe80::/10",      // IPv6 link-local
+		"fc00::/7",       // IPv6 unique local
 	}
 
 	for _, cidr := range privateCIDRs {

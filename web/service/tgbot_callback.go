@@ -926,26 +926,26 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.errorOperation"))
 					}
 				case "get_clients":
-				inboundId := dataArray[1]
-				inboundIdInt, err := strconv.Atoi(inboundId)
-				if err != nil {
-					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-					return
-				}
-				inbound, err := t.inboundService.GetInbound(inboundIdInt)
-				if err != nil {
-					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-					return
-				}
-				clients, err := t.getInboundClients(inboundIdInt)
-				if err != nil {
-					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-					return
-				}
-				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
-			case "log_settings":
-				t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
-				t.showLogSettings(chatId)
+					inboundId := dataArray[1]
+					inboundIdInt, err := strconv.Atoi(inboundId)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					inbound, err := t.inboundService.GetInbound(inboundIdInt)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					clients, err := t.getInboundClients(inboundIdInt)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
+				case "log_settings":
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
+					t.showLogSettings(chatId)
 				case "add_client_to":
 					// assign default values to clients variables
 					client_Id = uuid.New().String()
@@ -1303,7 +1303,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "get_sorted_traffic_usage_report":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		emails, err := t.inboundService.getAllEmails()
-
 		if err != nil {
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.errorOperation"), tu.ReplyKeyboardRemove())
 			return
@@ -1389,7 +1388,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "update_management_panel":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔄 正在检查最新版本...")
 		t.checkPanelUpdate(chatId)
-
 
 	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
 	case "restart_panel":
@@ -1551,8 +1549,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "firewall_check_status":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔍 正在检测防火墙状态...")
 		t.checkFirewallStatus(chatId)
-
-
 
 	case "firewall_install_firewalld":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📦 正在安装 Firewalld...")
@@ -1770,8 +1766,6 @@ func (t *Tgbot) BuildInboundClientDataMessage(inbound_remark string, protocol mo
 	case model.VMESS, model.VLESS:
 		message = t.I18nBot("tgbot.messages.inbound_client_data_id", "InboundRemark=="+inbound_remark, "ClientId=="+client_Id, "ClientEmail=="+client_Email, "ClientTraffic=="+traffic_value, "ClientExp=="+expiryTime, "IpLimit=="+ip_limit, "ClientComment=="+client_Comment)
 
-
-
 	default:
 		return "", errors.New("unknown protocol")
 	}
@@ -1817,8 +1811,6 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
             }]
         }`, client_Id, client_Flow, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
 
-
-
 	default:
 		return "", errors.New("unknown protocol")
 	}
@@ -1827,7 +1819,6 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
 }
 
 func (t *Tgbot) SubmitAddClient() (bool, error) {
-
 	inbound, err := t.inboundService.GetInbound(receiver_inbound_ID)
 	if err != nil {
 		logger.Warning("getIboundClients run failed:", err)
@@ -2169,6 +2160,7 @@ func (t *Tgbot) getInboundUsages() string {
 	}
 	return info
 }
+
 func (t *Tgbot) getInbounds() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
@@ -2259,11 +2251,9 @@ func (t *Tgbot) getInboundClients(id int) (*telego.InlineKeyboardMarkup, error) 
 			for _, client := range clients {
 				buttons = append(buttons, tu.InlineKeyboardButton(client.Email).WithCallbackData(t.encodeQuery("client_get_usage "+client.Email)))
 			}
-
 		} else {
 			return nil, errors.New(t.I18nBot("tgbot.answers.getClientsFailed"))
 		}
-
 	}
 	cols := 0
 	if len(buttons) < 6 {
@@ -2578,9 +2568,7 @@ func (t *Tgbot) addClient(chatId int64, msg string, messageID ...int) {
 		} else {
 			t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
 		}
-
 	}
-
 }
 
 func (t *Tgbot) searchInbound(chatId int64, remark string) {
@@ -3055,8 +3043,6 @@ func (t *Tgbot) sendDirectOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连：\n\n🚀 Vless + TCP + Reality: 高性能直连，优秀兼容性\n⚡ Vless + XHTTP + Reality: 新型传输，更佳隐蔽性", directKeyboard)
 }
 
-
-
 // 远程创建【一键配置】入站，增加一个 type 参数
 func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	var err error
@@ -3086,7 +3072,6 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	inboundService.SetTelegramService(t) // 将当前的 bot 实例注入
 
 	createdInbound, _, err := inboundService.AddInbound(newInbound)
-
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))
 		return
@@ -3824,8 +3809,6 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
-
-
 
 // 【新增方法】: 检查面板更新
 func (t *Tgbot) checkPanelUpdate(chatId int64) {

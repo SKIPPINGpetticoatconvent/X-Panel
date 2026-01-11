@@ -54,7 +54,7 @@ type SystemTestConfig struct {
 func runSystemIntegrationTest(t *testing.T, config *SystemTestConfig) {
 	// 创建日志目录
 	logDir := filepath.Dir(config.LogFilePath)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		t.Fatalf("创建日志目录失败: %v", err)
 	}
 
