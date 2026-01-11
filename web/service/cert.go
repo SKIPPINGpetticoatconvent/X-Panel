@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"x-ui/logger"
+	"x-ui/web/global"
 )
 
 type CertService struct {
@@ -144,6 +145,9 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 		logger.Warning("LegoIPService not initialized")
 		return errors.New("lego IP service not available")
 	}
+
+	// Note: Port checking is now handled within LegoIPService.ObtainIPCert()
+	// which implements intelligent challenge type selection and port management
 
 	// Obtain certificate using Lego (mask sensitive info in logs)
 	logger.Infof("Starting IP certificate obtain for IP address")
@@ -340,24 +344,40 @@ type certWebServerController struct {
 }
 
 func (c *certWebServerController) PauseHTTPListener() error {
-	// In a real implementation, this would signal the web server to stop listening on port 80
-	// Since we don't have direct control over the Gin engine here, we log a warning
-	// If the panel is actually on port 80, this will likely fail to free the port
-	logger.Warning("PauseHTTPListener called: Cannot pause panel listener directly. Ensure panel is not on port 80.")
-	return nil
+	// Get the web server instance from global
+	webServer := global.GetWebServer()
+	if webServer == nil {
+		logger.Warning("Web server not available, cannot pause HTTP listener")
+		return errors.New("web server not available")
+	}
+
+	return webServer.PauseHTTPListener()
 }
 
 func (c *certWebServerController) ResumeHTTPListener() error {
-	logger.Info("ResumeHTTPListener called")
-	return nil
+	// Get the web server instance from global
+	webServer := global.GetWebServer()
+	if webServer == nil {
+		logger.Warning("Web server not available, cannot resume HTTP listener")
+		return errors.New("web server not available")
+	}
+
+	return webServer.ResumeHTTPListener()
 }
 
 func (c *certWebServerController) IsListeningOnPort80() bool {
-	port, err := c.settingService.GetPort()
-	if err != nil {
-		return false
+	// Get the web server instance from global
+	webServer := global.GetWebServer()
+	if webServer == nil {
+		logger.Warning("Web server not available, checking port setting directly")
+		port, err := c.settingService.GetPort()
+		if err != nil {
+			return false
+		}
+		return port == 80
 	}
-	return port == 80
+
+	return webServer.IsListeningOnPort80()
 }
 
 // certXrayController implements XrayController interface

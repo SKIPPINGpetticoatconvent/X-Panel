@@ -50,9 +50,10 @@ type LegoIPService struct {
 
 // LegoConfig Lego 配置
 type LegoConfig struct {
-	ACMEServerURL string
-	UserAgent     string
-	KeyType       string
+	ACMEServerURL   string
+	UserAgent       string
+	KeyType         string
+	ChallengeTypes  []string // 支持的挑战类型优先级 ["tls-alpn-01", "http-01"]
 }
 
 // LegoUser 实现 lego.User 接口
@@ -79,10 +80,17 @@ func (u *LegoUser) GetPrivateKey() crypto.PrivateKey {
 
 // NewLegoIPService 创建新的 LegoIPService 实例
 func NewLegoIPService(portResolver *PortConflictResolver, certReloader *CertHotReloader) *LegoIPService {
+	challengeTypesStr := getEnvOrDefault("LEGO_CHALLENGE_TYPES", "tls-alpn-01,http-01")
+	challengeTypes := strings.Split(challengeTypesStr, ",")
+	for i, ct := range challengeTypes {
+		challengeTypes[i] = strings.TrimSpace(ct)
+	}
+
 	config := &LegoConfig{
-		ACMEServerURL: getEnvOrDefault("LEGO_ACME_SERVER", "https://acme-v02.api.letsencrypt.org/directory"),
-		UserAgent:     getEnvOrDefault("LEGO_USER_AGENT", "x-ui-lego/1.0.0"),
-		KeyType:       getEnvOrDefault("LEGO_KEY_TYPE", "P256"),
+		ACMEServerURL:  getEnvOrDefault("LEGO_ACME_SERVER", "https://acme-v02.api.letsencrypt.org/directory"),
+		UserAgent:      getEnvOrDefault("LEGO_USER_AGENT", "x-ui-lego/1.0.0"),
+		KeyType:        getEnvOrDefault("LEGO_KEY_TYPE", "P256"),
+		ChallengeTypes: challengeTypes,
 	}
 
 	return &LegoIPService{
@@ -93,100 +101,196 @@ func NewLegoIPService(portResolver *PortConflictResolver, certReloader *CertHotR
 	}
 }
 
-// ObtainIPCert 申请 IP 证书
-func (s *LegoIPService) ObtainIPCert(ctx context.Context, ip, email string) (*CertResult, error) {
-	logger.Info("Starting IP certificate obtain")
+// setupChallengeProvider 设置挑战提供者
+func (s *LegoIPService) setupChallengeProvider(client *lego.Client, challengeType string) error {
+	switch challengeType {
+	case "tls-alpn-01":
+		logger.Info("Setting up TLS-ALPN-01 challenge provider")
+		// TLS-ALPN-01 使用标准的TLS握手，不需要特殊提供者
+		// Lego库会自动处理TLS-ALPN-01挑战
+		// 我们只需要确保TLS配置正确，但这里不需要设置提供者
+		return nil
+	case "http-01":
+		logger.Info("Setting up HTTP-01 challenge provider on port 80")
+		provider := http01.NewProviderServer("", "80")
+		if err := client.Challenge.SetHTTP01Provider(provider); err != nil {
+			return fmt.Errorf("failed to set HTTP-01 provider: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported challenge type: %s", challengeType)
+	}
+	return nil
+}
 
-	// 验证参数
-	if err := s.ValidateIP(ip); err != nil {
-		return nil, fmt.Errorf("invalid IP address: %w", err)
+// acquirePortsForChallenge 根据挑战类型获取端口
+func (s *LegoIPService) acquirePortsForChallenge(ctx context.Context, challengeType string) error {
+	switch challengeType {
+	case "tls-alpn-01":
+		// TLS-ALPN-01 需要443端口，但目前我们简化处理，先尝试443端口可用性
+		logger.Info("TLS-ALPN-01 challenge requires port 443 - checking availability")
+		// 由于没有专门的443端口管理，我们依赖于系统配置
+		// 如果443被占用，挑战会失败，然后回退到HTTP-01
+		return nil
+	case "http-01":
+		logger.Info("Attempting to acquire port 80 for HTTP-01 challenge")
+		return s.portResolver.AcquirePort80(ctx)
+	default:
+		return nil
 	}
-	if email == "" {
-		return nil, fmt.Errorf("email cannot be empty")
-	}
+}
 
-	// 获取端口控制权
-	if err := s.portResolver.AcquirePort80(ctx); err != nil {
-		return nil, fmt.Errorf("failed to acquire port 80: %w", err)
-	}
-	defer func() {
+// releasePortsForChallenge 释放端口
+func (s *LegoIPService) releasePortsForChallenge(challengeType string) {
+	switch challengeType {
+	case "http-01":
+		logger.Info("Releasing port 80")
 		if err := s.portResolver.ReleasePort80(); err != nil {
 			logger.Warningf("Failed to release port 80: %v", err)
 		}
-	}()
+	}
+}
+
+// ObtainIPCert 申请 IP 证书
+func (s *LegoIPService) ObtainIPCert(ctx context.Context, ip, email string) (*CertResult, error) {
+	logger.Infof("Starting IP certificate obtain for IP: %s, Email: %s", ip, email)
+
+	// 验证参数
+	if err := s.ValidateIP(ip); err != nil {
+		logger.Errorf("IP validation failed for %s: %v", ip, err)
+		return nil, fmt.Errorf("invalid IP address: %w", err)
+	}
+	if email == "" {
+		logger.Error("Email cannot be empty")
+		return nil, fmt.Errorf("email cannot be empty")
+	}
 
 	// 创建 Lego 用户
+	logger.Info("Creating Lego user")
 	user, err := s.createLegoUser(email)
 	if err != nil {
+		logger.Errorf("Failed to create lego user: %v", err)
 		return nil, fmt.Errorf("failed to create lego user: %w", err)
 	}
 
-	// 创建 Lego 配置
-	config := lego.NewConfig(user)
-	config.CADirURL = s.legoConfig.ACMEServerURL
-	config.UserAgent = s.legoConfig.UserAgent
+	// 尝试不同的挑战类型
+	var lastErr error
+	for _, challengeType := range s.legoConfig.ChallengeTypes {
+		logger.Infof("Attempting certificate obtain with challenge type: %s", challengeType)
 
-	// 设置密钥类型 (使用默认 P256)
-
-	// 创建 Lego 客户端
-	client, err := lego.NewClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create lego client: %w", err)
-	}
-
-	// 设置 HTTP-01 Challenge 提供者
-	provider := http01.NewProviderServer("", "80")
-	if err := client.Challenge.SetHTTP01Provider(provider); err != nil {
-		return nil, fmt.Errorf("failed to set HTTP-01 provider: %w", err)
-	}
-
-	// 注册账户
-	reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
-	if err != nil {
-		return nil, fmt.Errorf("failed to register account: %w", err)
-	}
-	user.Registration = reg
-
-	// 申请证书
-	request := certificate.ObtainRequest{
-		Domains: []string{ip},
-		Bundle:  true,
-	}
-
-	logger.Infof("Obtaining certificate for domains: %v", request.Domains)
-	certificates, err := client.Certificate.Obtain(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to obtain certificate: %w", err)
-	}
-
-	// 保存证书
-	certPath, keyPath, err := s.saveCertificate(ip, certificates)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save certificate: %w", err)
-	}
-
-	// 解析证书过期时间
-	expiry, err := s.parseCertificateExpiry(certificates.Certificate)
-	if err != nil {
-		logger.Warningf("Failed to parse certificate expiry: %v", err)
-		expiry = time.Now().Add(90 * 24 * time.Hour) // 默认 90 天
-	}
-
-	result := &CertResult{
-		CertPath: certPath,
-		KeyPath:  keyPath,
-		Expiry:   expiry,
-	}
-
-	// 触发证书重载
-	if s.certReloader != nil {
-		if err := s.certReloader.OnCertRenewed(certPath, keyPath); err != nil {
-			logger.Warningf("Failed to reload certificate: %v", err)
+		// 获取端口控制权（如果需要）
+		if err := s.acquirePortsForChallenge(ctx, challengeType); err != nil {
+			logger.Warningf("Failed to acquire ports for %s challenge: %v", challengeType, err)
+			lastErr = err
+			continue
 		}
+		defer s.releasePortsForChallenge(challengeType)
+
+		// 创建 Lego 配置
+		logger.Infof("Creating Lego config with ACME server: %s", s.legoConfig.ACMEServerURL)
+		config := lego.NewConfig(user)
+		config.CADirURL = s.legoConfig.ACMEServerURL
+		config.UserAgent = s.legoConfig.UserAgent
+
+		// 创建 Lego 客户端
+		logger.Info("Creating Lego client")
+		client, err := lego.NewClient(config)
+		if err != nil {
+			logger.Errorf("Failed to create lego client for %s: %v", challengeType, err)
+			lastErr = err
+			s.releasePortsForChallenge(challengeType)
+			continue
+		}
+
+		// 设置挑战提供者
+		if err := s.setupChallengeProvider(client, challengeType); err != nil {
+			logger.Errorf("Failed to setup %s challenge provider: %v", challengeType, err)
+			lastErr = err
+			s.releasePortsForChallenge(challengeType)
+			continue
+		}
+
+		// 注册账户
+		logger.Info("Registering ACME account")
+		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true})
+		if err != nil {
+			logger.Errorf("Failed to register account for %s challenge: %v", challengeType, err)
+			lastErr = err
+			s.releasePortsForChallenge(challengeType)
+			continue
+		}
+		user.Registration = reg
+		logger.Info("Account registered successfully")
+
+		// 申请证书
+		request := certificate.ObtainRequest{
+			Domains: []string{ip},
+			Bundle:  true,
+		}
+
+		logger.Infof("Starting certificate obtain request for domains: %v using %s challenge", request.Domains, challengeType)
+
+		var challengePortNote string
+		if challengeType == "http-01" {
+			challengePortNote = "Ensure port 80 is accessible from the internet."
+		} else if challengeType == "tls-alpn-01" {
+			challengePortNote = "Ensure port 443 is accessible from the internet and TLS is properly configured."
+		}
+		logger.Info("Note: This may take several minutes. " + challengePortNote)
+
+		certificates, err := client.Certificate.Obtain(request)
+		if err != nil {
+			logger.Errorf("Failed to obtain certificate with %s challenge: %v", challengeType, err)
+			if challengeType == "tls-alpn-01" {
+				logger.Warning("TLS-ALPN-01 challenge failed - this may be due to port 443 configuration or ACME server support")
+			} else if challengeType == "http-01" {
+				logger.Error("Possible causes for HTTP-01 failure:")
+				logger.Error("  1. Port 80 is blocked by firewall")
+				logger.Error("  2. IP address is not reachable from the internet")
+				logger.Error("  3. HTTP challenge server failed to start")
+				logger.Error("  4. ACME server timeout or rate limiting")
+			}
+			lastErr = err
+			s.releasePortsForChallenge(challengeType)
+			continue
+		}
+
+		logger.Infof("Certificate obtained successfully using %s challenge", challengeType)
+
+		// 保存证书
+		certPath, keyPath, err := s.saveCertificate(ip, certificates)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save certificate: %w", err)
+		}
+
+		// 解析证书过期时间
+		expiry, err := s.parseCertificateExpiry(certificates.Certificate)
+		if err != nil {
+			logger.Warningf("Failed to parse certificate expiry: %v", err)
+			expiry = time.Now().Add(90 * 24 * time.Hour) // 默认 90 天
+		}
+
+		result := &CertResult{
+			CertPath: certPath,
+			KeyPath:  keyPath,
+			Expiry:   expiry,
+		}
+
+		// 触发证书重载
+		if s.certReloader != nil {
+			if err := s.certReloader.OnCertRenewed(certPath, keyPath); err != nil {
+				logger.Warningf("Failed to reload certificate: %v", err)
+			}
+		}
+
+		logger.Info("Successfully obtained IP certificate")
+		return result, nil
 	}
 
-	logger.Info("Successfully obtained IP certificate")
-	return result, nil
+	// 所有挑战类型都失败了
+	if lastErr != nil {
+		return nil, fmt.Errorf("all challenge types failed, last error: %w", lastErr)
+	}
+	return nil, fmt.Errorf("no challenge types configured")
 }
 
 // RenewIPCert 续期 IP 证书

@@ -52,14 +52,11 @@ func setupTestRouter() *gin.Engine {
 
 // TestInboundController_GetInbounds 测试获取入站列表
 func TestInboundController_GetInbounds(t *testing.T) {
-	// 创建模拟服务
-	mockInboundService := &service.InboundService{}
-
 	// 设置测试路由
 	router := setupTestRouter()
 
 	// 创建控制器
-	inboundController := NewInboundController(router.Group("/api/inbounds"))
+	NewInboundController(router.Group("/api/inbounds"))
 
 	// 创建测试请求
 	req, _ := http.NewRequest("GET", "/api/inbounds/list", nil)
@@ -188,14 +185,11 @@ func TestInboundController_ValidateInboundData(t *testing.T) {
 
 // TestSettingController_GetAllSetting 测试获取所有设置
 func TestSettingController_GetAllSetting(t *testing.T) {
-	// 创建模拟设置服务
-	mockSettingService := &service.SettingService{}
-
 	// 设置测试路由
 	router := setupTestRouter()
 
 	// 创建控制器
-	settingController := NewSettingController(router.Group("/api/setting"))
+	NewSettingController(router.Group("/api/setting"), nil)
 
 	// 创建测试请求
 	req, _ := http.NewRequest("POST", "/api/setting/all", nil)
@@ -238,7 +232,7 @@ func TestSettingController_UpdateUser(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
-	NewSettingController(router.Group("/api/setting"))
+	NewSettingController(router.Group("/api/setting"), nil)
 
 	// 执行请求
 	w := httptest.NewRecorder()
@@ -281,7 +275,7 @@ func TestAPIController_BackuptoTgbot(t *testing.T) {
 	router := setupTestRouter()
 
 	// 创建API控制器
-	apiController := NewAPIController(router.Group("/panel/api"), *mockServerService)
+	NewAPIController(router.Group("/panel/api"), *mockServerService)
 
 	// 创建测试请求
 	req, _ := http.NewRequest("GET", "/panel/api/backuptotgbot", nil)
@@ -369,7 +363,7 @@ func TestInboundController_ImportInbound(t *testing.T) {
 // TestInboundController_ClientOperations 测试客户端操作
 func TestInboundController_ClientOperations(t *testing.T) {
 	router := setupTestRouter()
-	controller := NewInboundController(router.Group("/api/inbounds"))
+	NewInboundController(router.Group("/api/inbounds"))
 
 	// 测试添加客户端
 	addClientData := model.Inbound{
