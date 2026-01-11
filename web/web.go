@@ -153,13 +153,13 @@ func (s *Server) SetCertService(certService *service.CertService) {
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-func NewServer(serverService service.ServerService) *Server {
+func NewServer(serverService *service.ServerService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		ctx:    ctx,
 		cancel: cancel,
 		// 〔中文注释〕: 2. 将传入的 serverService 存储到 Server 结构体的字段中。
-		serverService: serverService,
+		serverService: *serverService,
 	}
 }
 

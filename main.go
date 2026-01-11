@@ -123,7 +123,7 @@ func runWebServer() {
 	var server *web.Server
 
 	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
-	server = web.NewServer(serverService)
+	server = web.NewServer(&serverService)
 	// 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
 	if tgBotService != nil {
 		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
@@ -221,7 +221,7 @@ func runWebServer() {
 				logger.Debug("Error stopping sub server:", err)
 			}
 
-			server = web.NewServer(serverService)
+			server = web.NewServer(&serverService)
 			// 重新注入 tgBotService
 			if tgBotService != nil {
 				server.SetTelegramService(tgBotService)
@@ -594,6 +594,22 @@ func requestIPCert(ip, email string) {
 
 	settingService := service.SettingService{}
 	certService := service.NewCertService(&settingService)
+
+	// 初始化必要的服务依赖以启用 IP 证书功能
+	serverService := service.ServerService{}
+	certService.SetServerService(&serverService)
+
+	// 检查 Telegram Bot 是否启用，如果启用则设置依赖
+	tgEnable, err := settingService.GetTgbotEnabled()
+	if err == nil && tgEnable {
+		// 初始化 Telegram Bot 服务
+		xrayService := service.XrayService{}
+		inboundService := service.InboundService{}
+		lastStatus := service.Status{}
+
+		tgBotService := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
+		certService.SetTgbot(tgBotService)
+	}
 
 	err = certService.ObtainIPCert(ip, email)
 	if err != nil {
