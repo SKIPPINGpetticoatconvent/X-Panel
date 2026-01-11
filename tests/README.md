@@ -101,7 +101,7 @@ tests/
 │   └── comprehensive_test.go         # 综合测试运行器
 ├── performance_stability_test.go      # 性能稳定性测试
 ├── e2e/                              # 端到端测试
-│   ├── podman_test.go
+│   ├── docker_test.go
 │   └── README.md
 └── tools/                            # 测试工具
     ├── run_oneclick.go

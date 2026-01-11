@@ -10,10 +10,10 @@
    - 安装包：https://golang.org/dl/
    - 验证安装：`go version`
 
-2. **Podman** (版本 3.0 或更高)
-   - Windows/macOS：https://podman.io/getting-started/installation
-   - Linux：使用包管理器安装（如 `sudo apt install podman` 或 `sudo yum install podman`）
-   - 验证安装：`podman version`
+2. **Docker** (版本 3.0 或更高)
+   - Windows/macOS：https://docker.io/getting-started/installation
+   - Linux：使用包管理器安装（如 `sudo apt install docker` 或 `sudo yum install docker`）
+   - 验证安装：`docker version`
 
 ## 运行测试
 
@@ -24,16 +24,16 @@
 go test -v ./tests/e2e/...
 
 # 运行基础功能测试
-go test -v -run TestPodmanE2E ./tests/e2e/
+go test -v -run TestDockerE2E ./tests/e2e/
 
 # 运行性能测试
-go test -v -run TestPodmanE2EPerformance ./tests/e2e/
+go test -v -run TestDockerE2EPerformance ./tests/e2e/
 
 # 运行错误处理测试
-go test -v -run TestPodmanE2EErrorHandling ./tests/e2e/
+go test -v -run TestDockerE2EErrorHandling ./tests/e2e/
 
 # 运行备份恢复测试
-go test -v -run TestPodmanE2EBackupRestore ./tests/e2e/
+go test -v -run TestDockerE2EBackupRestore ./tests/e2e/
 
 # 运行 Telegram 测试
 go test -v -run TestTelegramE2E ./tests/e2e/
@@ -44,7 +44,7 @@ go test -v -bench=. -run=^$ ./tests/e2e/
 
 ### 测试流程
 
-#### 基础E2E测试 (TestPodmanE2E)
+#### 基础E2E测试 (TestDockerE2E)
 
 测试将执行以下步骤：
 
@@ -62,7 +62,7 @@ go test -v -bench=. -run=^$ ./tests/e2e/
    - 备份功能测试
 6. **清理环境**：测试完成后自动清理测试容器
 
-#### 性能测试 (TestPodmanE2EPerformance)
+#### 性能测试 (TestDockerE2EPerformance)
 
 验证系统性能指标：
 
@@ -71,7 +71,7 @@ go test -v -bench=. -run=^$ ./tests/e2e/
 - API响应时间（服务器状态、入站列表）
 - 性能断言和阈值检查
 
-#### 错误处理测试 (TestPodmanE2EErrorHandling)
+#### 错误处理测试 (TestDockerE2EErrorHandling)
 
 验证错误场景的处理：
 
@@ -88,7 +88,7 @@ go test -v -bench=. -run=^$ ./tests/e2e/
 - 备份到Telegram功能
 - 消息格式验证
 
-#### 备份恢复E2E测试 (TestPodmanE2EBackupRestore)
+#### 备份恢复E2E测试 (TestDockerE2EBackupRestore)
 
 验证数据库备份和恢复功能：
 
@@ -103,14 +103,14 @@ go test -v -bench=. -run=^$ ./tests/e2e/
 成功的测试应该输出类似以下内容：
 
 ```
-=== RUN   TestPodmanE2E
-=== RUN   TestPodmanE2E
-    podman_test.go:20: Building Docker image: x-panel-e2e:latest...
-    podman_test.go:26: Starting container: x-panel-e2e-container...
-    podman_test.go:38: Waiting for service to be ready at http://localhost:13688...
-    podman_test.go:51: Service is ready!
-    podman_test.go:56: E2E Test Passed Successfully!
---- PASS: TestPodmanE2E (35.42s)
+=== RUN   TestDockerE2E
+=== RUN   TestDockerE2E
+    docker_test.go:20: Building Docker image: x-panel-e2e:latest...
+    docker_test.go:26: Starting container: x-panel-e2e-container...
+    docker_test.go:38: Waiting for service to be ready at http://localhost:13688...
+    docker_test.go:51: Service is ready!
+    docker_test.go:56: E2E Test Passed Successfully!
+--- PASS: TestDockerE2E (35.42s)
 PASS
 ok      github.com/your-org/x-panel/tests/e2e        35.424s
 ```
@@ -123,9 +123,9 @@ ok      github.com/your-org/x-panel/tests/e2e        35.424s
    - 如果端口 13688 已被占用，测试将失败
    - 解决方案：停止占用该端口的服务或修改测试配置
 
-2. **Podman 权限问题**
-   - 在 Linux 上，可能需要 sudo 权限运行 Podman
-   - 解决方案：确保用户有 Podman 运行权限或使用 `sudo`
+2. **Docker 权限问题**
+   - 在 Linux 上，可能需要 sudo 权限运行 Docker
+   - 解决方案：确保用户有 Docker 运行权限或使用 `sudo`
 
 3. **网络问题**
    - 如果无法下载 Docker 镜像或访问外网，测试可能超时
@@ -141,15 +141,15 @@ ok      github.com/your-org/x-panel/tests/e2e        35.424s
 
 ```bash
 # 删除测试容器
-podman rm -f x-panel-e2e-container
+docker rm -f x-panel-e2e-container
 
 # 删除测试镜像
-podman rmi x-panel-e2e:latest
+docker rmi x-panel-e2e:latest
 ```
 
 ## 测试配置
 
-可以通过修改 `tests/e2e/podman_test.go` 中的常量来调整测试参数：
+可以通过修改 `tests/e2e/docker_test.go` 中的常量来调整测试参数：
 
 - `imageName`: 测试镜像名称
 - `containerName`: 测试容器名称
