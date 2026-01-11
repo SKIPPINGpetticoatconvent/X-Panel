@@ -23,6 +23,7 @@ import (
 	"x-ui/web/locale"
 	"x-ui/web/middleware"
 	"x-ui/web/network"
+	"x-ui/web/security"
 	"x-ui/web/service"
 
 	"github.com/gin-contrib/gzip"
@@ -439,6 +440,9 @@ func (s *Server) Start() (err error) {
 		listener = net.Listener(kaListener)
 	}
 
+	// 集成安全监听器链
+	listener = security.NewSecureListener(listener, nil)
+
 	// 再次检查证书，配置 TLS Listener
 	if certFile != "" && keyFile != "" {
 		cert, _ := tls.LoadX509KeyPair(certFile, keyFile) // 这里我们忽略错误，因为上面已经检查过了
@@ -586,6 +590,9 @@ func (s *Server) ResumeHTTPListener() error {
 	}
 
 	listener := s.setupListener(baseListener)
+
+	// 集成安全监听器链
+	listener = security.NewSecureListener(listener, nil)
 
 	// 如果是 HTTPS 模式，配置 TLS
 	if s.isHTTPS {

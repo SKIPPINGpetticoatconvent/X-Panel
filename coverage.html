@@ -1,0 +1,863 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>security: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">x-ui/web/security/cert_health.go (78.3%)</option>
+				
+				<option value="file1">x-ui/web/security/proto_detect.go (50.0%)</option>
+				
+				<option value="file2">x-ui/web/security/rate_limiter.go (64.1%)</option>
+				
+				<option value="file3">x-ui/web/security/security.go (0.0%)</option>
+				
+				<option value="file4">x-ui/web/security/tls_error_logger.go (84.3%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package security
+
+import (
+        "crypto/tls"
+        "crypto/x509"
+        "encoding/pem"
+        "fmt"
+        "io/ioutil"
+        "net"
+        "time"
+
+        "x-ui/logger"
+)
+
+// CertHealthChecker 证书健康检查器接口
+type CertHealthChecker interface {
+        Check(certPath, keyPath string) (time.Time, error)
+        ValidateIP(certPath string, ip string) error
+        ValidateChain(certPath, caPath string) error
+}
+
+// certHealthCheckerImpl 证书健康检查器的实现
+type certHealthCheckerImpl struct{}
+
+// NewCertHealthChecker 创建证书健康检查器
+func NewCertHealthChecker() CertHealthChecker <span class="cov8" title="1">{
+        return &amp;certHealthCheckerImpl{}
+}</span>
+
+// Check 检查证书文件并返回到期时间
+func (chc *certHealthCheckerImpl) Check(certPath, keyPath string) (time.Time, error) <span class="cov8" title="1">{
+        // 加载证书和密钥
+        cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+        if err != nil </span><span class="cov8" title="1">{
+                return time.Time{}, fmt.Errorf("加载证书失败: %w", err)
+        }</span>
+
+        // 解析证书
+        <span class="cov8" title="1">parsedCert, err := x509.ParseCertificate(cert.Certificate[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, fmt.Errorf("解析证书失败: %w", err)
+        }</span>
+
+        // 检查证书是否即将过期（30天内）
+        <span class="cov8" title="1">if time.Until(parsedCert.NotAfter) &lt; 30*24*time.Hour </span><span class="cov8" title="1">{
+                logger.Warningf("证书即将过期: %s, 到期时间: %s", certPath, parsedCert.NotAfter.Format("2006-01-02"))
+        }</span>
+
+        <span class="cov8" title="1">return parsedCert.NotAfter, nil</span>
+}
+
+// ValidateIP 验证证书是否包含指定的IP地址
+func (chc *certHealthCheckerImpl) ValidateIP(certPath string, ip string) error <span class="cov8" title="1">{
+        certData, err := ioutil.ReadFile(certPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("读取证书文件失败: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">block, _ := pem.Decode(certData)
+        if block == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("无效的PEM格式")
+        }</span>
+
+        <span class="cov8" title="1">cert, err := x509.ParseCertificate(block.Bytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("解析证书失败: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">parsedIP := net.ParseIP(ip)
+        if parsedIP == nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("无效的IP地址: %s", ip)
+        }</span>
+
+        // 检查IP是否在证书的IP SAN中
+        <span class="cov8" title="1">for _, certIP := range cert.IPAddresses </span><span class="cov8" title="1">{
+                if certIP.Equal(parsedIP) </span><span class="cov8" title="1">{
+                        return nil
+                }</span>
+        }
+
+        // 检查是否在DNS名称中（虽然不标准，但有时会这样配置）
+        <span class="cov8" title="1">for _, dnsName := range cert.DNSNames </span><span class="cov8" title="1">{
+                if dnsName == ip </span><span class="cov0" title="0">{
+                        return nil
+                }</span>
+        }
+
+        <span class="cov8" title="1">return fmt.Errorf("IP地址 %s 不在证书的主题备用名称中", ip)</span>
+}
+
+// ValidateChain 验证证书链完整性
+func (chc *certHealthCheckerImpl) ValidateChain(certPath, caPath string) error <span class="cov8" title="1">{
+        certData, err := ioutil.ReadFile(certPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("读取证书文件失败: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">caData, err := ioutil.ReadFile(caPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("读取CA证书文件失败: %w", err)
+        }</span>
+
+        // 解码PEM
+        <span class="cov8" title="1">certBlock, _ := pem.Decode(certData)
+        if certBlock == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("无效的证书PEM格式")
+        }</span>
+
+        <span class="cov8" title="1">caBlock, _ := pem.Decode(caData)
+        if caBlock == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("无效的CA证书PEM格式")
+        }</span>
+
+        // 解析证书
+        <span class="cov8" title="1">cert, err := x509.ParseCertificate(certBlock.Bytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("解析证书失败: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">caCert, err := x509.ParseCertificate(caBlock.Bytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("解析CA证书失败: %w", err)
+        }</span>
+
+        // 创建证书池
+        <span class="cov8" title="1">roots := x509.NewCertPool()
+        roots.AddCert(caCert)
+
+        // 验证证书链
+        opts := x509.VerifyOptions{
+                Roots:       roots,
+                CurrentTime: time.Now(),
+        }
+
+        chains, err := cert.Verify(opts)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("证书链验证失败: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if len(chains) == 0 </span><span class="cov0" title="0">{
+                return fmt.Errorf("未找到有效的证书链")
+        }</span>
+
+        <span class="cov8" title="1">logger.Infof("证书链验证成功，共 %d 条链", len(chains))
+        return nil</span>
+}
+
+// CertMonitor 证书监控器
+type CertMonitor struct {
+        checker CertHealthChecker
+}
+
+// NewCertMonitor 创建证书监控器
+func NewCertMonitor() *CertMonitor <span class="cov8" title="1">{
+        return &amp;CertMonitor{
+                checker: NewCertHealthChecker(),
+        }
+}</span>
+
+// MonitorCert 监控证书健康状态
+func (cm *CertMonitor) MonitorCert(certPath, keyPath string) error <span class="cov8" title="1">{
+        expiry, err := cm.checker.Check(certPath, keyPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">daysUntilExpiry := int(time.Until(expiry).Hours() / 24)
+        if daysUntilExpiry &lt;= 30 </span><span class="cov0" title="0">{
+                logger.Warningf("证书将在 %d 天后过期: %s", daysUntilExpiry, certPath)
+        }</span> else<span class="cov8" title="1"> {
+                logger.Infof("证书健康检查通过，还有 %d 天到期", daysUntilExpiry)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// IsCertValid 检查证书是否有效
+func IsCertValid(certPath, keyPath string) bool <span class="cov8" title="1">{
+        checker := NewCertHealthChecker()
+        _, err := checker.Check(certPath, keyPath)
+        return err == nil
+}</pre>
+		
+		<pre class="file" id="file1" style="display: none">package security
+
+import (
+        "bufio"
+        "io"
+        "net"
+        "time"
+
+        "x-ui/logger"
+)
+
+// ProtoDetectListener 协议检测监听器
+type ProtoDetectListener struct {
+        net.Listener
+}
+
+// NewProtoDetectListener 创建协议检测监听器
+func NewProtoDetectListener(listener net.Listener) *ProtoDetectListener <span class="cov0" title="0">{
+        return &amp;ProtoDetectListener{
+                Listener: listener,
+        }
+}</span>
+
+// Accept 实现net.Listener接口，检测协议类型
+func (pdl *ProtoDetectListener) Accept() (net.Conn, error) <span class="cov0" title="0">{
+        for </span><span class="cov0" title="0">{
+                conn, err := pdl.Listener.Accept()
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+
+                // 创建带缓冲的连接用于协议检测
+                <span class="cov0" title="0">bufferedConn := NewBufferedConn(conn)
+
+                // 检测是否为TLS连接
+                isTLS, err := pdl.detectTLS(bufferedConn)
+                if err != nil </span><span class="cov0" title="0">{
+                        logger.Warningf("协议检测失败：%v", err)
+                        bufferedConn.Close()
+                        continue</span>
+                }
+
+                // 这里可以根据检测结果进行不同处理
+                // 目前只记录检测结果，实际应用中可以路由到不同处理器
+                <span class="cov0" title="0">if isTLS </span><span class="cov0" title="0">{
+                        logger.Debugf("检测到TLS连接来自 %s", conn.RemoteAddr())
+                }</span> else<span class="cov0" title="0"> {
+                        logger.Debugf("检测到非TLS连接来自 %s", conn.RemoteAddr())
+                }</span>
+
+                <span class="cov0" title="0">return bufferedConn, nil</span>
+        }
+}
+
+// detectTLS 检测连接是否为TLS协议
+func (pdl *ProtoDetectListener) detectTLS(conn *BufferedConn) (bool, error) <span class="cov8" title="1">{
+        // 设置2秒读取超时
+        conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
+        // 读取首字节
+        buf := make([]byte, 1)
+        n, err := conn.Read(buf)
+        if err != nil </span><span class="cov8" title="1">{
+                if netErr, ok := err.(net.Error); ok &amp;&amp; netErr.Timeout() </span><span class="cov0" title="0">{
+                        // 超时，可能是客户端未发送数据
+                        return false, nil
+                }</span>
+                <span class="cov8" title="1">if err == io.EOF </span><span class="cov8" title="1">{
+                        // 连接已关闭
+                        return false, err
+                }</span>
+                <span class="cov0" title="0">return false, err</span>
+        }
+
+        <span class="cov8" title="1">if n == 0 </span><span class="cov0" title="0">{
+                // 未读取到数据
+                return false, nil
+        }</span>
+
+        // TLS记录层的首字节是0x16
+        <span class="cov8" title="1">return buf[0] == 0x16, nil</span>
+}
+
+// BufferedConn 带缓冲的连接包装器
+type BufferedConn struct {
+        net.Conn
+        reader *bufio.Reader
+}
+
+// NewBufferedConn 创建带缓冲的连接
+func NewBufferedConn(conn net.Conn) *BufferedConn <span class="cov8" title="1">{
+        return &amp;BufferedConn{
+                Conn:   conn,
+                reader: bufio.NewReader(conn),
+        }
+}</span>
+
+// Read 实现io.Reader接口，使用缓冲读取
+func (bc *BufferedConn) Read(b []byte) (int, error) <span class="cov8" title="1">{
+        return bc.reader.Read(b)
+}</span>
+
+// Peek 查看缓冲区中的数据而不消费
+func (bc *BufferedConn) Peek(n int) ([]byte, error) <span class="cov8" title="1">{
+        return bc.reader.Peek(n)
+}</span>
+
+// Buffered 返回底层缓冲读取器
+func (bc *BufferedConn) Buffered() int <span class="cov8" title="1">{
+        return bc.reader.Buffered()
+}</span>
+
+// SetReadDeadline 设置读取超时
+func (bc *BufferedConn) SetReadDeadline(t time.Time) error <span class="cov8" title="1">{
+        return bc.Conn.SetReadDeadline(t)
+}</span>
+
+// SetWriteDeadline 设置写入超时
+func (bc *BufferedConn) SetWriteDeadline(t time.Time) error <span class="cov0" title="0">{
+        return bc.Conn.SetWriteDeadline(t)
+}</span>
+
+// SetDeadline 设置读写超时
+func (bc *BufferedConn) SetDeadline(t time.Time) error <span class="cov0" title="0">{
+        return bc.Conn.SetDeadline(t)
+}</span>
+
+// Close 关闭连接
+func (bc *BufferedConn) Close() error <span class="cov0" title="0">{
+        return bc.Conn.Close()
+}</span>
+
+// LocalAddr 返回本地地址
+func (bc *BufferedConn) LocalAddr() net.Addr <span class="cov0" title="0">{
+        return bc.Conn.LocalAddr()
+}</span>
+
+// RemoteAddr 返回远程地址
+func (bc *BufferedConn) RemoteAddr() net.Addr <span class="cov0" title="0">{
+        return bc.Conn.RemoteAddr()
+}</span>
+
+// ProtocolDetector 协议检测器接口
+type ProtocolDetector interface {
+        Detect(conn net.Conn) (string, error)
+}
+
+// TLSDetector TLS协议检测器
+type TLSDetector struct{}
+
+// Detect 检测是否为TLS协议
+func (td *TLSDetector) Detect(conn net.Conn) (string, error) <span class="cov8" title="1">{
+        bufferedConn := NewBufferedConn(conn)
+
+        // 设置读取超时
+        bufferedConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+
+        buf := make([]byte, 1)
+        n, err := bufferedConn.Read(buf)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov8" title="1">if n == 0 </span><span class="cov0" title="0">{
+                return "unknown", nil
+        }</span>
+
+        <span class="cov8" title="1">if buf[0] == 0x16 </span><span class="cov8" title="1">{
+                return "tls", nil
+        }</span>
+
+        <span class="cov8" title="1">return "unknown", nil</span>
+}
+
+// DetectProtocol 检测协议类型
+func DetectProtocol(conn net.Conn) (string, error) <span class="cov8" title="1">{
+        detector := &amp;TLSDetector{}
+        return detector.Detect(conn)
+}</pre>
+		
+		<pre class="file" id="file2" style="display: none">package security
+
+import (
+        "net"
+        "sync"
+
+        "golang.org/x/time/rate"
+        "x-ui/logger"
+)
+
+// RateLimiter 接口定义连接速率限制器
+type RateLimiter interface {
+        Allow(ip string) bool
+        AddWhitelist(ip string)
+}
+
+// rateLimiterImpl 令牌桶速率限制器的实现
+type rateLimiterImpl struct {
+        limiters    map[string]*rate.Limiter
+        whitelist   map[string]bool
+        mutex       sync.RWMutex
+        maxConnsSec rate.Limit
+        burst       int
+}
+
+// defaultRateLimiter 默认配置的速率限制器
+var defaultRateLimiter = &amp;rateLimiterImpl{
+        limiters:    make(map[string]*rate.Limiter),
+        whitelist:   make(map[string]bool),
+        maxConnsSec: 5,  // 每秒最多5个连接
+        burst:       10, // 突发允许10个连接
+}
+
+// Allow 检查IP是否允许建立连接
+func (rl *rateLimiterImpl) Allow(ip string) bool <span class="cov8" title="1">{
+        rl.mutex.Lock()
+        defer rl.mutex.Unlock()
+
+        // 白名单IP直接允许
+        if rl.whitelist[ip] </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        // 获取或创建该IP的限速器
+        <span class="cov8" title="1">limiter, exists := rl.limiters[ip]
+        if !exists </span><span class="cov8" title="1">{
+                limiter = rate.NewLimiter(rl.maxConnsSec, rl.burst)
+                rl.limiters[ip] = limiter
+        }</span>
+
+        // 检查是否允许
+        <span class="cov8" title="1">return limiter.Allow()</span>
+}
+
+// AddWhitelist 添加IP到白名单
+func (rl *rateLimiterImpl) AddWhitelist(ip string) <span class="cov8" title="1">{
+        rl.mutex.Lock()
+        defer rl.mutex.Unlock()
+        rl.whitelist[ip] = true
+}</span>
+
+// RateLimitListener 包装的监听器，添加速率限制
+type RateLimitListener struct {
+        net.Listener
+        limiter RateLimiter
+}
+
+// NewRateLimitListener 创建带速率限制的监听器
+func NewRateLimitListener(listener net.Listener, config *RateLimitConfig) *RateLimitListener <span class="cov8" title="1">{
+        if config == nil </span><span class="cov0" title="0">{
+                config = &amp;RateLimitConfig{
+                        MaxConnsPerSec: 5,
+                        Burst:          10,
+                }
+        }</span>
+
+        <span class="cov8" title="1">limiter := &amp;rateLimiterImpl{
+                limiters:    make(map[string]*rate.Limiter),
+                whitelist:   make(map[string]bool),
+                maxConnsSec: rate.Limit(config.MaxConnsPerSec),
+                burst:       config.Burst,
+        }
+
+        return &amp;RateLimitListener{
+                Listener: listener,
+                limiter:  limiter,
+        }</span>
+}
+
+// Accept 实现net.Listener接口，添加速率检查
+func (rl *RateLimitListener) Accept() (net.Conn, error) <span class="cov8" title="1">{
+        for </span><span class="cov8" title="1">{
+                conn, err := rl.Listener.Accept()
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+
+                // 获取客户端IP
+                <span class="cov8" title="1">clientIP := getClientIP(conn)
+                if clientIP == "" </span><span class="cov0" title="0">{
+                        logger.Warning("无法获取客户端IP，拒绝连接")
+                        conn.Close()
+                        continue</span>
+                }
+
+                // 检查速率限制
+                <span class="cov8" title="1">if !rl.limiter.Allow(clientIP) </span><span class="cov0" title="0">{
+                        logger.Warningf("连接速率限制：拒绝来自 %s 的连接", clientIP)
+                        conn.Close()
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">return conn, nil</span>
+        }
+}
+
+// AddWhitelist 添加IP到白名单
+func (rl *RateLimitListener) AddWhitelist(ip string) <span class="cov8" title="1">{
+        rl.limiter.AddWhitelist(ip)
+}</span>
+
+// RateLimitConfig 速率限制配置
+type RateLimitConfig struct {
+        MaxConnsPerSec int
+        Burst          int
+}
+
+// getClientIP 从连接中提取客户端IP
+func getClientIP(conn net.Conn) string <span class="cov8" title="1">{
+        if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok </span><span class="cov8" title="1">{
+                return addr.IP.String()
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// cleanupExpiredLimiters 清理过期的限速器（可选，用于内存管理）
+func (rl *rateLimiterImpl) cleanupExpiredLimiters() <span class="cov0" title="0">{
+        rl.mutex.Lock()
+        defer rl.mutex.Unlock()
+
+        for ip, limiter := range rl.limiters </span><span class="cov0" title="0">{
+                // 如果限速器长时间未使用，可以考虑清理
+                // 这里简化实现，实际可以添加时间戳跟踪
+                _ = ip
+                _ = limiter
+        }</span>
+}</pre>
+		
+		<pre class="file" id="file3" style="display: none">package security
+
+import (
+        "net"
+
+        "x-ui/logger"
+)
+
+// SecurityConfig 安全配置结构体
+type SecurityConfig struct {
+        RateLimit *RateLimitConfig
+        // 可以扩展其他安全配置
+}
+
+// DefaultSecurityConfig 默认安全配置
+var DefaultSecurityConfig = &amp;SecurityConfig{
+        RateLimit: &amp;RateLimitConfig{
+                MaxConnsPerSec: 5,
+                Burst:          10,
+        },
+}
+
+// NewSecureListener 创建安全的监听器链
+func NewSecureListener(baseListener net.Listener, config *SecurityConfig) net.Listener <span class="cov0" title="0">{
+        if config == nil </span><span class="cov0" title="0">{
+                config = DefaultSecurityConfig
+        }</span>
+
+        <span class="cov0" title="0">logger.Info("初始化安全监听器链...")
+
+        // 第一层：速率限制
+        rateLimitedListener := NewRateLimitListener(baseListener, config.RateLimit)
+        logger.Info("已启用连接速率限制")
+
+        // 第二层：协议检测
+        protoListener := NewProtoDetectListener(rateLimitedListener)
+        logger.Info("已启用协议检测")
+
+        return protoListener</span>
+}
+
+// NewRateLimitListener 工厂函数：创建速率限制监听器
+func NewRateLimitedListener(listener net.Listener) *RateLimitListener <span class="cov0" title="0">{
+        return NewRateLimitListener(listener, DefaultSecurityConfig.RateLimit)
+}</span>
+
+// NewProtoDetectListenerFactory 工厂函数：创建协议检测监听器
+func NewProtoDetectListenerFactory(listener net.Listener) *ProtoDetectListener <span class="cov0" title="0">{
+        return NewProtoDetectListener(listener)
+}</span>
+
+// GetCertHealthChecker 获取证书健康检查器
+func GetCertHealthChecker() CertHealthChecker <span class="cov0" title="0">{
+        return NewCertHealthChecker()
+}</span>
+
+// GetTLSLogger 获取TLS错误记录器
+func GetTLSLogger() *TLSLogger <span class="cov0" title="0">{
+        return NewTLSLogger()
+}</span>
+
+// InitSecurity 初始化安全模块
+func InitSecurity() <span class="cov0" title="0">{
+        logger.Info("安全模块初始化完成")
+}</span>
+
+// GetDefaultRateLimitConfig 获取默认速率限制配置
+func GetDefaultRateLimitConfig() *RateLimitConfig <span class="cov0" title="0">{
+        return &amp;RateLimitConfig{
+                MaxConnsPerSec: 5,
+                Burst:          10,
+        }
+}</pre>
+		
+		<pre class="file" id="file4" style="display: none">package security
+
+import (
+        "net"
+        "strings"
+        "time"
+
+        "x-ui/logger"
+)
+
+// TLSError TLS错误信息结构体
+type TLSError struct {
+        ClientIP  string    `json:"client_ip"`
+        Time      time.Time `json:"time"`
+        ErrorType string    `json:"error_type"`
+        RawError  string    `json:"raw_error"`
+        IsScanner bool      `json:"is_scanner"`
+}
+
+// knownScannerErrors 已知的扫描器错误模式
+var knownScannerErrors = []string{
+        "tls: client offered only unsupported versions",
+        "tls: no cipher suite supported by both client and server",
+        "tls: client offered an unsupported, maximum protocol version of",
+        "tls: unsupported SSLv2 handshake received",
+        "tls: received unexpected handshake message",
+        "local error: tls: bad record MAC",
+        "remote error: tls: bad certificate",
+        "remote error: tls: unknown certificate authority",
+}
+
+// LogTLSError 记录TLS错误
+func LogTLSError(conn net.Conn, err error) <span class="cov8" title="1">{
+        if err == nil </span><span class="cov8" title="1">{
+                return
+        }</span>
+
+        <span class="cov8" title="1">clientIP := getClientIP(conn)
+        if clientIP == "" </span><span class="cov0" title="0">{
+                clientIP = "unknown"
+        }</span>
+
+        <span class="cov8" title="1">rawError := err.Error()
+        errorType := classifyTLSError(rawError)
+        isScanner := isKnownScannerError(rawError)
+
+        _ = TLSError{
+                ClientIP:  clientIP,
+                Time:      time.Now(),
+                ErrorType: errorType,
+                RawError:  rawError,
+                IsScanner: isScanner,
+        }
+
+        // 根据错误类型选择日志级别
+        if isScanner </span><span class="cov8" title="1">{
+                // 扫描器错误使用debug级别，避免日志噪音
+                logger.Debugf("TLS扫描器检测 - IP: %s, 错误: %s", clientIP, rawError)
+        }</span> else<span class="cov8" title="1"> {
+                // 其他TLS错误使用warning级别
+                logger.Warningf("TLS握手错误 - IP: %s, 类型: %s, 错误: %s", clientIP, errorType, rawError)
+        }</span>
+}
+
+// classifyTLSError 分类TLS错误类型
+func classifyTLSError(errMsg string) string <span class="cov8" title="1">{
+        // 检查顺序很重要：从最具体到最通用
+        if strings.Contains(errMsg, "certificate") </span><span class="cov8" title="1">{
+                return "certificate"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(errMsg, "cipher") </span><span class="cov8" title="1">{
+                return "cipher_suite"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(errMsg, "record") </span><span class="cov8" title="1">{
+                return "record"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(errMsg, "version") || strings.Contains(errMsg, "SSLv2") || strings.Contains(errMsg, "SSLv3") </span><span class="cov8" title="1">{
+                return "protocol_version"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(errMsg, "handshake") </span><span class="cov8" title="1">{
+                return "handshake"
+        }</span>
+        <span class="cov8" title="1">return "unknown"</span>
+}
+
+// isKnownScannerError 检查是否为已知的扫描器错误
+func isKnownScannerError(errMsg string) bool <span class="cov8" title="1">{
+        for _, pattern := range knownScannerErrors </span><span class="cov8" title="1">{
+                if strings.Contains(errMsg, pattern) </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+// TLSLogger TLS错误记录器
+type TLSLogger struct {
+        logFunc func(level string, format string, args ...interface{})
+}
+
+// NewTLSLogger 创建TLS错误记录器
+func NewTLSLogger() *TLSLogger <span class="cov8" title="1">{
+        return &amp;TLSLogger{
+                logFunc: func(level string, format string, args ...interface{}) </span><span class="cov8" title="1">{
+                        switch level </span>{
+                        case "info":<span class="cov0" title="0">
+                                logger.Infof(format, args...)</span>
+                        case "warning":<span class="cov8" title="1">
+                                logger.Warningf(format, args...)</span>
+                        case "error":<span class="cov0" title="0">
+                                logger.Errorf(format, args...)</span>
+                        case "debug":<span class="cov0" title="0">
+                                logger.Debugf(format, args...)</span>
+                        default:<span class="cov0" title="0">
+                                logger.Infof(format, args...)</span>
+                        }
+                },
+        }
+}
+
+// LogError 记录TLS错误
+func (tl *TLSLogger) LogError(conn net.Conn, err error) <span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+
+        <span class="cov8" title="1">clientIP := getClientIP(conn)
+        if clientIP == "" </span><span class="cov0" title="0">{
+                clientIP = "unknown"
+        }</span>
+
+        <span class="cov8" title="1">rawError := err.Error()
+        errorType := classifyTLSError(rawError)
+        isScanner := isKnownScannerError(rawError)
+
+        // 使用自定义日志函数
+        if isScanner </span><span class="cov0" title="0">{
+                tl.logFunc("debug", "TLS扫描器检测 - IP: %s, 错误: %s", clientIP, rawError)
+        }</span> else<span class="cov8" title="1"> {
+                tl.logFunc("warning", "TLS握手错误 - IP: %s, 类型: %s, 错误: %s", clientIP, errorType, rawError)
+        }</span>
+}
+
+// SetLogFunction 设置自定义日志函数
+func (tl *TLSLogger) SetLogFunction(logFunc func(level string, format string, args ...interface{})) <span class="cov8" title="1">{
+        tl.logFunc = logFunc
+}</span>
+
+// TLSHandshakeMonitor TLS握手监控器
+type TLSHandshakeMonitor struct {
+        logger *TLSLogger
+}
+
+// NewTLSHandshakeMonitor 创建TLS握手监控器
+func NewTLSHandshakeMonitor() *TLSHandshakeMonitor <span class="cov8" title="1">{
+        return &amp;TLSHandshakeMonitor{
+                logger: NewTLSLogger(),
+        }
+}</span>
+
+// MonitorHandshake 监控TLS握手过程
+func (thm *TLSHandshakeMonitor) MonitorHandshake(conn net.Conn, handshakeFunc func() error) error <span class="cov8" title="1">{
+        err := handshakeFunc()
+        if err != nil </span><span class="cov8" title="1">{
+                thm.logger.LogError(conn, err)
+        }</span>
+        <span class="cov8" title="1">return err</span>
+}</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
