@@ -73,6 +73,10 @@ func runWebServer() {
 	inboundService := service.InboundService{}
 	lastStatus := service.Status{}
 
+	// 初始化 ServerService 的依赖字段
+	serverService.SetXrayService(xrayService)
+	serverService.SetInboundService(inboundService)
+
 	// 初始化证书服务
 	certService := service.NewCertService(&settingService)
 

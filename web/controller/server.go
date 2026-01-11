@@ -72,6 +72,10 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 }
 
 func (a *ServerController) refreshStatus() {
+	if a.serverService == nil {
+		logger.Error("serverService is nil in refreshStatus")
+		return
+	}
 	a.lastStatus = a.serverService.GetStatus(a.lastStatus)
 }
 
