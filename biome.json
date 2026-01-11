@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!web/assets", "!!**/dist", "!!**/bin"]
+    "includes": ["**", "!web/assets", "!!**/dist", "!!**/bin","!web/html/**/*"]
   },
   "formatter": {
     "enabled": true,
