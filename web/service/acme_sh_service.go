@@ -21,7 +21,7 @@ type AcmeShService struct {
 // NewAcmeShService 创建新的 AcmeShService 实例
 func NewAcmeShService() *AcmeShService {
 	return &AcmeShService{
-		installPath: "/usr/local/bin/acme.sh", // 默认安装路径
+		installPath: "/root/.acme.sh/acme.sh", // 默认安装路径
 		certDir:     "/root/.acme.sh",         // 默认证书目录
 	}
 }
@@ -50,11 +50,28 @@ func (a *AcmeShService) isValidIP(ip string) bool {
 
 // EnsureInstalled 检查并安装 acme.sh
 func (a *AcmeShService) EnsureInstalled() error {
+	logger.Infof("Checking acme.sh at path: %s", a.installPath)
 	// 检查 acme.sh 是否已安装
 	if _, err := os.Stat(a.installPath); err == nil {
 		logger.Info("acme.sh is already installed")
 		return nil
 	}
+	// 也检查 /usr/local/bin/acme.sh
+	if _, err := os.Stat("/usr/local/bin/acme.sh"); err == nil {
+		logger.Info("acme.sh found at /usr/local/bin/acme.sh, using it")
+		a.installPath = "/usr/local/bin/acme.sh"
+		return nil
+	}
+	// 检查用户目录 ~/.acme.sh/acme.sh
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		userPath := filepath.Join(homeDir, ".acme.sh", "acme.sh")
+		if _, err := os.Stat(userPath); err == nil {
+			logger.Info("acme.sh found at user home directory, using it")
+			a.installPath = userPath
+			return nil
+		}
+	}
+	logger.Warningf("acme.sh not found at %s, attempting to install", a.installPath)
 
 	logger.Info("Installing acme.sh...")
 
@@ -76,6 +93,12 @@ func (a *AcmeShService) EnsureInstalled() error {
 	}
 
 	logger.Info("acme.sh installed successfully")
+
+	// 检查安装后的路径是否存在
+	if _, err := os.Stat(a.installPath); err != nil {
+		logger.Errorf("acme.sh installation completed but executable not found at %s: %v", a.installPath, err)
+		return fmt.Errorf("acme.sh installation failed: executable not found at %s", a.installPath)
+	}
 	return nil
 }
 
@@ -104,6 +127,7 @@ func (a *AcmeShService) IssueIPCert(ip, email string) error {
 		"--certificate-profile", "shortlived",
 		"--email", email,
 	}
+	logger.Infof("Executing acme.sh command: %s %v", a.installPath, args)
 
 	cmd := exec.Command(a.installPath, args...)
 	cmd.Env = append(os.Environ(), "HOME=/root")

@@ -595,7 +595,7 @@ func requestIPCert(ip, email string) {
 	err = certService.ObtainIPCert(ip, email)
 	if err != nil {
 		fmt.Printf("Failed to obtain IP certificate: %v\n", err)
-		return
+		os.Exit(1)
 	}
 
 	fmt.Printf("Successfully obtained IP certificate for %s\n", ip)
