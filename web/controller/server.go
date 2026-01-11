@@ -18,7 +18,7 @@ var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 type ServerController struct {
 	BaseController
 
-	serverService    service.ServerService
+	serverService    *service.ServerService
 	settingService   service.SettingService
 	publicIPDetector *service.PublicIPDetector
 
@@ -30,7 +30,7 @@ type ServerController struct {
 }
 
 // 〔中文注释〕: 1. 在函数参数中，增加 serverService service.ServerService，让它可以接收一个服务实例。
-func NewServerController(g *gin.RouterGroup, serverService service.ServerService) *ServerController {
+func NewServerController(g *gin.RouterGroup, serverService *service.ServerService) *ServerController {
 	a := &ServerController{
 		lastGetStatusTime: time.Now(),
 		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。

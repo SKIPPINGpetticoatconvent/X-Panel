@@ -14,7 +14,7 @@ type XUIController struct {
 	serverController      *ServerController
 	settingController     *SettingController
 	xraySettingController *XraySettingController
-	serverService         service.ServerService
+	serverService         *service.ServerService
 	certService           *service.CertService
 }
 

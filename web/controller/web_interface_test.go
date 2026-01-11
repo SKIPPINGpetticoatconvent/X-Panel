@@ -275,7 +275,7 @@ func TestAPIController_BackuptoTgbot(t *testing.T) {
 	router := setupTestRouter()
 
 	// 创建API控制器
-	NewAPIController(router.Group("/panel/api"), *mockServerService)
+	NewAPIController(router.Group("/panel/api"), mockServerService)
 
 	// 创建测试请求
 	req, _ := http.NewRequest("GET", "/panel/api/backuptotgbot", nil)

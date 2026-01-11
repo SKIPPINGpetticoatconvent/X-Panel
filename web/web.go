@@ -123,7 +123,7 @@ type Server struct {
 	tgbotService   service.TelegramService
 	certService    *service.CertService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
-	serverService service.ServerService
+	serverService *service.ServerService
 
 	// TLS Certificate Manager
 	tlsCertManager *service.TLSCertManager
@@ -159,7 +159,7 @@ func NewServer(serverService *service.ServerService) *Server {
 		ctx:    ctx,
 		cancel: cancel,
 		// 〔中文注释〕: 2. 将传入的 serverService 存储到 Server 结构体的字段中。
-		serverService: *serverService,
+		serverService: serverService,
 	}
 }
 
