@@ -222,10 +222,10 @@ func (m *AggressiveRenewalManager) getCertInfo() (*CertInfo, error) {
 		return nil, errors.New("IP cert target is empty")
 	}
 
-	// 使用 AcmeShService 获取证书过期时间
-	expiry, err := m.certService.acmeShService.GetCertExpiry(ip)
+	// 使用 LegoIPService 获取证书信息
+	legoCertInfo, err := m.certService.legoIPService.GetCertInfo(ip)
 	if err != nil {
-		logger.Warningf("Failed to get expiry from acme.sh, falling back to file parsing: %v", err)
+		logger.Warningf("Failed to get cert info from Lego service, falling back to file parsing: %v", err)
 
 		// 回退到文件解析方式
 		certPath, err := m.certService.settingService.GetIpCertPath()
@@ -260,12 +260,15 @@ func (m *AggressiveRenewalManager) getCertInfo() (*CertInfo, error) {
 			return nil, fmt.Errorf("failed to parse X.509 certificate: %w", err)
 		}
 
-		expiry = x509Cert.NotAfter
+		return &CertInfo{
+			Path:   fmt.Sprintf("/etc/ssl/certs/ip_%s.crt", strings.ReplaceAll(ip, ".", "_")),
+			Expiry: x509Cert.NotAfter,
+		}, nil
 	}
 
 	return &CertInfo{
 		Path:   fmt.Sprintf("/etc/ssl/certs/ip_%s.crt", strings.ReplaceAll(ip, ".", "_")),
-		Expiry: expiry,
+		Expiry: legoCertInfo.Expiry,
 	}, nil
 }
 

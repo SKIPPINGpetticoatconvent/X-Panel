@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -15,26 +14,29 @@ import (
 )
 
 type CertService struct {
-	settingService *SettingService
-	serverService  *ServerService
-	tgbot          TelegramService
+	settingService      *SettingService
+	serverService       *ServerService
+	tgbot               TelegramService
+
+	// Certificate Services
+	legoIPService       *LegoIPService
+	certMagicService    *CertMagicDomainService
 
 	// Improvement Modules
-	portResolver   *PortConflictResolver
-	renewalManager *AggressiveRenewalManager
-	hotReloader    *CertHotReloader
-	alertFallback  *CertAlertFallback
-	acmeShService  *AcmeShService
+	portResolver        *PortConflictResolver
+	renewalManager      *AggressiveRenewalManager
+	hotReloader         *CertHotReloader
+	alertFallback       *CertAlertFallback
 
 	initOnce sync.Once
+	mutex    sync.RWMutex // 细粒度并发锁
 }
 
 func NewCertService(settingService *SettingService) *CertService {
 	c := &CertService{
 		settingService: settingService,
 	}
-	// Directly initialize AcmeShService to ensure it's available in CLI mode
-	c.acmeShService = NewAcmeShService()
+	// Certificate services will be initialized in tryInitImprovements when dependencies are ready
 	return c
 }
 
@@ -51,18 +53,31 @@ func (c *CertService) SetTgbot(t TelegramService) {
 // tryInitImprovements attempts to initialize improvement modules if dependencies are ready
 func (c *CertService) tryInitImprovements() {
 	c.initOnce.Do(func() {
-		logger.Info("Initializing IP Certificate Improvement Modules...")
+		logger.Info("Initializing Certificate Management Modules...")
 
-		// 1. Initialize AcmeShService
-		c.acmeShService = NewAcmeShService()
-		logger.Info("AcmeShService initialized")
-
-		// 2. Initialize PortConflictResolver
+		// 1. Initialize PortConflictResolver
 		webCtrl := &certWebServerController{settingService: c.settingService}
 		c.portResolver = NewPortConflictResolver(webCtrl)
 		logger.Info("PortConflictResolver initialized")
 
-		// 3. Initialize CertAlertFallback
+		// 2. Initialize CertHotReloader
+		if c.serverService != nil {
+			xrayCtrl := &certXrayController{serverService: c.serverService}
+			c.hotReloader = NewCertHotReloader(xrayCtrl)
+			logger.Info("CertHotReloader initialized")
+		} else {
+			logger.Info("CertHotReloader skipped (no ServerService)")
+		}
+
+		// 3. Initialize LegoIPService
+		c.legoIPService = NewLegoIPService(c.portResolver, c.hotReloader)
+		logger.Info("LegoIPService initialized")
+
+		// 4. Initialize CertMagicDomainService
+		c.certMagicService = NewCertMagicDomainService(c.portResolver, c.hotReloader)
+		logger.Info("CertMagicDomainService initialized")
+
+		// 5. Initialize CertAlertFallback
 		var alertSvc AlertService
 		if c.tgbot != nil {
 			alertSvc = &certAlertService{tgbot: c.tgbot}
@@ -73,7 +88,7 @@ func (c *CertService) tryInitImprovements() {
 			logger.Info("CertAlertFallback initialized in silent mode")
 		}
 
-		// 4. Initialize AggressiveRenewalManager
+		// 6. Initialize AggressiveRenewalManager
 		renewalConfig := RenewalConfig{
 			CheckInterval:  6 * time.Hour,
 			RenewThreshold: 3 * 24 * time.Hour, // 3 days
@@ -83,27 +98,21 @@ func (c *CertService) tryInitImprovements() {
 		c.renewalManager = NewAggressiveRenewalManager(renewalConfig, c, c.portResolver, c.alertFallback)
 		logger.Info("AggressiveRenewalManager initialized")
 
-		// 5. Initialize CertHotReloader
-		if c.serverService != nil {
-			xrayCtrl := &certXrayController{serverService: c.serverService}
-			c.hotReloader = NewCertHotReloader(xrayCtrl)
-			logger.Info("CertHotReloader initialized")
-		} else {
-			logger.Info("CertHotReloader skipped (no ServerService)")
-		}
-
-		// 6. Start automatic renewal loop if core services are available
-		if c.acmeShService != nil && c.portResolver != nil {
+		// 7. Start automatic renewal loop if core services are available
+		if c.legoIPService != nil && c.portResolver != nil {
 			go c.RenewLoop()
 			logger.Info("Certificate renewal loop started")
 		}
 
-		logger.Info("IP Certificate Improvement Modules initialized successfully")
+		logger.Info("Certificate Management Modules initialized successfully")
 	})
 }
 
-// ObtainIPCert obtains a Let's Encrypt IP certificate using acme.sh
+// ObtainIPCert obtains a Let's Encrypt IP certificate using Lego
 func (c *CertService) ObtainIPCert(ip, email string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	if ip == "" {
 		return errors.New("IP address cannot be empty")
 	}
@@ -112,54 +121,59 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 	}
 
 	// Ensure modules are initialized
-	if c.acmeShService == nil {
-		logger.Warning("AcmeShService not initialized")
-		return errors.New("acme.sh service not available")
+	if c.legoIPService == nil {
+		logger.Warning("LegoIPService not initialized")
+		return errors.New("lego IP service not available")
 	}
 
-	// 1. Acquire Port 80
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	// Obtain certificate using Lego (mask sensitive info in logs)
+	logger.Infof("Starting IP certificate obtain for IP address")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	if c.portResolver != nil {
-		if err := c.portResolver.AcquirePort80(ctx); err != nil {
-			return fmt.Errorf("failed to acquire port 80: %w", err)
-		}
-		defer func() {
-			if err := c.portResolver.ReleasePort80(); err != nil {
-				logger.Warningf("Failed to release port 80: %v", err)
-			}
-		}()
+	result, err := c.legoIPService.ObtainIPCert(ctx, ip, email)
+	if err != nil {
+		logger.Errorf("Failed to obtain IP certificate: %v", err)
+		return fmt.Errorf("failed to obtain IP certificate: %w", err)
 	}
 
-	// 2. Issue IP certificate using acme.sh
-	if err := c.acmeShService.IssueIPCert(ip, email); err != nil {
-		return fmt.Errorf("failed to issue IP certificate: %w", err)
-	}
-
-	// 3. Install certificate to custom path
-	_, _ = c.acmeShService.GetCertPath(ip) // 获取原始路径（如果需要）
-	installPath := filepath.Join("/etc/ssl/certs", fmt.Sprintf("ip_%s", strings.ReplaceAll(ip, ".", "_")))
-	installCertPath := installPath + ".crt"
-	installKeyPath := installPath + ".key"
-
-	if err := c.acmeShService.InstallCert(ip, installCertPath, installKeyPath); err != nil {
-		return fmt.Errorf("failed to install certificate: %w", err)
-	}
-
-	// 4. Save certificate path to configuration
+	// Save certificate path to configuration
+	installPath := strings.TrimSuffix(result.CertPath, ".pem")
 	if err := c.settingService.SetIpCertPath(installPath); err != nil {
 		logger.Warningf("Failed to set IP cert path: %v", err)
 	}
 
-	// 5. Trigger hot reload
-	if c.hotReloader != nil {
-		if err := c.hotReloader.OnCertRenewed(installCertPath, installKeyPath); err != nil {
-			logger.Errorf("Failed to hot reload certificate: %v", err)
-		}
+	logger.Info("Successfully obtained IP certificate")
+	return nil
+}
+
+// ObtainDomainCert obtains a Let's Encrypt domain certificate using CertMagic
+func (c *CertService) ObtainDomainCert(domain, email string, opts *CertOptions) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if domain == "" {
+		return errors.New("domain cannot be empty")
+	}
+	if email == "" {
+		return errors.New("email cannot be empty")
 	}
 
-	logger.Infof("Successfully obtained and installed IP certificate for %s", ip)
+	// Ensure modules are initialized
+	if c.certMagicService == nil {
+		logger.Warning("CertMagicDomainService not initialized")
+		return errors.New("certmagic domain service not available")
+	}
+
+	// Obtain certificate using CertMagic (mask sensitive info in logs)
+	logger.Info("Starting domain certificate obtain")
+	_, err := c.certMagicService.ObtainDomainCert(domain, email, opts)
+	if err != nil {
+		logger.Errorf("Failed to obtain domain certificate: %v", err)
+		return fmt.Errorf("failed to obtain domain certificate: %w", err)
+	}
+
+	logger.Info("Successfully obtained domain certificate")
 	return nil
 }
 
