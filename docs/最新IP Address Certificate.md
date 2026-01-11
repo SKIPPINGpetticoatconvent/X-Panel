@@ -24,3 +24,11 @@ curl https://get.acme.sh | sh -s email=my@example.com
 >--certificate-profile shortlived：申请一个短期证书（最长90天？）。
 >--days 3：证书的有效期是 3 天。
 >--standalone：使用 standalone 模式验证，不依赖现有的 Web 服务器。（需要80/443端口
+
+证书文件在哪里？
+生成的证书默认保存在 /root/.acme.sh/64.23.194.105_ecc/ 路径下，你要使用的是：
+
+```bash
+/root/.acme.sh/64.23.194.105_ecc/64.23.194.105.key （私钥）
+/root/.acme.sh/64.23.194.105_ecc/fullchain.cer （完整证书链）
+```
