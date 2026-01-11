@@ -24,30 +24,30 @@ jobs:
         go-version: '1.25.5'
         cache: true
 
-    - name: Install Podman
+    - name: Install Docker
       run: |
         sudo apt-get update
-        sudo apt-get install -y podman
-        podman --version
+        sudo apt-get install -y docker.io
+        docker --version
 
     - name: Download dependencies
       run: go mod download
 
     - name: Run E2E tests
       run: |
-        export TEST_CONTAINER_RUNTIME=podman
+        export TEST_CONTAINER_RUNTIME=docker
         go test -v -timeout 20m ./tests/e2e/...
       env:
-        TEST_CONTAINER_RUNTIME: podman
+        TEST_CONTAINER_RUNTIME: docker
 
     - name: Collect test logs
       if: always()
       run: |
-        podman logs x-panel-e2e-container || true
-        podman ps -a || true
+        docker logs x-panel-e2e-container || true
+        docker ps -a || true
 
     - name: Cleanup containers
       if: always()
       run: |
-        podman rm -f x-panel-e2e-container || true
-        podman rmi x-panel-e2e:latest || true
+        docker rm -f x-panel-e2e-container || true
+        docker rmi x-panel-e2e:latest || true
