@@ -1385,6 +1385,32 @@ echo ""
 show_menu
 }
 
+cert_management_menu() {
+    echo -e "${yellow}域名/IP 证书申请管理${plain}"
+    echo ""
+    echo -e "${green}\t1.${plain} 域名证书申请 (传统域名，如 example.com)"
+    echo -e "${green}\t2.${plain} IP证书申请 (纯IP地址，如 107.174.245.44)"
+    echo -e "${green}\t0.${plain} 返回主菜单"
+    read -p "请输入选项: " choice
+    case "$choice" in
+    0)
+        show_menu
+        ;;
+    1)
+        echo -e "${yellow}正在启动域名证书申请流程...${plain}"
+        ssl_cert_issue
+        ;;
+    2)
+        echo -e "${yellow}正在启动IP证书申请流程...${plain}"
+        request_ip_cert
+        ;;
+    *)
+        LOGE "无效选项，请重新选择"
+        cert_management_menu
+        ;;
+    esac
+}
+
 run_speedtest() {
     # Check if Speedtest is already installed
     if ! command -v speedtest &>/dev/null; then
@@ -1882,7 +1908,7 @@ show_menu() {
   ${green}16.${plain} 启用开机启动
   ${green}17.${plain} 禁用开机启动
 ——————————————————————
-  ${green}18.${plain} IP 证书申请
+  ${green}18.${plain} 域名/IP 证书申请管理
   ${green}19.${plain} CF SSL 证书
   ${green}20.${plain} IP 限制管理
   ${green}21.${plain} 防火墙管理
@@ -1954,7 +1980,7 @@ show_menu() {
         check_install && disable
         ;;
     18)
-        request_ip_cert
+        cert_management_menu
         ;;
     19)
         ssl_cert_issue_CF

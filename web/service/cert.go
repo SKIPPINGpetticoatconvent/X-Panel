@@ -30,9 +30,12 @@ type CertService struct {
 }
 
 func NewCertService(settingService *SettingService) *CertService {
-	return &CertService{
+	c := &CertService{
 		settingService: settingService,
 	}
+	// Directly initialize AcmeShService to ensure it's available in CLI mode
+	c.acmeShService = NewAcmeShService()
+	return c
 }
 
 func (c *CertService) SetServerService(s *ServerService) {
