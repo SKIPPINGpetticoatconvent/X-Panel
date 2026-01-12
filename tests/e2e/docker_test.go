@@ -337,7 +337,7 @@ func TestDockerE2E(t *testing.T) {
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../../",
+			Context:       ".",
 			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
@@ -572,7 +572,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../../",
+			Context:       ".",
 			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
@@ -689,7 +689,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../../",
+			Context:       ".",
 			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
@@ -814,7 +814,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../../",
+			Context:       ".",
 			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,

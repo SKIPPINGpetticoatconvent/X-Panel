@@ -29,7 +29,7 @@ type XPanelContainer struct {
 func NewXPanelContainer(ctx context.Context) (*XPanelContainer, error) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
-			Context:       "../../",
+			Context:       ".",
 			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
