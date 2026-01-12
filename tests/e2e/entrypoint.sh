@@ -3,18 +3,20 @@ set -e
 
 echo "🟢 [Test] Starting initialization..."
 
-# 1. 清理旧数据库，确保生成全新的
-# 我们不猜测数据库到底在哪里，直接把可能的位置都删了
+# 1. 清理旧数据库
 rm -f /etc/x-ui/x-ui.db /app/x-ui.db
 
 # 确保数据库目录存在
 mkdir -p /etc/x-ui
 
+# 调试：打印帮助信息确认参数存在
+echo "🟢 [Test] Checking setting command help..."
+/app/x-ui setting -help || true
+
 # 2. 初始化 (生成数据库)
-# 当没有旧数据库干扰时，setting 命令会创建一个全新的数据库
-# 并严格按照我们的参数（-webBasePath /）写入配置
+# 使用 -key=value 格式以确保正确解析
 echo "🟢 [Test] Initializing settings..."
-/app/x-ui setting -username admin -password admin -port 13688 -webBasePath /
+/app/x-ui setting -webBasePath=/ -username=admin -password=admin -port=13688
 
 # 3. 启动
 echo "🟢 [Test] Starting x-ui..."
