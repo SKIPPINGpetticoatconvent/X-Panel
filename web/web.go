@@ -389,13 +389,13 @@ func (s *Server) Start() (err error) {
 		return err
 	}
 
-	certFile, err := s.settingService.GetCertFile()
+	certFile, keyFile, err := s.settingService.GetEffectiveCertPaths()
 	if err != nil {
-		return err
-	}
-	keyFile, err := s.settingService.GetKeyFile()
-	if err != nil {
-		return err
+		// Log warning but don't fail yet, maybe we fall back to HTTP
+		logger.Warningf("Failed to get effective cert paths: %v", err)
+		// Ensure empty strings if error
+		certFile = ""
+		keyFile = ""
 	}
 	listen, err := s.settingService.GetListen()
 	if err != nil {
@@ -470,8 +470,7 @@ func (s *Server) Start() (err error) {
 		}
 
 		// 从设置加载证书路径并加载证书
-		certFile, _ := s.settingService.GetCertFile()
-		keyFile, _ := s.settingService.GetKeyFile()
+		certFile, keyFile, _ := s.settingService.GetEffectiveCertPaths()
 		if certFile != "" && keyFile != "" {
 			s.tlsCertManager.SetCertPaths(certFile, keyFile)
 			if err := s.tlsCertManager.ReloadCert(); err != nil {
