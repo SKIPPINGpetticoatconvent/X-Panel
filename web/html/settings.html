@@ -162,6 +162,21 @@
 {{template "component/aThemeSwitch" .}}
 {{template "component/aSettingListItem" .}}
 {{template "modals/twoFactorModal"}}
+
+<a-modal id="self-signed-modal" v-model="showSelfSignedModal" title="Generate Self-signed Certificate" @ok="generateSelfSignedCert" :confirm-loading="generatingCert">
+    <a-form layout="vertical">
+        <a-form-item label="Domain / Common Name">
+            <a-input v-model="selfSignedForm.domain" placeholder="e.g. 192.168.1.1 or example.com"></a-input>
+        </a-form-item>
+        <a-form-item label="Validity Days">
+            <a-input-number v-model="selfSignedForm.days" :min="1" :max="36500" style="width: 100%"></a-input-number>
+        </a-form-item>
+        <a-form-item>
+            <a-checkbox v-model="selfSignedForm.apply">Apply to Panel Settings automatically</a-checkbox>
+        </a-form-item>
+    </a-form>
+</a-modal>
+
 <script>
   const app = new Vue({
     delimiters: ['[[', ']]'],
@@ -188,6 +203,13 @@
         issuer: '',
         subject: '',
         daysRemaining: 0
+      },
+      showSelfSignedModal: false,
+      generatingCert: false,
+      selfSignedForm: {
+          domain: '',
+          days: 3650,
+          apply: true
       },
       applyingCert: false,
       remarkModels: { i: 'Inbound', e: 'Email', o: 'Other' },
@@ -354,6 +376,32 @@
         if (msg.success) {
           this.certStatus = msg.obj;
         }
+      },
+      
+      openSelfSignedModal() {
+          this.selfSignedForm.domain = this.allSetting.webDomain || window.location.hostname;
+          this.showSelfSignedModal = true;
+      },
+
+      async generateSelfSignedCert() {
+          this.generatingCert = true;
+          try {
+            const msg = await HttpUtil.post("/panel/setting/cert/generateSelfSigned", this.selfSignedForm);
+            if (msg.success) {
+                this.showSelfSignedModal = false;
+                if (this.selfSignedForm.apply) {
+                    this.allSetting.webCertFile = msg.obj.certPath;
+                    this.allSetting.webKeyFile = msg.obj.keyPath;
+                    this.$message.success("Certificate generated and applied.");
+                } else {
+                    this.$message.success("Certificate generated at: " + msg.obj.certPath);
+                }
+            } else {
+                this.$message.error(msg.msg);
+            }
+          } finally {
+            this.generatingCert = false;
+          }
       },
 
       // 申请 IP 证书

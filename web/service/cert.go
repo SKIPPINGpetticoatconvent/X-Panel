@@ -2,10 +2,17 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -15,22 +22,22 @@ import (
 )
 
 type CertService struct {
-	settingService      *SettingService
-	serverService       *ServerService
-	tgbot               TelegramService
+	settingService *SettingService
+	serverService  *ServerService
+	tgbot          TelegramService
 
 	// Certificate Services
-	legoIPService       *LegoIPService
-	certMagicService    *CertMagicDomainService
+	legoIPService    *LegoIPService
+	certMagicService *CertMagicDomainService
 
 	// Improvement Modules
-	portResolver        *PortConflictResolver
-	renewalManager      *AggressiveRenewalManager
-	hotReloader         *CertHotReloader
-	alertFallback       *CertAlertFallback
+	portResolver   *PortConflictResolver
+	renewalManager *AggressiveRenewalManager
+	hotReloader    *CertHotReloader
+	alertFallback  *CertAlertFallback
 
 	// TLS Certificate Manager for dynamic loading
-	tlsCertManager      *TLSCertManager
+	tlsCertManager *TLSCertManager
 
 	initOnce sync.Once
 	mutex    sync.RWMutex // 细粒度并发锁
@@ -334,6 +341,119 @@ func (c *CertService) checkAndRenewCertificates() {
 			}
 		}
 	}
+}
+
+// GenerateSelfSignedCert generates a self-signed certificate and key
+func (c *CertService) GenerateSelfSignedCert(domain string, days int, targetDir string, apply bool) (string, string, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if domain == "" {
+		domain = "x-ui"
+	}
+	if days <= 0 {
+		days = 3650 // Default ~10 years
+	}
+	if targetDir == "" {
+		targetDir = "bin/cert/self_signed"
+	}
+
+	// 1. Generate Private Key
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	// 2. Create Certificate Template
+	notBefore := time.Now()
+	notAfter := notBefore.Add(time.Duration(days) * 24 * time.Hour)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate serial number: %w", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"X-Panel Self-Signed"},
+			CommonName:   domain,
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	// Add IP SAN if domain looks like an IP
+	if strings.Count(domain, ".") == 3 {
+		template.DNSNames = []string{domain}
+		// Also add as IPAddress if it parses
+		// ip := net.ParseIP(domain)
+		// if ip != nil {
+		// 	template.IPAddresses = []net.IP{ip}
+		// }
+	} else {
+		template.DNSNames = []string{domain}
+	}
+
+	// 3. Create Certificate
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	// 4. Save to files
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return "", "", fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	certPath := filepath.Join(targetDir, "cert.pem")
+	keyPath := filepath.Join(targetDir, "key.pem")
+
+	// Write Cert
+	certOut, err := os.Create(certPath)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to open cert.pem for writing: %w", err)
+	}
+	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	certOut.Close()
+
+	// Write Key
+	keyOut, err := os.Create(keyPath)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to open key.pem for writing: %w", err)
+	}
+	privBytes := x509.MarshalPKCS1PrivateKey(priv)
+	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: privBytes})
+	keyOut.Close()
+
+	logger.Infof("Self-signed certificate generated at: %s, %s", certPath, keyPath)
+
+	if apply {
+		// Update settings
+		if err := c.settingService.SetCertFile(certPath); err != nil {
+			logger.Warningf("Failed to set cert file setting: %v", err)
+		}
+		if err := c.settingService.SetKeyFile(keyPath); err != nil {
+			logger.Warningf("Failed to set key file setting: %v", err)
+		}
+
+		// Reload TLS
+		if c.tlsCertManager != nil {
+			c.tlsCertManager.SetCertPaths(certPath, keyPath)
+			if err := c.tlsCertManager.ReloadCert(); err != nil {
+				logger.Warningf("Failed to reload self-signed certificate in TLS manager: %v", err)
+				return certPath, keyPath, fmt.Errorf("generated but failed to reload: %w", err)
+			}
+		}
+		logger.Info("Self-signed certificate applied and TLS reloaded")
+	}
+
+	return certPath, keyPath, nil
 }
 
 // --- Adapter Implementations ---

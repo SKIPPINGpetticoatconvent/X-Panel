@@ -22,6 +22,12 @@ type updateUserForm struct {
 	NewPassword string `json:"newPassword" form:"newPassword"`
 }
 
+type selfSignedCertForm struct {
+	Domain string `json:"domain"`
+	Days   int    `json:"days"`
+	Apply  bool   `json:"apply"`
+}
+
 type SettingController struct {
 	settingService service.SettingService
 	userService    service.UserService
@@ -47,6 +53,7 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/restartPanel", a.restartPanel)
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
 	g.POST("/cert/apply", a.applyIPCert)
+	g.POST("/cert/generateSelfSigned", a.generateSelfSignedCert)
 	g.GET("/cert/status", a.getCertStatus)
 }
 
@@ -224,4 +231,24 @@ func (a *SettingController) getCertStatus(c *gin.Context) {
 	}
 
 	jsonObj(c, status, nil)
+}
+
+func (a *SettingController) generateSelfSignedCert(c *gin.Context) {
+	form := &selfSignedCertForm{}
+	err := c.ShouldBind(form)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.invalidParams"), err)
+		return
+	}
+
+	certPath, keyPath, err := a.certService.GenerateSelfSignedCert(form.Domain, form.Days, "", form.Apply)
+	if err != nil {
+		jsonMsg(c, "Generate failed: "+err.Error(), nil)
+		return
+	}
+
+	jsonObj(c, map[string]string{
+		"certPath": certPath,
+		"keyPath":  keyPath,
+	}, nil)
 }

@@ -1,9 +1,20 @@
 {{define "settings/panel/general"}}
 <style>
-.red-placeholder input::-webkit-input-placeholder { color: red !important; }
-.red-placeholder input::-moz-placeholder { color: red !important; }
-.red-placeholder input:-ms-input-placeholder { color: red !important; }
-.red-placeholder input::placeholder { color: red !important; }
+    .red-placeholder input::-webkit-input-placeholder {
+        color: red !important;
+    }
+
+    .red-placeholder input::-moz-placeholder {
+        color: red !important;
+    }
+
+    .red-placeholder input:-ms-input-placeholder {
+        color: red !important;
+    }
+
+    .red-placeholder input::placeholder {
+        color: red !important;
+    }
 </style>
 <a-collapse default-active-key="1">
     <a-collapse-panel key="1" header='{{ i18n "pages.xray.generalConfigs"}}'>
@@ -103,14 +114,22 @@
             <template #title>{{ i18n "pages.settings.publicKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.publicKeyPathDesc"}}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.webCertFile" placeholder="/root/cert/域名/fullchain.pem" class="red-placeholder"></a-input>
+                <a-input type="text" v-model="allSetting.webCertFile" placeholder="/root/cert/域名/fullchain.pem"
+                    class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
         <a-setting-list-item paddings="small">
             <template #title>{{ i18n "pages.settings.privateKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.privateKeyPathDesc"}}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/cert/域名/privkey.pem" class="red-placeholder"></a-input>
+                <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/cert/域名/privkey.pem"
+                    class="red-placeholder"></a-input>
+            </template>
+        </a-setting-list-item>
+        <a-setting-list-item paddings="small">
+            <template #title>Self-signed Cert</template>
+            <template #control>
+                <a-button type="primary" @click="openSelfSignedModal">Generate Self-signed Cert</a-button>
             </template>
         </a-setting-list-item>
         <!-- IP 证书设置区域 -->
@@ -123,7 +142,8 @@
         </a-setting-list-item>
 
         <!-- 端口 80 警告提示 -->
-        <a-alert v-if="allSetting.webPort == 80" type="warning" :message='{{ i18n "pages.settings.ipCert.port80Warning" }}' show-icon style="margin: 16px 0;"></a-alert>
+        <a-alert v-if="allSetting.webPort == 80" type="warning"
+            :message='{{ i18n "pages.settings.ipCert.port80Warning" }}' show-icon style="margin: 16px 0;"></a-alert>
         <!-- 邮箱输入 -->
         <a-setting-list-item paddings="small" v-if="allSetting.ipCertEnable">
             <template #title>{{ i18n "pages.settings.ipCert.email" }}</template>
@@ -143,17 +163,20 @@
         <!-- 申请按钮 -->
         <a-list-item v-if="allSetting.ipCertEnable">
             <a-space direction="horizontal" :style="{ padding: '0 20px' }">
-                <a-button type="primary" @click="applyIPCert" :loading="applyingCert">{{ i18n "pages.settings.ipCert.applyBtn" }}</a-button>
+                <a-button type="primary" @click="applyIPCert" :loading="applyingCert">{{ i18n
+                    "pages.settings.ipCert.applyBtn" }}</a-button>
             </a-space>
         </a-list-item>
 
         <!-- 证书状态显示 -->
-        <a-card v-if="allSetting.ipCertEnable && certStatus.certExists" :title='{{ i18n "pages.settings.ipCert.status" }}' size="small" style="margin: 16px 0;">
+        <a-card v-if="allSetting.ipCertEnable && certStatus.certExists"
+            :title='{{ i18n "pages.settings.ipCert.status" }}' size="small" style="margin: 16px 0;">
             <p><strong>{{ i18n "pages.settings.ipCert.validFrom" }}:</strong> [[ certStatus.notBefore ]]</p>
             <p><strong>{{ i18n "pages.settings.ipCert.validUntil" }}:</strong> [[ certStatus.notAfter ]]</p>
             <p><strong>{{ i18n "pages.settings.ipCert.issuer" }}:</strong> [[ certStatus.issuer ]]</p>
             <p><strong>{{ i18n "pages.settings.ipCert.daysRemaining" }}:</strong>
-                <a-tag :color="certStatus.daysRemaining < 3 ? 'red' : certStatus.daysRemaining < 7 ? 'orange' : 'green'">
+                <a-tag
+                    :color="certStatus.daysRemaining < 3 ? 'red' : certStatus.daysRemaining < 7 ? 'orange' : 'green'">
                     [[ certStatus.daysRemaining ]] {{ i18n "days" }}
                 </a-tag>
             </p>
@@ -188,7 +211,8 @@
             <template #title>{{ i18n "pages.settings.datepicker"}}</template>
             <template #description>{{ i18n "pages.settings.datepickerDescription"}}</template>
             <template #control>
-                <a-select :style="{ width: '100%' }" :dropdown-class-name="themeSwitcher.currentTheme" v-model="datepicker">
+                <a-select :style="{ width: '100%' }" :dropdown-class-name="themeSwitcher.currentTheme"
+                    v-model="datepicker">
                     <a-select-option v-for="item in datepickerList" :value="item.value">
                         <span v-text="item.name"></span>
                     </a-select-option>
