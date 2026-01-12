@@ -79,6 +79,16 @@ var defaultValueMap = map[string]string{
 	"ipCertEmail":         "",
 	"ipCertTarget":        "",
 	"ipCertPath":          "",
+	// Domain certificate settings
+	"domainCertEnable": "false",
+	"domainCertEmail":  "",
+	"domainCertDomain": "",
+	"domainCertPath":   "",
+	// Certificate source setting: "manual", "ip", "domain"
+	// "manual" = use webCertFile/webKeyFile as configured
+	// "ip" = use IP certificate (ipCertPath)
+	// "domain" = use domain certificate (domainCertPath)
+	"certSource": "manual",
 }
 
 type SettingService struct{}
@@ -685,6 +695,100 @@ func (s *SettingService) GetIpCertPath() (string, error) {
 
 func (s *SettingService) SetIpCertPath(value string) error {
 	return s.setString("ipCertPath", value)
+}
+
+// Domain Certificate Settings
+
+func (s *SettingService) GetDomainCertEnable() (bool, error) {
+	return s.getBool("domainCertEnable")
+}
+
+func (s *SettingService) SetDomainCertEnable(value bool) error {
+	return s.setBool("domainCertEnable", value)
+}
+
+func (s *SettingService) GetDomainCertEmail() (string, error) {
+	return s.getString("domainCertEmail")
+}
+
+func (s *SettingService) SetDomainCertEmail(value string) error {
+	return s.setString("domainCertEmail", value)
+}
+
+func (s *SettingService) GetDomainCertDomain() (string, error) {
+	return s.getString("domainCertDomain")
+}
+
+func (s *SettingService) SetDomainCertDomain(value string) error {
+	return s.setString("domainCertDomain", value)
+}
+
+func (s *SettingService) GetDomainCertPath() (string, error) {
+	return s.getString("domainCertPath")
+}
+
+func (s *SettingService) SetDomainCertPath(value string) error {
+	return s.setString("domainCertPath", value)
+}
+
+// Certificate Source Settings
+// certSource can be "manual", "ip", or "domain"
+
+func (s *SettingService) GetCertSource() (string, error) {
+	return s.getString("certSource")
+}
+
+func (s *SettingService) SetCertSource(value string) error {
+	// 验证值是否有效
+	if value != "manual" && value != "ip" && value != "domain" {
+		return fmt.Errorf("invalid certSource value: %s (must be 'manual', 'ip', or 'domain')", value)
+	}
+	return s.setString("certSource", value)
+}
+
+// GetEffectiveCertPaths returns the effective certificate and key paths based on certSource setting
+// This allows switching between IP certificate, domain certificate, and manual certificate
+func (s *SettingService) GetEffectiveCertPaths() (certPath, keyPath string, err error) {
+	source, err := s.GetCertSource()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get certSource: %w", err)
+	}
+
+	switch source {
+	case "ip":
+		basePath, err := s.GetIpCertPath()
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get IP cert path: %w", err)
+		}
+		if basePath == "" {
+			return "", "", fmt.Errorf("IP certificate path not configured")
+		}
+		return basePath + ".crt", basePath + ".key", nil
+
+	case "domain":
+		basePath, err := s.GetDomainCertPath()
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get domain cert path: %w", err)
+		}
+		if basePath == "" {
+			return "", "", fmt.Errorf("domain certificate path not configured")
+		}
+		return basePath + ".crt", basePath + ".key", nil
+
+	case "manual":
+		fallthrough
+	default:
+		// Use manually configured webCertFile and webKeyFile
+		cert, err := s.GetCertFile()
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get cert file: %w", err)
+		}
+		key, err := s.GetKeyFile()
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get key file: %w", err)
+		}
+		return cert, key, nil
+	}
 }
 
 func (s *SettingService) GetIpLimitEnable() (bool, error) {

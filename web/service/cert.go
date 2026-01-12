@@ -213,8 +213,84 @@ func (c *CertService) ObtainDomainCert(domain, email string, opts *CertOptions) 
 		return fmt.Errorf("failed to obtain domain certificate: %w", err)
 	}
 
+	// Save domain certificate path to configuration
+	installPath := "bin/cert/domains/" + domain
+	if err := c.settingService.SetDomainCertPath(installPath); err != nil {
+		logger.Warningf("Failed to set domain cert path: %v", err)
+	}
+
+	// 触发 TLS 证书重载
+	if c.tlsCertManager != nil {
+		certPath := installPath + ".crt"
+		keyPath := installPath + ".key"
+		c.tlsCertManager.SetCertPaths(certPath, keyPath)
+		if err := c.tlsCertManager.ReloadCert(); err != nil {
+			logger.Warningf("Failed to reload domain certificate in TLS manager: %v", err)
+		}
+	}
+
 	logger.Info("Successfully obtained domain certificate")
 	return nil
+}
+
+// SwitchCertSource 切换证书来源
+// source 可以是 "manual"、"ip" 或 "domain"
+// 该方法会更新设置并重新加载 TLS 证书
+func (c *CertService) SwitchCertSource(source string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	// 验证并设置新的证书来源
+	if err := c.settingService.SetCertSource(source); err != nil {
+		return fmt.Errorf("failed to set cert source: %w", err)
+	}
+
+	// 获取对应的证书路径
+	certPath, keyPath, err := c.settingService.GetEffectiveCertPaths()
+	if err != nil {
+		return fmt.Errorf("failed to get effective cert paths for source '%s': %w", source, err)
+	}
+
+	// 验证证书文件存在
+	if certPath == "" || keyPath == "" {
+		return fmt.Errorf("certificate paths are empty for source '%s'", source)
+	}
+
+	// 更新 webCertFile 和 webKeyFile 设置（供 web.go 使用）
+	if err := c.settingService.SetCertFile(certPath); err != nil {
+		logger.Warningf("Failed to update webCertFile: %v", err)
+	}
+	if err := c.settingService.SetKeyFile(keyPath); err != nil {
+		logger.Warningf("Failed to update webKeyFile: %v", err)
+	}
+
+	// 如果 TLS 证书管理器存在，重新加载证书
+	if c.tlsCertManager != nil {
+		c.tlsCertManager.SetCertPaths(certPath, keyPath)
+		if err := c.tlsCertManager.ReloadCert(); err != nil {
+			return fmt.Errorf("failed to reload TLS certificate: %w", err)
+		}
+		logger.Infof("Successfully switched to %s certificate and reloaded TLS", source)
+	} else {
+		logger.Infof("Certificate source switched to %s (TLS manager not available, restart required)", source)
+	}
+
+	return nil
+}
+
+// GetCurrentCertInfo 获取当前证书信息
+func (c *CertService) GetCurrentCertInfo() (source, certPath, keyPath string, err error) {
+	source, err = c.settingService.GetCertSource()
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to get cert source: %w", err)
+	}
+
+	certPath, keyPath, err = c.settingService.GetEffectiveCertPaths()
+	if err != nil {
+		return source, "", "", fmt.Errorf("failed to get effective cert paths: %w", err)
+	}
+
+	return source, certPath, keyPath, nil
 }
 
 // RenewLoop runs a background goroutine that periodically checks and renews IP certificates

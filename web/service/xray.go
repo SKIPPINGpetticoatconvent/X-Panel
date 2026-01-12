@@ -416,6 +416,14 @@ func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, 
 		logger.Debug("Attempted to fetch Xray traffic, but Xray is not running:", err)
 		return nil, nil, err
 	}
+
+	// 防御性检查：确保 xrayAPI 已注入
+	if s.xrayAPI == nil {
+		err := errors.New("xrayAPI not initialized, please inject via SetXrayAPI")
+		logger.Warning("GetXrayTraffic failed:", err)
+		return nil, nil, err
+	}
+
 	apiPort := p.GetAPIPort()
 	s.xrayAPI.Init(apiPort)
 	defer s.xrayAPI.Close()
