@@ -298,11 +298,6 @@ func (lf *LogForwarder) flushLogs(batch []*LogMessage) {
 	}
 }
 
-// forwardLog 执行实际的日志转发（保留用于兼容性，但现在主要使用 flushLogs）
-func (lf *LogForwarder) forwardLog(logMsg *LogMessage) {
-	lf.flushLogs([]*LogMessage{logMsg})
-}
-
 // formatLogMessage 格式化日志消息
 func (lf *LogForwarder) formatLogMessage(logMsg *LogMessage) string {
 	// 根据级别格式化消息，使用清晰的格式和 HTML 标记

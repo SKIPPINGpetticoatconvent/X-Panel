@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"x-ui/logger"
 )
 
 // TLSCertManager 管理 TLS 证书的动态加载
@@ -35,10 +37,6 @@ func (m *TLSCertManager) GetTLSConfig() *tls.Config {
 	}
 }
 
-
-
-
-
 // ReloadCert 从磁盘重新加载证书到内存
 func (m *TLSCertManager) ReloadCert() error {
 	cert, err := tls.LoadX509KeyPair(m.certPath, m.keyPath)
@@ -63,9 +61,7 @@ func (m *TLSCertManager) ReloadCert() error {
 		// 异步发送通知，不影响证书重载
 		go func() {
 			if sendErr := m.alertService.SendAlert("证书更新通知", message, "INFO"); sendErr != nil {
-				// 只记录日志，不返回错误
-				// 由于这个函数在 goroutine 中运行，这里没有 logger 可以用
-				// 但在实际项目中，应该有适当的日志记录
+				logger.Warningf("Failed to send certificate update alert: %v", sendErr)
 			}
 		}()
 	}
@@ -80,4 +76,3 @@ func (m *TLSCertManager) SetCertPaths(certPath, keyPath string) {
 	m.keyPath = keyPath
 	m.mu.Unlock()
 }
-

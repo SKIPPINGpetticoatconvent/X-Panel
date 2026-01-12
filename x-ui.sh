@@ -24,9 +24,11 @@ function LOGI() {
 
 # Check OS and set release variable
 if [[ -f /etc/os-release ]]; then
+    # shellcheck source=/dev/null
     source /etc/os-release
     release=$ID
 elif [[ -f /usr/lib/os-release ]]; then
+    # shellcheck source=/dev/null
     source /usr/lib/os-release
     release=$ID
 else
@@ -113,13 +115,13 @@ iplimit_log_path="${log_folder}/3xipl.log"
 iplimit_banned_log_path="${log_folder}/3xipl-banned.log"
 
 confirm() {
-    if [[ $# > 1 ]]; then
-        echo && read -p "$1 [Default $2]: " temp
+    if [[ $# -gt 1 ]]; then
+        echo && read -r -p "$1 [Default $2]: " temp
         if [[ "${temp}" == "" ]]; then
             temp=$2
         fi
     else
-        read -p "$1 [y/n]: " temp
+        read -r -p "$1 [y/n]: " temp
     fi
     if [[ "${temp}" == "y" || "${temp}" == "Y" ]]; then
         return 0
@@ -129,8 +131,7 @@ confirm() {
 }
 
 confirm_restart() {
-    confirm "重启面板，注意：重启面板也会重启 Xray" "y"
-    if [[ $? == 0 ]]; then
+    if confirm "重启面板，注意：重启面板也会重启 Xray" "y"; then
         restart
     else
         show_menu
@@ -138,13 +139,12 @@ confirm_restart() {
 }
 
 before_show_menu() {
-    echo && echo -n -e "${yellow}按 Enter 键返回主菜单：${plain}" && read temp
+    echo && echo -n -e "${yellow}按 Enter 键返回主菜单：${plain}" && read -r temp
     show_menu
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
-    if [[ $? == 0 ]]; then
+    if bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh); then
         if [[ $# == 0 ]]; then
             start
         else
@@ -154,25 +154,23 @@ install() {
 }
 
 update() {
-    confirm "$(echo -e "${green}该功能将强制安装最新版本，并且数据不会丢失。${red}你想继续吗？${plain}---->>请输入")" "y"
-    if [[ $? != 0 ]]; then
+    if ! confirm "$(echo -e "${green}该功能将强制安装最新版本，并且数据不会丢失。${red}你想继续吗？${plain}---->>请输入")" "y"; then
         LOGE "已取消"
         if [[ $# == 0 ]]; then
             before_show_menu
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
-    if [[ $? == 0 ]]; then
+    if bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh); then
         LOGI "更新完成，面板已自动重启"
         exit 0
     fi
 }
 
+# shellcheck disable=SC2120
 update_menu() {
     echo -e "${yellow}更新菜单项${plain}"
-    confirm "此功能会将所有菜单项更新为最新显示状态" "y"
-    if [[ $? != 0 ]]; then
+    if ! confirm "此功能会将所有菜单项更新为最新显示状态" "y"; then
         LOGE "Cancelled"
         if [[ $# == 0 ]]; then
             before_show_menu
@@ -184,7 +182,7 @@ update_menu() {
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     
-     if [[ $? == 0 ]]; then
+     if [ -f /usr/bin/x-ui ]; then
         echo -e "${green}更新成功，面板已自动重启${plain}"
         exit 0
     else
@@ -195,7 +193,7 @@ update_menu() {
 
 custom_version() {
     echo "输入面板版本 (例: 2.3.8):"
-    read panel_version
+    read -r panel_version
 
     if [ -z "$panel_version" ]; then
         echo "面板版本不能为空。"
@@ -208,7 +206,7 @@ custom_version() {
     install_command="bash <(curl -Ls $download_link) v$panel_version"
 
     echo "下载并安装面板版本 $panel_version..."
-    eval $install_command
+    eval "$install_command"
 }
 
 # Function to handle the deletion of the script file
@@ -218,8 +216,7 @@ delete_script() {
 }
 
 uninstall() {
-    confirm "您确定要卸载面板吗? Xray 也将被卸载!" "n"
-    if [[ $? != 0 ]]; then
+    if ! confirm "您确定要卸载面板吗? Xray 也将被卸载!" "n"; then
         if [[ $# == 0 ]]; then
             show_menu
         fi
@@ -243,9 +240,9 @@ uninstall() {
     delete_script
 }
 
+# shellcheck disable=SC2120
 reset_user() {
-    confirm "您确定重置面板的用户名和密码吗?" "n"
-    if [[ $? != 0 ]]; then
+    if ! confirm "您确定重置面板的用户名和密码吗?" "n"; then
         if [[ $# == 0 ]]; then
             show_menu
         fi
@@ -255,7 +252,7 @@ reset_user() {
     [[ -z $config_account ]] && config_account=$(gen_random_string 8)
     read -rp "请设置密码 [默认为随机密码]: " config_password
     [[ -z $config_password ]] && config_password=$(gen_random_string 8)
-    /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password} >/dev/null 2>&1
+    /usr/local/x-ui/x-ui setting -username "${config_account}" -password "${config_password}" >/dev/null 2>&1
     /usr/local/x-ui/x-ui setting -remove_secret >/dev/null 2>&1
     echo -e "面板登录用户名已重置为：${green} ${config_account} ${plain}"
     echo -e "面板登录密码已重置为：${green} ${config_password} ${plain}"
@@ -266,7 +263,8 @@ reset_user() {
 
 gen_random_string() {
     local length="$1"
-    local random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
+    local random_string
+    random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
     echo "$random_string"
 }
 
@@ -289,9 +287,9 @@ reset_webbasepath() {
     echo -e "${green}请使用新的路径登录访问面板${plain}"
 }
 
+# shellcheck disable=SC2120
 reset_config() {
-    confirm "您确定要重置所有面板设置，帐户数据不会丢失，用户名和密码不会更改" "n"
-    if [[ $? != 0 ]]; then
+    if ! confirm "您确定要重置所有面板设置，帐户数据不会丢失，用户名和密码不会更改" "n"; then
         if [[ $# == 0 ]]; then
             show_menu
         fi
@@ -303,8 +301,7 @@ reset_config() {
 }
 
 check_config() {
-    info=$(/usr/local/x-ui/x-ui setting -show true)
-    if [[ $? != 0 ]]; then
+    if ! info=$(/usr/local/x-ui/x-ui setting -show true); then
         LOGE "获取当前设置错误，请检查日志"
         show_menu
     fi
@@ -314,15 +311,20 @@ check_config() {
     # 获取 IPv4 和 IPv6 地址
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    local existing_cert
+    existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key
+    existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_cert
+        existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
         domain=$(basename "$(dirname "$existing_cert")")
         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
     fi
@@ -370,27 +372,25 @@ check_config() {
 }
 
 set_port() {
-    echo && echo -n -e "输入端口号 [1-65535]: " && read port
+    echo && echo -n -e "输入端口号 [1-65535]: " && read -r port
     if [[ -z "${port}" ]]; then
         LOGD "Cancelled"
         before_show_menu
     else
-        /usr/local/x-ui/x-ui setting -port ${port}
+        /usr/local/x-ui/x-ui setting -port "${port}"
         echo -e "端口已设置，请立即重启面板，并使用新端口 ${green}${port}${plain} 以访问面板"
         confirm_restart
     fi
 }
 
 start() {
-    check_status
-    if [[ $? == 0 ]]; then
+    if check_status; then
         echo ""
         LOGI "面板正在运行，无需再次启动，如需重新启动，请选择重新启动"
     else
         systemctl start x-ui
         sleep 2
-        check_status
-        if [[ $? == 0 ]]; then
+        if check_status; then
             LOGI "X-Panel 已成功启动"
         else
             LOGE "面板启动失败，可能是启动时间超过两秒，请稍后查看日志信息"
@@ -403,15 +403,13 @@ start() {
 }
 
 stop() {
-    check_status
-    if [[ $? == 1 ]]; then
+    if ! check_status; then
         echo ""
         LOGI "面板已关闭，无需再次关闭！"
     else
         systemctl stop x-ui
         sleep 2
-        check_status
-        if [[ $? == 1 ]]; then
+        if ! check_status; then
             LOGI "X-Panel 和 Xray 已成功关闭"
         else
             LOGE "面板关闭失败，可能是停止时间超过两秒，请稍后查看日志信息"
@@ -426,8 +424,7 @@ stop() {
 restart() {
     systemctl restart x-ui
     sleep 2
-    check_status
-    if [[ $? == 0 ]]; then
+    if check_status; then
         LOGI "X-Panel 和 Xray 已成功重启"
     else
         LOGE "面板重启失败，可能是启动时间超过两秒，请稍后查看日志信息"
@@ -445,8 +442,7 @@ status() {
 }
 
 enable() {
-    systemctl enable x-ui
-    if [[ $? == 0 ]]; then
+    if systemctl enable x-ui; then
         LOGI "x-ui 已成功设置开机启动"
     else
         LOGE "x-ui 设置开机启动失败"
@@ -458,8 +454,7 @@ enable() {
 }
 
 disable() {
-    systemctl disable x-ui
-    if [[ $? == 0 ]]; then
+    if systemctl disable x-ui; then
         LOGI "x-ui 已成功取消开机启动"
     else
         LOGE "x-ui 取消开机启动失败"
@@ -481,7 +476,7 @@ bbr_menu() {
     echo -e "${green}\t1.${plain} 启用 BBR"
     echo -e "${green}\t2.${plain} 禁用 BBR"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -r -p "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -559,8 +554,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/x-ui.sh
-    if [[ $? != 0 ]]; then
+    if ! wget -O /usr/bin/x-ui -N --no-check-certificate https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/x-ui.sh; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
         before_show_menu
@@ -638,9 +632,8 @@ show_status() {
     show_xray_status
 }
 
-show_enable_status() {
-    check_enabled
-    if [[ $? == 0 ]]; then
+    show_enable_status() {
+    if check_enabled; then
         echo -e "开机启动: ${green}是${plain}"
     else
         echo -e "开机启动: ${red}否${plain}"
@@ -648,8 +641,7 @@ show_enable_status() {
 }
 
 check_xray_status() {
-    count=$(ps -ef | grep "xray-linux" | grep -v "grep" | wc -l)
-    if [[ count -ne 0 ]]; then
+    if pgrep -f "xray-linux" >/dev/null 2>&1; then
         return 0
     else
         return 1
@@ -657,8 +649,7 @@ check_xray_status() {
 }
 
 show_xray_status() {
-    check_xray_status
-    if [[ $? == 0 ]]; then
+    if check_xray_status; then
         echo -e "Xray状态: ${green}运行中${plain}"
     else
         echo -e "Xray状态: ${red}未运行${plain}"
@@ -671,7 +662,7 @@ firewall_menu() {
     echo -e "${green}\t3.${plain} 从列表中删除端口"
     echo -e "${green}\t4.${plain} 禁用防火墙"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -r -p "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -715,7 +706,7 @@ open_ports() {
     firewall-cmd --zone=public --add-port=13688/tcp --permanent
 
     # Prompt the user to enter a list of ports
-    read -p "输入您要打开的端口（例如 80,443,13688 或端口范围 400-500): " ports
+    read -r -p "输入您要打开的端口（例如 80,443,13688 或端口范围 400-500): " ports
 
     # Check if the input is valid
     if ! [[ $ports =~ ^([0-9]+|[0-9]+-[0-9]+)(,([0-9]+|[0-9]+-[0-9]+))*$ ]]; then
@@ -728,14 +719,14 @@ open_ports() {
     for port in "${PORT_LIST[@]}"; do
         if [[ $port == *-* ]]; then
             # Split the range into start and end ports
-            start_port=$(echo $port | cut -d'-' -f1)
-            end_port=$(echo $port | cut -d'-' -f2)
+            start_port=$(echo "$port" | cut -d'-' -f1)
+            end_port=$(echo "$port" | cut -d'-' -f2)
             # Loop through the range and open each port
             for ((i = start_port; i <= end_port; i++)); do
                 firewall-cmd --zone=public --add-port=$i/tcp --permanent
             done
         else
-            firewall-cmd --zone=public --add-port=$port/tcp --permanent
+            firewall-cmd --zone=public --add-port="${port}/tcp" --permanent
         fi
     done
 
@@ -748,7 +739,7 @@ open_ports() {
 
 delete_ports() {
     # Prompt the user to enter the ports they want to delete
-    read -p "输入要删除的端口（例如 80,443,13688 或范围 400-500): " ports
+    read -r -p "输入要删除的端口（例如 80,443,13688 或范围 400-500): " ports
 
     # Check if the input is valid
     if ! [[ $ports =~ ^([0-9]+|[0-9]+-[0-9]+)(,([0-9]+|[0-9]+-[0-9]+))*$ ]]; then
@@ -761,14 +752,14 @@ delete_ports() {
     for port in "${PORT_LIST[@]}"; do
         if [[ $port == *-* ]]; then
             # Split the range into start and end ports
-            start_port=$(echo $port | cut -d'-' -f1)
-            end_port=$(echo $port | cut -d'-' -f2)
+            start_port=$(echo "$port" | cut -d'-' -f1)
+            end_port=$(echo "$port" | cut -d'-' -f2)
             # Loop through the range and delete each port
             for ((i = start_port; i <= end_port; i++)); do
                 firewall-cmd --zone=public --remove-port=$i/tcp --permanent
             done
         else
-            firewall-cmd --zone=public --remove-port=$port/tcp --permanent
+            firewall-cmd --zone=public --remove-port="${port}/tcp" --permanent
         fi
     done
 
@@ -782,16 +773,16 @@ delete_ports() {
 
 update_geo() {
     local defaultBinFolder="/usr/local/x-ui/bin"
-    read -p "请输入 x-ui bin 文件夹路径，默认留空。（默认值：'${defaultBinFolder}')" binFolder
+    read -r -p "请输入 x-ui bin 文件夹路径，默认留空。（默认值：'${defaultBinFolder}')" binFolder
     binFolder=${binFolder:-${defaultBinFolder}}
     if [[ ! -d ${binFolder} ]]; then
         LOGE "文件夹 ${binFolder} 不存在！"
         LOGI "制作 bin 文件夹：${binFolder}..."
-        mkdir -p ${binFolder}
+        mkdir -p "${binFolder}"
     fi
 
     systemctl stop x-ui
-    cd ${binFolder}
+    cd "${binFolder}" || exit 1
     rm -f geoip.dat geosite.dat geoip_IR.dat geosite_IR.dat geoip_VN.dat geosite_VN.dat
     wget -N https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
     wget -N https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
@@ -800,7 +791,7 @@ update_geo() {
     wget -O geoip_VN.dat https://github.com/vuong2023/vn-v2ray-rules/releases/latest/download/geoip.dat
     wget -O geosite_VN.dat https://github.com/vuong2023/vn-v2ray-rules/releases/latest/download/geosite.dat
     systemctl start x-ui
-    echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binfolder}' 中已经更新成功 !${plain}"
+    echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binFolder}' 中已经更新成功 !${plain}"
     before_show_menu
 }
 
@@ -814,8 +805,7 @@ install_acme() {
     LOGI "正在安装 acme.sh..." 
     cd ~ || return 1 # 确保可以切换到主目录
  
-    curl -s https://get.acme.sh | sh 
-    if [ $? -ne 0 ]; then 
+    if ! curl -s https://get.acme.sh | sh; then
         LOGE "安装 acme.sh 失败。" 
         return 1 
     else 
@@ -843,7 +833,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     2) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到可撤销的证书。" 
         else 
@@ -851,7 +842,7 @@ ssl_cert_issue_main() {
             echo "$domains" 
             read -rp "请从列表中输入要撤销证书的域名：" domain 
             if echo "$domains" | grep -qw "$domain"; then 
-                ~/.acme.sh/acme.sh --revoke -d ${domain} 
+                ~/.acme.sh/acme.sh --revoke -d "${domain}" 
                 LOGI "已撤销域名的证书：$domain" 
             else 
                 echo "输入的域名无效。" 
@@ -860,7 +851,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     3) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到可更新的证书。" 
         else 
@@ -868,7 +860,7 @@ ssl_cert_issue_main() {
             echo "$domains" 
             read -rp "请从列表中输入要强制更新 SSL 证书的域名：" domain 
             if echo "$domains" | grep -qw "$domain"; then 
-                ~/.acme.sh/acme.sh --renew -d ${domain} --force 
+                ~/.acme.sh/acme.sh --renew -d "${domain}" --force 
                 LOGI "已强制更新域名的证书：$domain" 
             else 
                 echo "输入的域名无效。" 
@@ -877,7 +869,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     4) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到证书。" 
         else 
@@ -897,7 +890,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     5) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到证书。" 
         else 
@@ -933,20 +927,21 @@ ssl_cert_issue_main() {
 } 
 
 ssl_cert_issue() { 
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
     # 首先检查 acme.sh
     if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
         echo "未找到 acme.sh，将进行安装" 
-        install_acme 
-        if [ $? -ne 0 ]; then 
+        if ! install_acme; then
             LOGE "安装 acme 失败，请检查日志" 
             exit 1 
         fi 
     fi 
  
     # 安装 socat
-    case "${release}" in 
+    if ! case "${release}" in 
     ubuntu | debian | armbian) 
         apt update && apt install socat -y 
         ;; 
@@ -963,13 +958,12 @@ ssl_cert_issue() {
         echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包。${plain}\n" 
         exit 1 
         ;; 
-    esac 
-    if [ $? -ne 0 ]; then 
+    esac; then
         LOGE "安装 socat 失败，请检查日志"
         exit 1 
-     else 
-         LOGI "安装 socat 成功..." 
-     fi 
+    else 
+        LOGI "安装 socat 成功..." 
+    fi 
  
      # 在这里获取域名，我们需要验证它 
      local domain="" 
@@ -977,9 +971,11 @@ ssl_cert_issue() {
      LOGD "您的域名是: ${domain}, 正在检查..." 
  
      # 检查是否已存在证书 
-     local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
+     local currentCert
+     currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
      if [ "${currentCert}" == "${domain}" ]; then 
-         local certInfo=$(~/.acme.sh/acme.sh --list) 
+         local certInfo
+         certInfo=$(~/.acme.sh/acme.sh --list) 
          LOGE "系统已存在此域名的证书。无法再次签发。当前证书详情:" 
          LOGI "$certInfo" 
          exit 1 
@@ -1007,10 +1003,9 @@ ssl_cert_issue() {
  
      # 签发证书 
      ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt 
-     ~/.acme.sh/acme.sh --issue -d ${domain} --listen-v6 --standalone --httpport ${WebPort} --force 
-     if [ $? -ne 0 ]; then 
+     if ! ~/.acme.sh/acme.sh --issue -d "${domain}" --listen-v6 --standalone --httpport "${WebPort}" --force; then
          LOGE "签发证书失败，请检查日志。" 
-         rm -rf ~/.acme.sh/${domain} 
+         rm -rf ~/.acme.sh/"${domain}" 
          exit 1 
      else 
          LOGE "签发证书成功，正在安装证书..." 
@@ -1043,30 +1038,27 @@ ssl_cert_issue() {
      fi
      
      # 安装证书
-     ~/.acme.sh/acme.sh --installcert -d ${domain} \
-        --key-file /root/cert/${domain}/privkey.pem \
-        --fullchain-file /root/cert/${domain}/fullchain.pem \
-        --reloadcmd "${reloadCmd}"
- 
-     if [ $? -ne 0 ]; then 
+     if ! ~/.acme.sh/acme.sh --installcert -d "${domain}" \
+        --key-file /root/cert/"${domain}"/privkey.pem \
+        --fullchain-file /root/cert/"${domain}"/fullchain.pem \
+        --reloadcmd "${reloadCmd}"; then
          LOGE "安装证书失败，正在退出。" 
-         rm -rf ~/.acme.sh/${domain} 
+         rm -rf ~/.acme.sh/"${domain}" 
          exit 1 
      else 
          LOGI "安装证书成功，正在启用自动续订..." 
      fi 
  
      # 启用自动续订
-     ~/.acme.sh/acme.sh --upgrade --auto-upgrade 
-     if [ $? -ne 0 ]; then 
+     if ! ~/.acme.sh/acme.sh --upgrade --auto-upgrade; then
          LOGE "自动续订失败，证书详情：" 
          ls -lah cert/* 
-         chmod 755 $certPath/* 
+         chmod 755 "$certPath"/* 
          exit 1 
      else 
          LOGI "自动续订成功，证书详情：" 
          ls -lah cert/* 
-         chmod 755 $certPath/* 
+         chmod 755 "$certPath"/* 
      fi 
  
      # 成功安装证书后提示用户设置面板路径
@@ -1095,8 +1087,10 @@ ssl_cert_issue() {
      fi 
  } 
 ssl_cert_issue_CF() { 
-     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+     local existing_webBasePath
+     existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+     local existing_port
+     existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
      LOGI "****** 使用说明 ******" 
      LOGI "请按照以下步骤完成操作：" 
      LOGI "1. 准备好在 Cloudflare 注册的电子邮箱。" 
@@ -1105,14 +1099,11 @@ ssl_cert_issue_CF() {
      LOGI "4. 证书颁发后，系统将提示您为面板设置证书（可选）。" 
      LOGI "5. 安装后，脚本还支持自动续订 SSL 证书。" 
  
-     confirm "您确认信息并希望继续吗？[y/n]" "y" 
- 
-     if [ $? -eq 0 ]; then 
+     if confirm "您确认信息并希望继续吗？[y/n]" "y"; then 
          # 首先检查 acme.sh
          if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
              echo "未找到 acme.sh。我们将为您安装。" 
-             install_acme 
-             if [ $? -ne 0 ]; then 
+             if ! install_acme; then 
                  LOGE "安装 acme 失败，请检查日志。" 
                  exit 1 
              fi 
@@ -1136,8 +1127,7 @@ ssl_cert_issue_CF() {
          LOGD "您注册的电子邮箱地址是：${CF_AccountEmail}" 
  
          # 将默认 CA 设置为 Let's Encrypt
-         ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt 
-         if [ $? -ne 0 ]; then 
+         if ! ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt; then
              LOGE "设置默认 CA 为 Let's Encrypt 失败，脚本正在退出..." 
              exit 1 
          fi 
@@ -1146,8 +1136,7 @@ ssl_cert_issue_CF() {
          export CF_Email="${CF_AccountEmail}" 
  
          # 使用 Cloudflare DNS 颁发证书
-         ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${CF_Domain} -d *.${CF_Domain} --log --force 
-         if [ $? -ne 0 ]; then 
+         if ! ~/.acme.sh/acme.sh --issue --dns dns_cf -d "${CF_Domain}" -d "*.${CF_Domain}" --log --force; then
              LOGE "证书颁发失败，脚本正在退出..." 
              exit 1 
          else 
@@ -1157,11 +1146,10 @@ ssl_cert_issue_CF() {
           # 安装证书
          certPath="/root/cert/${CF_Domain}" 
          if [ -d "$certPath" ]; then 
-             rm -rf ${certPath} 
+             rm -rf "${certPath}" 
          fi 
  
-         mkdir -p ${certPath} 
-         if [ $? -ne 0 ]; then 
+         if ! mkdir -p "${certPath}"; then
              LOGE "创建目录失败: ${certPath}" 
              exit 1 
          fi 
@@ -1191,12 +1179,10 @@ ssl_cert_issue_CF() {
                  ;; 
              esac 
          fi 
-         ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} \
-            --key-file ${certPath}/privkey.pem \
-            --fullchain-file ${certPath}/fullchain.pem \
-            --reloadcmd "${reloadCmd}" 
-         
-         if [ $? -ne 0 ]; then 
+         if ! ~/.acme.sh/acme.sh --installcert -d "${CF_Domain}" -d "*.${CF_Domain}" \
+            --key-file "${certPath}"/privkey.pem \
+            --fullchain-file "${certPath}"/fullchain.pem \
+            --reloadcmd "${reloadCmd}"; then
              LOGE "证书安装失败，脚本正在退出..." 
              exit 1 
          else 
@@ -1204,14 +1190,13 @@ ssl_cert_issue_CF() {
          fi 
  
          # 启用自动更新
-         ~/.acme.sh/acme.sh --upgrade --auto-upgrade 
-         if [ $? -ne 0 ]; then 
+         if ! ~/.acme.sh/acme.sh --upgrade --auto-upgrade; then
              LOGE "自动更新设置失败，脚本正在退出..." 
              exit 1 
          else 
              LOGI "证书已安装并开启自动续订。具体信息如下：" 
-             ls -lah ${certPath}/* 
-             chmod 755 ${certPath}/* 
+             ls -lah "${certPath}"/* 
+             chmod 755 "${certPath}"/* 
          fi 
  
          # 成功安装证书后提示用户设置面板路径
@@ -1249,7 +1234,7 @@ warp_cloudflare() {
     echo -e "${green}\t3.${plain} 开启 / 关闭 WireProxy"
     echo -e "${green}\t4.${plain} 卸载 WARP"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -r -p "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -1283,8 +1268,10 @@ echo -e "5. 可直观在前端页面配置订阅"
 echo -e "作者：〔X-Panel面板〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_cert
+    existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key
+    existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
     echo -e "${green}面板已安装证书采用SSL保护${plain}"
@@ -1392,7 +1379,7 @@ cert_management_menu() {
     echo -e "${green}\t2.${plain} IP证书申请 (纯IP地址，如 107.174.245.44)"
     echo -e "${green}\t3.${plain} 自签证书申请 (支持 RSA/ECDSA，无需域名)"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -r -p "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -1479,10 +1466,7 @@ request_ip_cert() {
 
     LOGI "正在申请 IP 证书: $cert_ip ($cert_email)"
 
-    # 调用 Go 程序，完全信任其返回结果
-    /usr/local/x-ui/x-ui cert-request-ip -ip "$cert_ip" -email "$cert_email"
-
-    if [[ $? == 0 ]]; then
+    if /usr/local/x-ui/x-ui cert-request-ip -ip "$cert_ip" -email "$cert_email"; then
         LOGI "IP 证书申请成功，证书已自动配置到面板"
         confirm_restart
     else
@@ -1528,16 +1512,14 @@ ssl_cert_self_signed() {
         openssl ecparam -genkey -name prime256v1 -out "$key_file"
     fi
 
-    if [[ $? -ne 0 ]]; then
+    if ! openssl genrsa -out "$key_file" 2048; then
         LOGE "私钥生成失败，请检查 openssl 是否安装"
         return 1
     fi
 
     LOGI "正在生成自签名证书..."
-    openssl req -new -x509 -days "$cert_days" -key "$key_file" -out "$cert_file" \
-        -subj "/C=XX/ST=SelfSigned/L=SelfSigned/O=SelfSigned/OU=SelfSigned/CN=${cert_domain}"
-
-    if [[ $? -ne 0 ]]; then
+    if ! openssl req -new -x509 -days "$cert_days" -key "$key_file" -out "$cert_file" \
+        -subj "/C=XX/ST=SelfSigned/L=SelfSigned/O=SelfSigned/OU=SelfSigned/CN=${cert_domain}"; then
         LOGE "证书生成失败"
         return 1
     fi
@@ -1547,12 +1529,12 @@ ssl_cert_self_signed() {
     LOGI "私钥: $key_file"
 
     # Install cert to x-ui
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
 
-    /usr/local/x-ui/x-ui cert -webCert "$cert_file" -webCertKey "$key_file"
-    
-    if [[ $? == 0 ]]; then
+    if /usr/local/x-ui/x-ui cert -webCert "$cert_file" -webCertKey "$key_file"; then
         LOGI "已将证书应用到面板"
         echo -e "${green}登录访问面板URL: https://${cert_domain}:${existing_port}${existing_webBasePath}${plain}"
         confirm_restart
@@ -1615,16 +1597,18 @@ ip_in_range() {
 
     # Simple check using awk (basic implementation)
     # For full CIDR check, would need more complex logic
-    local network=$(echo $cidr | cut -d'/' -f1)
-    local prefix=$(echo $cidr | cut -d'/' -f2)
+    # local network=$(echo "$cidr" | cut -d'/' -f1)
+    local prefix
+    prefix=$(echo "$cidr" | cut -d'/' -f2)
 
     # For simplicity, check if IP starts with network prefix
     case $prefix in
         8) [[ "$ip" == 10.* ]] && return 0 ;;
         12) [[ "$ip" == 172.1[6-9].* || "$ip" == 172.2[0-9].* || "$ip" == 172.3[0-1].* ]] && return 0 ;;
-        16) [[ "$ip" == 192.168.* ]] && return 0 ;;
-        24) [[ "$ip" == 127.* ]] && return 0 ;;
-        16) [[ "$ip" == 169.254.* ]] && return 0 ;;
+        16)
+            if [[ "$ip" == 192.168.* ]]; then return 0; fi 
+            if [[ "$ip" == 169.254.* ]]; then return 0; fi
+            ;;
     esac
     return 1
 }
@@ -1639,14 +1623,13 @@ iplimit_main() {
     echo -e "${green}\t6.${plain} 重启 Fail2ban"
     echo -e "${green}\t7.${plain} 卸载 Fail2ban"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -r -p "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
         ;;
     1)
-        confirm "继续安装 Fail2ban 和 IP 限制?" "y"
-        if [[ $? == 0 ]]; then
+        if confirm "继续安装 Fail2ban 和 IP 限制?" "y"; then
             install_iplimit
         else
             iplimit_main
@@ -1655,7 +1638,7 @@ iplimit_main() {
     2)
         read -rp "请输入新的禁令持续时间（以分钟为单位）[默认 30]: " NUM
         if [[ $NUM =~ ^[0-9]+$ ]]; then
-            create_iplimit_jails ${NUM}
+            create_iplimit_jails "${NUM}"
             systemctl restart fail2ban
         else
             echo -e "${red}${NUM} 不是一个数字！ 请再试一次.${plain}"
@@ -1663,8 +1646,7 @@ iplimit_main() {
         iplimit_main
         ;;
     3)
-        confirm "继续解除所有人的 IP 限制禁令?" "y"
-        if [[ $? == 0 ]]; then
+        if confirm "继续解除所有人的 IP 限制禁令?" "y"; then
             fail2ban-client reload --restart --unban 3x-ipl
             truncate -s 0 "${iplimit_banned_log_path}"
             echo -e "${green}所有用户已成功解封${plain}"
@@ -1747,12 +1729,12 @@ install_iplimit() {
 
     # Check if log file exists
     if ! test -f "${iplimit_banned_log_path}"; then
-        touch ${iplimit_banned_log_path}
+        touch "${iplimit_banned_log_path}"
     fi
 
     # Check if service log file exists so fail2ban won't return error
     if ! test -f "${iplimit_log_path}"; then
-        touch ${iplimit_log_path}
+        touch "${iplimit_log_path}"
     fi
 
     # Create the iplimit jail files
@@ -1776,7 +1758,7 @@ remove_iplimit() {
     echo -e "${green}\t1.${plain} 仅删除 IP 限制配置"
     echo -e "${green}\t2.${plain} 卸载 Fail2ban 和 IP 限制"
     echo -e "${green}\t0.${plain} 终止"
-    read -p "请输入选项: " num
+    read -r -p "请输入选项: " num
     case "$num" in
     1)
         rm -f /etc/fail2ban/filter.d/3x-ipl.conf
@@ -1925,8 +1907,8 @@ iplimit_remove_conflicts() {
 
     for file in "${jail_files[@]}"; do
         # Check for [3x-ipl] config in jail file then remove it
-        if test -f "${file}" && grep -qw '3x-ipl' ${file}; then
-            sed -i "/\[3x-ipl\]/,/^$/d" ${file}
+        if test -f "${file}" && grep -qw '3x-ipl' "${file}"; then
+            sed -i "/\[3x-ipl\]/,/^$/d" "${file}"
             echo -e "${yellow}消除系统环境中 [3x-ipl] 的冲突 (${file})!${plain}\n"
         fi
     done
@@ -1998,7 +1980,7 @@ show_menu() {
 
 "
     show_status
-    echo && read -p "请输入选项 [0-26]: " num
+    echo && read -r -p "请输入选项 [0-26]: " num
 
     case "${num}" in
     0)
@@ -2011,7 +1993,8 @@ show_menu() {
         check_install && update
         ;;
     3)
-        check_install && update_menu
+        check_install
+        update_menu
         ;;
     4)
         check_install && custom_version
@@ -2020,13 +2003,15 @@ show_menu() {
         check_install && uninstall
         ;;
     6)
-        check_install && reset_user
+        check_install
+        reset_user
         ;;
     7)
         check_install && reset_webbasepath
         ;;
     8)
-        check_install && reset_config
+        check_install
+        reset_config
         ;;
     9)
         check_install && set_port
@@ -2088,7 +2073,7 @@ show_menu() {
     esac
 }
 
-if [[ $# > 0 ]]; then
+if [[ $# -gt 0 ]]; then
     case $1 in
     "start")
         check_install 0 && start 0

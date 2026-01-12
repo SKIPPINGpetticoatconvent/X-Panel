@@ -6,16 +6,18 @@ blue='\033[0;34m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-cur_dir=$(pwd)
+# cur_dir=$(pwd)
 
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
 
 # Check OS and set release variable
 if [[ -f /etc/os-release ]]; then
+    # shellcheck source=/dev/null
     source /etc/os-release
     release=$ID
 elif [[ -f /usr/lib/os-release ]]; then
+    # shellcheck source=/dev/null
     source /usr/lib/os-release
     release=$ID
 else
@@ -30,10 +32,10 @@ arch() {
     case "$(uname -m)" in
         x86_64 | x64 | amd64 ) echo 'amd64' ;;
         i*86 | x86 ) echo '386' ;;
-        armv8* | armv8 | arm64 | aarch64 ) echo 'arm64' ;;
-        armv7* | armv7 | arm ) echo 'armv7' ;;
-        armv6* | armv6 ) echo 'armv6' ;;
-        armv5* | armv5 ) echo 'armv5' ;;
+        armv8* | arm64 | aarch64 ) echo 'arm64' ;;
+        armv7* | arm ) echo 'armv7' ;;
+        armv6* ) echo 'armv6' ;;
+        armv5* ) echo 'armv5' ;;
         s390x) echo 's390x' ;;
         *) echo -e "${green}不支持的CPU架构! ${plain}" && rm -f install.sh && exit 1 ;;
     esac
@@ -167,7 +169,8 @@ install_base() {
 
 gen_random_string() {
     local length="$1"
-    local random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
+    local random_string
+    random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
     echo "$random_string"
 }
 
@@ -175,22 +178,22 @@ gen_random_string() {
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
-    read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
+    read -r -p "$(echo -e "${green}想继续修改吗？${red}选择'n'以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
-        read -p "请设置您的用户名: " config_account
+        read -r -p "请设置您的用户名: " config_account
         echo -e "${yellow}您的用户名将是: ${config_account}${plain}"
-        read -p "请设置您的密码: " config_password
+        read -r -p "请设置您的密码: " config_password
         echo -e "${yellow}您的密码将是: ${config_password}${plain}"
-        read -p "请设置面板端口: " config_port
+        read -r -p "请设置面板端口: " config_port
         echo -e "${yellow}您的面板端口号为: ${config_port}${plain}"
-        read -p "请设置面板登录访问路径: " config_webBasePath
+        read -r -p "请设置面板登录访问路径: " config_webBasePath
         echo -e "${yellow}您的面板访问路径为: ${config_webBasePath}${plain}"
         echo -e "${yellow}正在初始化，请稍候...${plain}"
-        /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password}
+        /usr/local/x-ui/x-ui setting -username "${config_account}" -password "${config_password}"
         echo -e "${yellow}用户名和密码设置成功!${plain}"
-        /usr/local/x-ui/x-ui setting -port ${config_port}
+        /usr/local/x-ui/x-ui setting -port "${config_port}"
         echo -e "${yellow}面板端口号设置成功!${plain}"
-        /usr/local/x-ui/x-ui setting -webBasePath ${config_webBasePath}
+        /usr/local/x-ui/x-ui setting -webBasePath "${config_webBasePath}"
         echo -e "${yellow}面板登录访问路径设置成功!${plain}"
         echo ""
     else
@@ -199,10 +202,13 @@ config_after_install() {
         echo -e "${red}--------------->>>>Cancel...--------------->>>>>>>取消修改...${plain}"
         echo ""
         if [[ ! -f "/etc/x-ui/x-ui.db" ]]; then
-            local usernameTemp=$(head -c 10 /dev/urandom | base64)
-            local passwordTemp=$(head -c 10 /dev/urandom | base64)
-            local webBasePathTemp=$(gen_random_string 15)
-            /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
+            local usernameTemp
+            usernameTemp=$(head -c 10 /dev/urandom | base64)
+            local passwordTemp
+            passwordTemp=$(head -c 10 /dev/urandom | base64)
+            local webBasePathTemp
+            webBasePathTemp=$(gen_random_string 15)
+            /usr/local/x-ui/x-ui setting -username "${usernameTemp}" -password "${passwordTemp}" -webBasePath "${webBasePathTemp}"
             echo ""
             echo -e "${yellow}检测到为全新安装，出于安全考虑将生成随机登录信息:${plain}"
             echo -e "###############################################"
@@ -227,12 +233,12 @@ config_after_install() {
 
 echo ""
 install_x-ui() {
-    cd /usr/local/
+    cd /usr/local/ || exit 1
 
     # Download resources
     if [ $# == 0 ]; then
         last_version=$(curl -Ls "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        if [[ ! -n "$last_version" ]]; then
+        if [[ -z "$last_version" ]]; then
             echo -e "${red}获取 X-Panel 版本失败，可能是 Github API 限制，请稍后再试${plain}"
             exit 1
         fi
@@ -248,8 +254,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz
-        if [[ $? -ne 0 ]]; then
+        if ! wget -N --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"; then
             echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
             exit 1
         fi
@@ -268,8 +273,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz ${url}
-        if [[ $? -ne 0 ]]; then
+        if ! wget -N --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "${url}"; then
             echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
             exit 1
         fi
@@ -285,19 +289,19 @@ install_x-ui() {
     sleep 3
     echo -e "${green}------->>>>>>>>>>>检查并保存安装目录${plain}"
     echo ""
-    tar zxvf x-ui-linux-$(arch).tar.gz
-    rm x-ui-linux-$(arch).tar.gz -f
+    tar zxvf "x-ui-linux-$(arch).tar.gz"
+    rm "x-ui-linux-$(arch).tar.gz" -f
     
-    cd x-ui
+    cd x-ui || exit 1
     chmod +x x-ui
     chmod +x x-ui.sh
 
     # Check the system's architecture and rename the file accordingly
     if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
-        mv bin/xray-linux-$(arch) bin/xray-linux-arm
+        mv "bin/xray-linux-$(arch)" bin/xray-linux-arm
         chmod +x bin/xray-linux-arm
     fi
-    chmod +x x-ui bin/xray-linux-$(arch)
+    chmod +x x-ui "bin/xray-linux-$(arch)"
 
     # Update x-ui cli and se set permission
     mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
@@ -312,15 +316,20 @@ ssh_forwarding() {
     # 获取 IPv4 和 IPv6 地址
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    local existing_cert
+    existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key
+    existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_cert
+        existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
         domain=$(basename "$(dirname "$existing_cert")")
         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
     fi
@@ -375,8 +384,8 @@ ssh_forwarding
     systemctl start x-ui
     systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
-    ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
-    ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
+    # ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
+    # ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
     systemctl start warp-go >/dev/null 2>&1
     wg-quick up wgcf >/dev/null 2>&1
 
@@ -422,7 +431,7 @@ ssh_forwarding
 sudo timedatectl set-timezone Asia/Shanghai
 
 install_base
-install_x-ui $1
+install_x-ui "$1"
 echo ""
 echo -e "----------------------------------------------"
 sleep 4

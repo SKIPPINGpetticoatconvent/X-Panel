@@ -230,11 +230,8 @@ func (c *CertService) RenewLoop() {
 		ticker := time.NewTicker(24 * time.Hour) // Check daily
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				c.checkAndRenewCertificates()
-			}
+		for range ticker.C {
+			c.checkAndRenewCertificates()
 		}
 	}()
 }

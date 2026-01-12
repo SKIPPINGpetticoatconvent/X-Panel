@@ -200,16 +200,6 @@ func (t *Tgbot) openPortWithFirewalld(port int) error {
 // =========================================================================================
 
 // 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
-func safeRandomInt(max int) int {
-	if max <= 0 {
-		return 0
-	}
-	result, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
-	if err != nil {
-		return time.Now().Nanosecond() % max
-	}
-	return int(result.Int64())
-}
 
 // =========================================================================================
 // 【辅助函数：每日一语】 (最终修复：严格遵循官方文档 Token 机制，增强健壮性)
@@ -1135,13 +1125,13 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 
 		// 首先尝试 apt (Debian/Ubuntu)
 		cmd = exec.CommandContext(ctx, "bash", "-c", "apt update -qq && apt install -y -qq fail2ban")
-		output, err = cmd.CombinedOutput()
+		_, err = cmd.CombinedOutput()
 		if err != nil {
 			// 如果 apt 失败，尝试 yum (CentOS/RHEL)
 			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
 			cmd = exec.CommandContext(ctx, "bash", "-c", "yum install -y fail2ban")
-			output, err = cmd.CombinedOutput()
+			_, err = cmd.CombinedOutput()
 			if err != nil {
 				// 如果 yum 失败，尝试 dnf (Fedora/RHEL 8+)
 				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
@@ -1409,18 +1399,6 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 }
 
 // 【新增辅助函数】: 检测系统类型
-func (t *Tgbot) detectSystemType() string {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "bash", "-c", "cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'")
-	output, err := cmd.Output()
-	if err != nil {
-		return "Unknown"
-	}
-
-	return strings.TrimSpace(string(output))
-}
 
 // 【新增辅助函数】: 获取 Firewalld 状态
 func (t *Tgbot) getFirewalldStatus() (string, bool) {

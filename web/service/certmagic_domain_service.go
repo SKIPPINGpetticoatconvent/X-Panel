@@ -461,15 +461,6 @@ func (s *CertMagicDomainService) getCertPaths(domain string) (certPath, keyPath 
 	return
 }
 
-// parseCertificateExpiry 解析证书过期时间
-func (s *CertMagicDomainService) parseCertificateExpiry(certPath string) (time.Time, error) {
-	data, err := os.ReadFile(certPath)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return s.parseCertificateExpiryFromData(data)
-}
-
 // parseCertificateExpiryFromData 从证书数据解析过期时间
 func (s *CertMagicDomainService) parseCertificateExpiryFromData(certData []byte) (time.Time, error) {
 	block, _ := pem.Decode(certData)

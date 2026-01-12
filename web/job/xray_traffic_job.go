@@ -6,7 +6,6 @@ import (
 )
 
 type XrayTrafficJob struct {
-	settingService  service.SettingService
 	xrayService     service.XrayService
 	inboundService  service.InboundService
 	outboundService service.OutboundService

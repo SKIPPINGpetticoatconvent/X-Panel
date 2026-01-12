@@ -57,7 +57,6 @@ var (
 	client_Security     string
 	client_ShPassword   string
 	client_TrPassword   string
-	client_Method       string
 )
 
 var userStates = make(map[int64]string)

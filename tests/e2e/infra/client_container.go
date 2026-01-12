@@ -13,10 +13,9 @@ import (
 
 // XrayClientContainer 封装 Xray 客户端测试容器的管理
 type XrayClientContainer struct {
-	container testcontainers.Container
-	host      string
+	container  testcontainers.Container
+	host       string
 	mappedPort string
-	baseURL   string
 }
 
 // NewXrayClientContainer 创建新的 Xray 客户端测试容器
@@ -56,7 +55,7 @@ func NewXrayClientContainer(ctx context.Context, serverHost, serverPort string) 
 	}`, serverHost, serverPort)
 
 	req := testcontainers.ContainerRequest{
-		Image: "teddysun/xray:1.8.6",
+		Image:        "teddysun/xray:1.8.6",
 		ExposedPorts: []string{"1080/tcp"},
 		Env: map[string]string{
 			"TZ": "Asia/Shanghai",
@@ -93,8 +92,8 @@ func NewXrayClientContainer(ctx context.Context, serverHost, serverPort string) 
 	}
 
 	return &XrayClientContainer{
-		container: container,
-		host:      host,
+		container:  container,
+		host:       host,
 		mappedPort: mappedPort.Port(),
 	}, nil
 }

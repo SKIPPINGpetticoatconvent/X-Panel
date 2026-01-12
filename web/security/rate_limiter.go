@@ -6,8 +6,9 @@ import (
 
 	"time"
 
-	"golang.org/x/time/rate"
 	"x-ui/logger"
+
+	"golang.org/x/time/rate"
 )
 
 // RateLimiter 接口定义连接速率限制器
@@ -28,14 +29,6 @@ type rateLimiterImpl struct {
 	mutex       sync.RWMutex
 	maxConnsSec rate.Limit
 	burst       int
-}
-
-// defaultRateLimiter 默认配置的速率限制器
-var defaultRateLimiter = &rateLimiterImpl{
-	limiters:    make(map[string]*clientLimiter),
-	whitelist:   make(map[string]bool),
-	maxConnsSec: 5,  // 每秒最多5个连接
-	burst:       10, // 突发允许10个连接
 }
 
 // Allow 检查IP是否允许建立连接

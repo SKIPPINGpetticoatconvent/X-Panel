@@ -355,7 +355,7 @@ func showSetting(show bool) {
 		hasDefaultCredential := func() bool {
 			return userModel.Username == "admin" && crypto.CheckPasswordHash(userModel.Password, "admin")
 		}()
-		if hasDefaultCredential == true {
+		if hasDefaultCredential {
 			fmt.Println(Red + "------>> 警告：使用了默认的admin账号/密码，容易被扫描" + Reset)
 		} else {
 			fmt.Println(Green + "------>> 为非默认admin账号/密码，请牢记" + Reset)
@@ -400,7 +400,7 @@ func showSetting(show bool) {
 		fmt.Println("--------------------------------------------------")
 		fmt.Println("")
 		//	fmt.Println("↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑")
-		fmt.Println(fmt.Sprintf("%s请确保 %s%d%s 端口已打开放行%s", Green, Red, port, Green, Reset))
+		fmt.Printf("%s请确保 %s%d%s 端口已打开放行%s\n", Green, Red, port, Green, Reset)
 		fmt.Println(Yellow + "请自行确保此端口没有被其他程序占用" + Reset)
 		//	fmt.Println(Green + "若要登录访问面板，请复制上面的地址到浏览器" + Reset)
 		fmt.Println("")

@@ -139,7 +139,6 @@ type Server struct {
 	router             *gin.Engine  // 保存的路由器，用于重新启动服务器
 	listenAddr         string       // 保存的监听地址
 	isHTTPS            bool         // 是否为 HTTPS 模式
-	tlsConfig          *tls.Config  // TLS 配置（如果适用）
 }
 
 // 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来
@@ -663,36 +662,6 @@ func (s *Server) setupListener(baseListener net.Listener) net.Listener {
 		KeepAlivePeriod: 5 * time.Second,
 	}
 	return net.Listener(kaListener)
-}
-
-// isInternalIP 判断是否为私网或回环IP（支持IPv4和IPv6）
-func isInternalIP(ipStr string) bool {
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return false
-	}
-
-	if ip4 := ip.To4(); ip4 != nil {
-		// IPv4 判断是否在私网/回环网段内
-		for _, privateNet := range privateIPv4Nets {
-			if privateNet.Contains(ip4) {
-				return true
-			}
-		}
-		return false
-	}
-
-	// IPv6 判断回环或链路本地地址
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-		return true
-	}
-
-	// 判断 IPv6 fc00::/7 私网地址段
-	if ip[0]&0xfe == 0xfc {
-		return true
-	}
-
-	return false
 }
 
 // fallbackToLocalhost 根据传入地址返回对应的本地回环地址

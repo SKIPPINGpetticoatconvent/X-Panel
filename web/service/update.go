@@ -314,17 +314,6 @@ func runMigrationCommand() error {
 	return nil
 }
 
-// restartPanelService 重启面板服务
-func restartPanelService() error {
-	cmd := exec.Command("systemctl", "restart", "x-ui")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("重启面板服务失败: %v, 输出: %s", err, string(output))
-	}
-	logger.Info("成功重启面板服务")
-	return nil
-}
-
 // UpdatePanel 更新面板到指定版本或最新版本（完全还原脚本逻辑）
 func (s *ServerService) UpdatePanel(version string) error {
 	// 启动异步任务进行面板更新，避免阻塞HTTP请求

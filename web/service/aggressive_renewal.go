@@ -201,7 +201,7 @@ func (m *AggressiveRenewalManager) CheckAndRenew() error {
 	}
 
 	// 检查是否需要续期
-	remaining := certInfo.Expiry.Sub(time.Now())
+	remaining := time.Until(certInfo.Expiry)
 	if remaining < m.config.RenewThreshold {
 		logger.Infof("Certificate expires in %v, triggering aggressive renewal", remaining)
 		return m.attemptRenewWithRetry()

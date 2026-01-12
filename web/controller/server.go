@@ -86,15 +86,7 @@ func (a *ServerController) startTask() {
 	webServer := global.GetWebServer()
 	c := webServer.GetCron()
 	c.AddFunc("@every 2s", func() {
-		now := time.Now()
-		if now.Sub(a.lastGetStatusTime) > time.Minute*3 {
-			// If no normal HTTP requests, check if we have active WS clients
-			// If active WS clients exist, we should continue refreshing
-			// However, since we are using lazy refresh in Broadcast, we can just refresh here
-			// and let Broadcast handle the pushing.
-			// Ideally, we only refresh if there are listeners.
-			// For simplicity: continue refreshing if WS clients are connected
-		}
+
 		a.refreshStatus()
 
 		// Push update to WebSocket clients

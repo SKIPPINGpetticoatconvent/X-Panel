@@ -65,7 +65,7 @@ func (c *CertAlertFallback) OnRenewalFailed(err error, attempt int) error {
 
 	// 检查是否需要发送告警（连续失败且剩余时间少于1天）
 	if certInfo != nil {
-		remaining := certInfo.Expiry.Sub(time.Now())
+		remaining := time.Until(certInfo.Expiry)
 		if remaining < 24*time.Hour && c.consecutiveFailures > 0 {
 			alertErr := c.CheckAndAlert()
 			if alertErr != nil {
@@ -89,7 +89,7 @@ func (c *CertAlertFallback) CheckAndAlert() error {
 		return errors.New("certificate info is nil")
 	}
 
-	remaining := certInfo.Expiry.Sub(time.Now())
+	remaining := time.Until(certInfo.Expiry)
 
 	// 严重告警：剩余时间小于1天
 	if remaining < 24*time.Hour {

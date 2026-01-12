@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"       // 新增：用于 exec.Command（getDomain 等）
 	"path/filepath" // 新增：用于 filepath.Base / Dir（getDomain 用到）
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -79,51 +78,6 @@ func (t *Tgbot) checkBBRSupport() (string, bool, error) {
 	bbrAvailable := strings.TrimSpace(string(modprobeOutput)) == "supported"
 
 	return kernelVersion, bbrAvailable, nil
-}
-
-// enableBBR 启用 BBR 拥塞控制算法
-func (t *Tgbot) enableBBR() error {
-	// 检查 BBR 支持
-	kernelVersion, bbrSupported, err := t.checkBBRSupport()
-	if err != nil {
-		return fmt.Errorf("检查 BBR 支持失败: %v", err)
-	}
-
-	if !bbrSupported {
-		logger.Info(fmt.Sprintf("BBR 不支持，内核版本: %s，需要 Linux 内核 4.9+", kernelVersion))
-		return fmt.Errorf("BBR 不支持，内核版本 %s，需要 Linux 内核 4.9+", kernelVersion)
-	}
-
-	// 创建 BBR 配置文件
-	bbrConfig := `# ===== BBR 拥塞控制算法配置 =====
-# 启用 BBR 拥塞控制算法以提升网络性能
-net.core.default_qdisc = fq
-net.ipv4.tcp_congestion_control = bbr
-`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-bbr-optimize.conf << 'EOF'
-%s
-EOF`, bbrConfig))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("创建 BBR 配置文件失败: %v, 输出: %s", err, string(output))
-	}
-
-	// 应用 BBR 设置
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-bbr-optimize.conf")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("应用 BBR 设置失败: %v, 输出: %s", err, string(output))
-	}
-
-	logger.Info("BBR 拥塞控制算法已成功启用")
-	return nil
 }
 
 func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool) {
@@ -472,7 +426,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					if len(dataArray) == 3 {
 						days, err := strconv.Atoi(dataArray[2])
 						if err == nil {
-							var date int64 = 0
+							var date int64
 							if days > 0 {
 								traffic, err := t.inboundService.GetClientTrafficByEmail(email)
 								if err != nil {
@@ -576,7 +530,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				case "add_client_reset_exp_c":
 					client_ExpiryTime = 0
 					days, _ := strconv.Atoi(dataArray[1])
-					var date int64 = 0
+					var date int64
 					if client_ExpiryTime > 0 {
 						if client_ExpiryTime-time.Now().Unix()*1000 < 0 {
 							date = -int64(days * 24 * 60 * 60000)
@@ -962,7 +916,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					client_Security = "auto"
 					client_ShPassword = t.randomShadowSocksPassword()
 					client_TrPassword = t.randomLowerAndNum(10)
-					client_Method = ""
 
 					inboundId := dataArray[1]
 					inboundIdInt, err := strconv.Atoi(inboundId)
@@ -1062,7 +1015,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		client_Security = "auto"
 		client_ShPassword = t.randomShadowSocksPassword()
 		client_TrPassword = t.randomLowerAndNum(10)
-		client_Method = ""
 
 		inbounds, err := t.getInboundsAddClient()
 		if err != nil {
@@ -2021,15 +1973,6 @@ func (t *Tgbot) SendBackupToAdmins() {
 	}
 }
 
-func (t *Tgbot) sendExhaustedToAdmins() {
-	if !t.IsRunning() {
-		return
-	}
-	for _, adminId := range adminIds {
-		t.getExhausted(int64(adminId))
-	}
-}
-
 func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 	info := t.prepareServerUsageInfo()
 
@@ -2046,10 +1989,6 @@ func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 }
 
 // Send server usage without an inline keyboard
-func (t *Tgbot) sendServerUsage() string {
-	info := t.prepareServerUsageInfo()
-	return info
-}
 
 func (t *Tgbot) prepareServerUsageInfo() string {
 	info, ipv4, ipv6 := "", "", ""
@@ -2702,86 +2641,6 @@ func (t *Tgbot) getExhausted(chatId int64) {
 	}
 }
 
-func (t *Tgbot) notifyExhausted() {
-	trDiff := int64(0)
-	exDiff := int64(0)
-	now := time.Now().Unix() * 1000
-
-	TrafficThreshold, err := t.settingService.GetTrafficDiff()
-	if err == nil && TrafficThreshold > 0 {
-		trDiff = int64(TrafficThreshold) * 1073741824
-	}
-	ExpireThreshold, err := t.settingService.GetExpireDiff()
-	if err == nil && ExpireThreshold > 0 {
-		exDiff = int64(ExpireThreshold) * 86400000
-	}
-	inbounds, err := t.inboundService.GetAllInbounds()
-	if err != nil {
-		logger.Warning("Unable to load Inbounds", err)
-	}
-
-	var chatIDsDone []int64
-	for _, inbound := range inbounds {
-		if inbound.Enable {
-			if len(inbound.ClientStats) > 0 {
-				clients, err := t.inboundService.GetClients(inbound)
-				if err == nil {
-					for _, client := range clients {
-						if client.TgID != 0 {
-							chatID := client.TgID
-							if !int64Contains(chatIDsDone, chatID) && !checkAdmin(chatID) {
-								var disabledClients []xray.ClientTraffic
-								var exhaustedClients []xray.ClientTraffic
-								traffics, err := t.inboundService.GetClientTrafficTgBot(client.TgID)
-								if err == nil && len(traffics) > 0 {
-									output := t.I18nBot("tgbot.messages.exhaustedCount", "Type=="+t.I18nBot("tgbot.clients"))
-									for _, traffic := range traffics {
-										if traffic.Enable {
-											if (traffic.ExpiryTime > 0 && (traffic.ExpiryTime-now < exDiff)) ||
-												(traffic.Total > 0 && (traffic.Total-(traffic.Up+traffic.Down) < trDiff)) {
-												exhaustedClients = append(exhaustedClients, *traffic)
-											}
-										} else {
-											disabledClients = append(disabledClients, *traffic)
-										}
-									}
-									if len(exhaustedClients) > 0 {
-										output += t.I18nBot("tgbot.messages.disabled", "Disabled=="+strconv.Itoa(len(disabledClients)))
-										if len(disabledClients) > 0 {
-											output += t.I18nBot("tgbot.clients") + ":\r\n"
-											for _, traffic := range disabledClients {
-												output += " " + traffic.Email
-											}
-											output += "\r\n"
-										}
-										output += "\r\n"
-										output += t.I18nBot("tgbot.messages.depleteSoon", "Deplete=="+strconv.Itoa(len(exhaustedClients)))
-										for _, traffic := range exhaustedClients {
-											output += t.clientInfoMsg(&traffic, true, false, false, true, true, false)
-											output += "\r\n"
-										}
-										t.SendMsgToTgbot(chatID, output)
-									}
-									chatIDsDone = append(chatIDsDone, chatID)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-func int64Contains(slice []int64, item int64) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *Tgbot) onlineClients(chatId int64, messageID ...int) {
 	if !p.IsRunning() {
 		return
@@ -2976,12 +2835,6 @@ func (t *Tgbot) deleteMessageTgBot(chatId int64, messageID int) {
 	} else {
 		logger.Info("Message deleted successfully")
 	}
-}
-
-func (t *Tgbot) isSingleWord(text string) bool {
-	text = strings.TrimSpace(text)
-	re := regexp.MustCompile(`\s+`)
-	return re.MatchString(text)
 }
 
 // 〔中文注释〕: 新增方法，实现 TelegramService 接口。

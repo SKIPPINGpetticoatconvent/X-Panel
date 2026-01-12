@@ -16,12 +16,11 @@ import (
 type AutoHttpsConn struct {
 	net.Conn
 
-	firstBuf    []byte
-	bufStart    int
-	bufLen      int
-	isHttps     bool
-	initialized bool
-	closed      bool
+	firstBuf []byte
+	bufStart int
+	bufLen   int
+	isHttps  bool
+	closed   bool
 
 	readRequestOnce sync.Once
 }

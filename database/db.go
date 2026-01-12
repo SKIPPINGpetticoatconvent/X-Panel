@@ -155,6 +155,9 @@ func InitDB(dbPath string) error {
 	}
 
 	isUsersEmpty, err := isTableEmpty("users")
+	if err != nil {
+		return err
+	}
 
 	if err := initUser(); err != nil {
 		return err
