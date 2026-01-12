@@ -39,6 +39,8 @@ class AllSetting {
 		this.ipCertEnable = false;
 		this.ipCertEmail = "";
 		this.ipCertTarget = "";
+		this.ipCertPath = "";
+		this.certSource = "manual";
 		this.subUpdates = 12;
 		this.subEncrypt = true;
 		this.subShowInfo = true;

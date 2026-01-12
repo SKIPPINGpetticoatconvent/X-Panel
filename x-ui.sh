@@ -1378,6 +1378,7 @@ cert_management_menu() {
     echo -e "${green}\t1.${plain} 域名证书申请 (传统域名，如 example.com)"
     echo -e "${green}\t2.${plain} IP证书申请 (纯IP地址，如 107.174.245.44)"
     echo -e "${green}\t3.${plain} 自签证书申请 (支持 RSA/ECDSA，无需域名)"
+    echo -e "${green}\t4.${plain} 切换证书来源模式 (手动配置/IP 证书/域名证书)"
     echo -e "${green}\t0.${plain} 返回主菜单"
     read -r -p "请输入选项: " choice
     case "$choice" in
@@ -1396,9 +1397,45 @@ cert_management_menu() {
         echo -e "${yellow}正在启动自签证书申请流程...${plain}"
         ssl_cert_self_signed
         ;;
+    4)
+        set_cert_source
+        ;;
     *)
         LOGE "无效选项，请重新选择"
         cert_management_menu
+        ;;
+    esac
+}
+
+set_cert_source() {
+    echo -e "${yellow}切换证书来源模式${plain}"
+    echo -e "${green}1.${plain} 手动配置 (manual)"
+    echo -e "${green}2.${plain} IP 证书 (ip)"
+    echo -e "${green}3.${plain} 域名证书 (domain)"
+    echo -e "${green}0.${plain} 返回"
+    read -r -p "请输入选项: " choice
+    case "$choice" in
+    0)
+        cert_management_menu
+        ;;
+    1)
+        /usr/local/x-ui/x-ui setting -certSource manual
+        echo -e "证书来源已切换为：${green}手动配置${plain}"
+        confirm_restart
+        ;;
+    2)
+        /usr/local/x-ui/x-ui setting -certSource ip
+        echo -e "证书来源已切换为：${green}IP 证书${plain}"
+        confirm_restart
+        ;;
+    3)
+        /usr/local/x-ui/x-ui setting -certSource domain
+        echo -e "证书来源已切换为：${green}域名证书${plain}"
+        confirm_restart
+        ;;
+    *)
+        LOGE "无效选项"
+        set_cert_source
         ;;
     esac
 }

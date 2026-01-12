@@ -65,6 +65,7 @@ type AllSetting struct {
 	SubJsonMux                  string `json:"subJsonMux" form:"subJsonMux"`
 	SubJsonRules                string `json:"subJsonRules" form:"subJsonRules"`
 	Datepicker                  string `json:"datepicker" form:"datepicker"`
+	CertSource                  string `json:"certSource" form:"certSource"`
 	IpCertEnable                bool   `json:"ipCertEnable" form:"ipCertEnable"`
 	IpCertEmail                 string `json:"ipCertEmail" form:"ipCertEmail"`
 	IpCertTarget                string `json:"ipCertTarget" form:"ipCertTarget"`

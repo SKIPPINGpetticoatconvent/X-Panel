@@ -442,6 +442,11 @@
 "information" = "Information"
 "language" = "Language"
 "telegramBotLanguage" = "Telegram Bot Language"
+"certSource" = "Certificate Source"
+"certSourceDesc" = "Select the HTTPS certificate type for the panel"
+"certSource.manual" = "Manual"
+"certSource.ip" = "IP Certificate"
+"certSource.domain" = "Domain Certificate"
 
 [pages.settings.ipCert]
 title = "Let's Encrypt IP Certificate"

@@ -342,6 +342,11 @@ func showSetting(show bool) {
 			fmt.Println("get current user info failed, error info（获取当前用户信息失败，错误信息）:", err)
 		}
 
+		certSource, err := settingService.GetCertSource()
+		if err != nil {
+			fmt.Println("get cert source failed, error info:", err)
+		}
+
 		if userModel.Username == "" || userModel.Password == "" {
 			fmt.Println("current username or password is empty --->>当前用户名或密码为空")
 		}
@@ -367,7 +372,8 @@ func showSetting(show bool) {
 		fmt.Println("")
 		fmt.Println(Green + fmt.Sprintf("port（端口号）: %d", port) + Reset)
 		fmt.Println(Green + fmt.Sprintf("webBasePath（访问路径）: %s", webBasePath) + Reset)
-		fmt.Println(Green + "PS：为安全起见，不显示账号和密码" + Reset)
+		fmt.Println(Green + fmt.Sprintf("certSource（证书来源）: %s", certSource) + Reset)
+		fmt.Println(Green + "PS：为安全起见，不显示账号 and 密码" + Reset)
 		fmt.Println(Green + "若您已经忘记账号/密码，请用脚本选项〔6〕重新设置" + Reset)
 
 		fmt.Println("")
@@ -469,7 +475,7 @@ func updateTgbotSetting(tgBotToken string, tgBotChatid string, tgBotRuntime stri
 	}
 }
 
-func updateSetting(port int, username string, password string, webBasePath string, listenIP string, resetTwoFactor bool) {
+func updateSetting(port int, username string, password string, webBasePath string, listenIP string, certSource string, resetTwoFactor bool) {
 	err := database.InitDB(config.GetDBPath())
 	if err != nil {
 		fmt.Println("Database initialization failed（初始化数据库失败）:", err)
@@ -522,7 +528,16 @@ func updateSetting(port int, username string, password string, webBasePath strin
 		if err != nil {
 			fmt.Println("Failed to set listen IP（设置监听IP失败）:", err)
 		} else {
-			fmt.Printf("listen %v set successfully --------->>设置监听IP成功", listenIP)
+			fmt.Printf("listen %v set successfully --------->>设置监听IP成功\n", listenIP)
+		}
+	}
+
+	if certSource != "" {
+		err := settingService.SetCertSource(certSource)
+		if err != nil {
+			fmt.Println("Failed to set certificate source（设置证书来源失败）:", err)
+		} else {
+			fmt.Printf("Certificate source set successfully to %v --------->>设置证书来源成功\n", certSource)
 		}
 	}
 }
@@ -659,6 +674,7 @@ func main() {
 	var username string
 	var password string
 	var webBasePath string
+	var certSource string
 	var listenIP string
 	var getListen bool
 	var webCertFile string
@@ -679,6 +695,7 @@ func main() {
 	settingCmd.StringVar(&username, "username", "", "Set login username")
 	settingCmd.StringVar(&password, "password", "", "Set login password")
 	settingCmd.StringVar(&webBasePath, "webBasePath", "", "Set base path for Panel")
+	settingCmd.StringVar(&certSource, "certSource", "", "Set certificate source (manual, ip, domain)")
 	settingCmd.StringVar(&listenIP, "listenIP", "", "set panel listenIP IP")
 	settingCmd.BoolVar(&resetTwoFactor, "resetTwoFactor", false, "Reset two-factor authentication settings")
 	settingCmd.BoolVar(&getListen, "getListen", false, "Display current panel listenIP IP")
@@ -728,7 +745,7 @@ func main() {
 		if reset {
 			resetSetting()
 		} else {
-			updateSetting(port, username, password, webBasePath, listenIP, resetTwoFactor)
+			updateSetting(port, username, password, webBasePath, listenIP, certSource, resetTwoFactor)
 		}
 		if show {
 			showSetting(show)

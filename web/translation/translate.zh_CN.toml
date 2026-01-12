@@ -459,6 +459,11 @@
 "information" = "信息"
 "language" = "语言"
 "telegramBotLanguage" = "Telegram 机器人语言"
+"certSource" = "证书来源"
+"certSourceDesc" = "选择面板使用的 HTTPS 证书类型"
+"certSource.manual" = "手动配置"
+"certSource.ip" = "IP 证书"
+"certSource.domain" = "域名证书"
 
 [pages.settings.ipCert]
 title = "Let's Encrypt IP 证书"

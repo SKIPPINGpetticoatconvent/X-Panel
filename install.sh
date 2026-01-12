@@ -188,6 +188,17 @@ config_after_install() {
         echo -e "${yellow}您的面板端口号为: ${config_port}${plain}"
         read -r -p "请设置面板登录访问路径: " config_webBasePath
         echo -e "${yellow}您的面板访问路径为: ${config_webBasePath}${plain}"
+        echo -e "${yellow}请选择证书来源模式 (默认为手动配置):${plain}"
+        echo -e "${green}1. 手动配置 (manual)${plain}"
+        echo -e "${green}2. IP 证书 (ip)${plain}"
+        echo -e "${green}3. 域名证书 (domain)${plain}"
+        read -r -p "请输入选项 [1-3, 默认 1]: " cert_choice
+        case "$cert_choice" in
+            2) config_certSource="ip" ;;
+            3) config_certSource="domain" ;;
+            *) config_certSource="manual" ;;
+        esac
+        echo -e "${yellow}您的证书来源模式为: ${config_certSource}${plain}"
         echo -e "${yellow}正在初始化，请稍候...${plain}"
         /usr/local/x-ui/x-ui setting -username "${config_account}" -password "${config_password}"
         echo -e "${yellow}用户名和密码设置成功!${plain}"
@@ -195,6 +206,8 @@ config_after_install() {
         echo -e "${yellow}面板端口号设置成功!${plain}"
         /usr/local/x-ui/x-ui setting -webBasePath "${config_webBasePath}"
         echo -e "${yellow}面板登录访问路径设置成功!${plain}"
+        /usr/local/x-ui/x-ui setting -certSource "${config_certSource}"
+        echo -e "${yellow}证书来源设置成功!${plain}"
         echo ""
     else
         echo ""

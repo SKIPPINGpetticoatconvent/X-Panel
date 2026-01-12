@@ -110,7 +110,30 @@
         </a-setting-list-item>
     </a-collapse-panel>
     <a-collapse-panel key="3" header='{{ i18n "pages.settings.certs" }}'>
+        <!-- 证书源选择 -->
         <a-setting-list-item paddings="small">
+            <template #title>{{ i18n "pages.settings.certSource" }}</template>
+            <template #description>{{ i18n "pages.settings.certSourceDesc" }}</template>
+            <template #control>
+                <a-radio-group v-model="allSetting.certSource" button-style="solid">
+                    <a-radio-button value="manual">{{ i18n "pages.settings.certSource.manual" }}</a-radio-button>
+                    <a-radio-button value="ip" :disabled="!allSetting.ipCertEnable || !allSetting.ipCertPath">{{ i18n
+                        "pages.settings.certSource.ip" }}</a-radio-button>
+                    <a-radio-button value="domain">{{ i18n "pages.settings.certSource.domain" }}</a-radio-button>
+                </a-radio-group>
+            </template>
+        </a-setting-list-item>
+
+        <!-- 当前使用的证书路径提示 -->
+        <a-alert v-if="allSetting.certSource === 'ip' && allSetting.ipCertPath" type="info"
+            :message="'当前使用 IP 证书: ' + allSetting.ipCertPath + '.crt'" show-icon style="margin: 8px 0;">
+        </a-alert>
+        <a-alert v-if="allSetting.certSource === 'domain'" type="info" message="域名证书功能需要配置域名证书路径" show-icon
+            style="margin: 8px 0;">
+        </a-alert>
+
+        <!-- 手动证书配置 (仅在手动模式下显示) -->
+        <a-setting-list-item paddings="small" v-show="allSetting.certSource === 'manual'">
             <template #title>{{ i18n "pages.settings.publicKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.publicKeyPathDesc"}}</template>
             <template #control>
@@ -118,7 +141,7 @@
                     class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
-        <a-setting-list-item paddings="small">
+        <a-setting-list-item paddings="small" v-show="allSetting.certSource === 'manual'">
             <template #title>{{ i18n "pages.settings.privateKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.privateKeyPathDesc"}}</template>
             <template #control>
@@ -126,7 +149,7 @@
                     class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
-        <a-setting-list-item paddings="small">
+        <a-setting-list-item paddings="small" v-show="allSetting.certSource === 'manual'">
             <template #title>Self-signed Cert</template>
             <template #control>
                 <a-button type="primary" @click="openSelfSignedModal">Generate Self-signed Cert</a-button>
