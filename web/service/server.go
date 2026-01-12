@@ -118,6 +118,16 @@ func (s *ServerService) SetCertService(certService *CertService) {
 	s.certService = certService
 }
 
+// SetXrayService 设置 Xray 服务实例
+func (s *ServerService) SetXrayService(xrayService XrayService) {
+	s.xrayService = xrayService
+}
+
+// SetInboundService 设置 Inbound 服务实例
+func (s *ServerService) SetInboundService(inboundService InboundService) {
+	s.inboundService = inboundService
+}
+
 func getPublicIP(url string) string {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
@@ -151,6 +161,10 @@ func getPublicIP(url string) string {
 }
 
 func (s *ServerService) GetStatus(lastStatus *Status) *Status {
+	if s == nil {
+		logger.Error("ServerService receiver is nil")
+		return nil
+	}
 	now := time.Now()
 	status := &Status{
 		T: now,

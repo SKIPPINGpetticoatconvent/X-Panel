@@ -20,8 +20,8 @@ const (
 	containerName = "x-panel-e2e-container"
 	hostPort      = "13688"
 	baseURL       = "http://localhost:" + hostPort
-	maxRetries    = 30
-	retryInterval = 1 * time.Second
+	maxRetries    = 60
+	retryInterval = 2 * time.Second
 	username      = "admin"
 	password      = "admin"
 )
@@ -325,17 +325,17 @@ func (c *Client) BackupToTgBot() error {
 	return c.checkResponse(resp)
 }
 
-func TestPodmanE2E(t *testing.T) {
+func TestDockerE2E(t *testing.T) {
 	// 1. 清理旧环境
-	runCommand(t, "podman", "rm", "-f", containerName)
+	runCommand(t, "docker", "rm", "-f", containerName)
 
 	// 2. 构建镜像
 	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "podman", "build", "-t", imageName, "../..")
+	runCommand(t, "docker", "build", "-t", imageName, "../..")
 
 	// 3. 启动容器
 	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "podman", "run", "-d",
+	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
 		imageName,
@@ -343,13 +343,14 @@ func TestPodmanE2E(t *testing.T) {
 
 	defer func() {
 		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "podman", "rm", "-f", containerName)
+		runCommand(t, "docker", "rm", "-f", containerName)
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
-	if err := waitForService(baseURL); err != nil {
-		logs := runCommand(t, "podman", "logs", containerName)
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
+	if err := waitForService(healthURL); err != nil {
+		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
 	}
@@ -520,21 +521,21 @@ func TestPodmanE2E(t *testing.T) {
 	t.Log("E2E Test Passed Successfully!")
 }
 
-// TestPodmanE2EPerformance 性能测试
-func TestPodmanE2EPerformance(t *testing.T) {
+// TestDockerE2EPerformance 性能测试
+func TestDockerE2EPerformance(t *testing.T) {
 	// 1. 清理旧环境
-	runCommand(t, "podman", "rm", "-f", containerName)
+	runCommand(t, "docker", "rm", "-f", containerName)
 
 	// 2. 构建镜像
 	t.Logf("Building Docker image: %s...", imageName)
 	startTime := time.Now()
-	runCommand(t, "podman", "build", "-t", imageName, "../..")
+	runCommand(t, "docker", "build", "-t", imageName, "../..")
 	buildTime := time.Since(startTime)
 	t.Logf("Build time: %v", buildTime)
 
 	// 3. 启动容器
 	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "podman", "run", "-d",
+	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
 		imageName,
@@ -542,14 +543,15 @@ func TestPodmanE2EPerformance(t *testing.T) {
 
 	defer func() {
 		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "podman", "rm", "-f", containerName)
+		runCommand(t, "docker", "rm", "-f", containerName)
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
 	startupStart := time.Now()
-	if err := waitForService(baseURL); err != nil {
-		logs := runCommand(t, "podman", "logs", containerName)
+	if err := waitForService(healthURL); err != nil {
+		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
 	}
@@ -605,18 +607,18 @@ func TestPodmanE2EPerformance(t *testing.T) {
 	t.Log("Performance Test Passed Successfully!")
 }
 
-// TestPodmanE2EErrorHandling 错误处理测试
-func TestPodmanE2EErrorHandling(t *testing.T) {
+// TestDockerE2EErrorHandling 错误处理测试
+func TestDockerE2EErrorHandling(t *testing.T) {
 	// 1. 清理旧环境
-	runCommand(t, "podman", "rm", "-f", containerName)
+	runCommand(t, "docker", "rm", "-f", containerName)
 
 	// 2. 构建镜像
 	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "podman", "build", "-t", imageName, "../..")
+	runCommand(t, "docker", "build", "-t", imageName, "../..")
 
 	// 3. 启动容器
 	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "podman", "run", "-d",
+	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
 		imageName,
@@ -624,13 +626,14 @@ func TestPodmanE2EErrorHandling(t *testing.T) {
 
 	defer func() {
 		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "podman", "rm", "-f", containerName)
+		runCommand(t, "docker", "rm", "-f", containerName)
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
-	if err := waitForService(baseURL); err != nil {
-		logs := runCommand(t, "podman", "logs", containerName)
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
+	if err := waitForService(healthURL); err != nil {
+		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
 	}
@@ -692,18 +695,18 @@ func TestPodmanE2EErrorHandling(t *testing.T) {
 	t.Log("Error Handling Test Passed Successfully!")
 }
 
-// TestPodmanE2EBackupRestore 备份恢复E2E测试
-func TestPodmanE2EBackupRestore(t *testing.T) {
+// TestDockerE2EBackupRestore 备份恢复E2E测试
+func TestDockerE2EBackupRestore(t *testing.T) {
 	// 1. 清理旧环境
-	runCommand(t, "podman", "rm", "-f", containerName)
+	runCommand(t, "docker", "rm", "-f", containerName)
 
 	// 2. 构建镜像
 	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "podman", "build", "-t", imageName, "../..")
+	runCommand(t, "docker", "build", "-t", imageName, "../..")
 
 	// 3. 启动容器
 	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "podman", "run", "-d",
+	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
 		imageName,
@@ -711,13 +714,14 @@ func TestPodmanE2EBackupRestore(t *testing.T) {
 
 	defer func() {
 		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "podman", "rm", "-f", containerName)
+		runCommand(t, "docker", "rm", "-f", containerName)
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
-	if err := waitForService(baseURL); err != nil {
-		logs := runCommand(t, "podman", "logs", containerName)
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
+	if err := waitForService(healthURL); err != nil {
+		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
 	}
@@ -871,7 +875,7 @@ func TestPodmanE2EBackupRestore(t *testing.T) {
 	time.Sleep(3 * time.Second) // 等待重启
 
 	// 重新等待服务就绪
-	if err := waitForService(baseURL); err != nil {
+	if err := waitForService(healthURL); err != nil {
 		t.Fatalf("Service failed to restart after restore: %v", err)
 	}
 
@@ -920,7 +924,7 @@ func runCommand(t *testing.T, name string, args ...string) string {
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 	if err != nil {
-		if name == "podman" && len(args) > 0 && args[0] == "rm" {
+		if name == "docker" && len(args) > 0 && args[0] == "rm" {
 			return output
 		}
 		t.Fatalf("Command failed: %s %s\nOutput: %s\nError: %v", name, strings.Join(args, " "), output, err)
@@ -929,11 +933,18 @@ func runCommand(t *testing.T, name string, args ...string) string {
 }
 
 func waitForService(url string) error {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	for i := 0; i < maxRetries; i++ {
-		resp, err := http.Get(url)
+		resp, err := client.Get(url)
 		if err == nil {
 			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
+			// 接受200-399范围的状态码（包括重定向）
+			if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 				return nil
 			}
 		}

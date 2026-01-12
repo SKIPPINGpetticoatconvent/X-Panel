@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"x-ui/logger"
+	"x-ui/web/global"
 )
 
 type CertService struct {
@@ -27,6 +28,9 @@ type CertService struct {
 	renewalManager      *AggressiveRenewalManager
 	hotReloader         *CertHotReloader
 	alertFallback       *CertAlertFallback
+
+	// TLS Certificate Manager for dynamic loading
+	tlsCertManager      *TLSCertManager
 
 	initOnce sync.Once
 	mutex    sync.RWMutex // 细粒度并发锁
@@ -48,6 +52,22 @@ func (c *CertService) SetServerService(s *ServerService) {
 func (c *CertService) SetTgbot(t TelegramService) {
 	c.tgbot = t
 	c.tryInitImprovements()
+}
+
+// SetTLSCertManager 设置 TLS 证书管理器
+func (c *CertService) SetTLSCertManager(manager *TLSCertManager) {
+	c.tlsCertManager = manager
+}
+
+// CreateTLSCertManager 创建 TLS 证书管理器并设置告警服务
+func (c *CertService) CreateTLSCertManager() *TLSCertManager {
+	var alertSvc AlertService
+	if c.tgbot != nil {
+		alertSvc = &certAlertService{tgbot: c.tgbot}
+	}
+	manager := NewTLSCertManager(alertSvc)
+	c.tlsCertManager = manager
+	return manager
 }
 
 // tryInitImprovements attempts to initialize improvement modules if dependencies are ready
@@ -126,6 +146,9 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 		return errors.New("lego IP service not available")
 	}
 
+	// Note: Port checking is now handled within LegoIPService.ObtainIPCert()
+	// which implements intelligent challenge type selection and port management
+
 	// Obtain certificate using Lego (mask sensitive info in logs)
 	logger.Infof("Starting IP certificate obtain for IP address")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -141,6 +164,16 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 	installPath := strings.TrimSuffix(result.CertPath, ".pem")
 	if err := c.settingService.SetIpCertPath(installPath); err != nil {
 		logger.Warningf("Failed to set IP cert path: %v", err)
+	}
+
+	// 触发 TLS 证书重载
+	if c.tlsCertManager != nil {
+		certPath := installPath + ".crt"
+		keyPath := installPath + ".key"
+		c.tlsCertManager.SetCertPaths(certPath, keyPath)
+		if err := c.tlsCertManager.ReloadCert(); err != nil {
+			logger.Warningf("Failed to reload IP certificate in TLS manager: %v", err)
+		}
 	}
 
 	logger.Info("Successfully obtained IP certificate")
@@ -288,6 +321,16 @@ func (c *CertService) checkAndRenewCertificates() {
 			logger.Infof("Certificate for IP %s is older than 7 days, renewing", ip)
 			if err := c.ObtainIPCert(ip, email); err != nil {
 				logger.Errorf("Failed to renew certificate for IP %s: %v", ip, err)
+			} else {
+				// 证书续期成功后，触发 TLS 证书重载
+				if c.tlsCertManager != nil {
+					certPath := certPath + ".crt"
+					keyPath := certPath + ".key"
+					c.tlsCertManager.SetCertPaths(certPath, keyPath)
+					if err := c.tlsCertManager.ReloadCert(); err != nil {
+						logger.Warningf("Failed to reload renewed IP certificate in TLS manager: %v", err)
+					}
+				}
 			}
 		}
 	}
@@ -301,24 +344,40 @@ type certWebServerController struct {
 }
 
 func (c *certWebServerController) PauseHTTPListener() error {
-	// In a real implementation, this would signal the web server to stop listening on port 80
-	// Since we don't have direct control over the Gin engine here, we log a warning
-	// If the panel is actually on port 80, this will likely fail to free the port
-	logger.Warning("PauseHTTPListener called: Cannot pause panel listener directly. Ensure panel is not on port 80.")
-	return nil
+	// Get the web server instance from global
+	webServer := global.GetWebServer()
+	if webServer == nil {
+		logger.Warning("Web server not available, cannot pause HTTP listener")
+		return errors.New("web server not available")
+	}
+
+	return webServer.PauseHTTPListener()
 }
 
 func (c *certWebServerController) ResumeHTTPListener() error {
-	logger.Info("ResumeHTTPListener called")
-	return nil
+	// Get the web server instance from global
+	webServer := global.GetWebServer()
+	if webServer == nil {
+		logger.Warning("Web server not available, cannot resume HTTP listener")
+		return errors.New("web server not available")
+	}
+
+	return webServer.ResumeHTTPListener()
 }
 
 func (c *certWebServerController) IsListeningOnPort80() bool {
-	port, err := c.settingService.GetPort()
-	if err != nil {
-		return false
+	// Get the web server instance from global
+	webServer := global.GetWebServer()
+	if webServer == nil {
+		logger.Warning("Web server not available, checking port setting directly")
+		port, err := c.settingService.GetPort()
+		if err != nil {
+			return false
+		}
+		return port == 80
 	}
-	return port == 80
+
+	return webServer.IsListeningOnPort80()
 }
 
 // certXrayController implements XrayController interface

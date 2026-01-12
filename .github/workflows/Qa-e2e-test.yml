@@ -1,0 +1,47 @@
+name: QA E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  e2e-test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run E2E tests
+        run: |
+          export TEST_CONTAINER_RUNTIME=docker
+          go test -v -timeout 20m ./tests/e2e/...
+        env:
+          TEST_CONTAINER_RUNTIME: docker
+
+      - name: Collect test logs
+        if: always()
+        run: |
+          docker logs x-panel-e2e-container || true
+          docker ps -a || true
+
+      - name: Cleanup containers
+        if: always()
+        run: |
+          docker rm -f x-panel-e2e-container || true
+          docker rmi x-panel-e2e:latest || true

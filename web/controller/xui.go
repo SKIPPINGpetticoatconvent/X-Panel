@@ -14,13 +14,14 @@ type XUIController struct {
 	serverController      *ServerController
 	settingController     *SettingController
 	xraySettingController *XraySettingController
-	serverService         service.ServerService
+	serverService         *service.ServerService
 	certService           *service.CertService
 }
 
-func NewXUIController(g *gin.RouterGroup, certService *service.CertService) *XUIController {
+func NewXUIController(g *gin.RouterGroup, certService *service.CertService, serverService *service.ServerService) *XUIController {
 	a := &XUIController{
-		certService: certService,
+		certService:   certService,
+		serverService: serverService,
 	}
 	a.initRouter(g)
 	return a

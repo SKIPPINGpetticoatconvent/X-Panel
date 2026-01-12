@@ -96,35 +96,46 @@ func (p *PortConflictResolver) CheckPort80() (occupied bool, ownedByPanel bool, 
 
 // AcquirePort80 尝试获取 80 端口控制权
 func (p *PortConflictResolver) AcquirePort80(ctx context.Context) error {
+	logger.Info("Checking port 80 status...")
 	occupied, ownedByPanel, err := p.CheckPort80()
 	if err != nil {
+		logger.Errorf("Failed to check port 80 status: %v", err)
 		return err
 	}
 
+	logger.Infof("Port 80 status - Occupied: %v, Owned by panel: %v", occupied, ownedByPanel)
+
 	if !occupied {
+		logger.Info("Port 80 is free, proceeding with ACME challenge")
 		return nil // 端口空闲，直接可用
 	}
 
 	if !ownedByPanel {
+		logger.Error("Port 80 is occupied by external process - this will prevent ACME HTTP-01 challenge")
+		logger.Error("Check if another web server is running on port 80")
 		return WrapError(ErrCodePort80External, nil)
 	}
 
 	// 面板占用，执行暂停
-	logger.Info("Pausing panel HTTP listener on port 80...")
+	logger.Info("Panel owns port 80, pausing panel HTTP listener...")
 	if err := p.webController.PauseHTTPListener(); err != nil {
+		logger.Errorf("Failed to pause HTTP listener: %v", err)
 		return fmt.Errorf("Failed to pause HTTP listener: %w", err)
 	}
 
 	// 双重检查：暂停后端口是否真的释放了？
+	logger.Info("Verifying port 80 is released after pausing panel...")
 	for i := 0; i < 5; i++ {
 		time.Sleep(100 * time.Millisecond)
 		occupied, _, _ := p.CheckPort80()
 		if !occupied {
+			logger.Info("Port 80 successfully released")
 			return nil
 		}
 	}
 
 	// 如果暂停后仍被占用，尝试恢复并报错
+	logger.Error("Port 80 still occupied after pausing panel - this indicates the panel failed to release the port")
 	p.webController.ResumeHTTPListener()
 	return WrapError(ErrCodePort80Occupied, nil)
 }

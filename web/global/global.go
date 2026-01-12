@@ -15,6 +15,9 @@ var (
 type WebServer interface {
 	GetCron() *cron.Cron
 	GetCtx() context.Context
+	PauseHTTPListener() error
+	ResumeHTTPListener() error
+	IsListeningOnPort80() bool
 }
 
 type SubServer interface {

@@ -202,7 +202,6 @@ func TestInboundAPI_PermissionValidation(t *testing.T) {
 	t.Run("CrossUserPermission", func(t *testing.T) {
 		// 创建两个不同用户的会话
 		user1 := &model.User{Id: 1, Username: "user1"}
-		user2 := &model.User{Id: 2, Username: "user2"}
 
 		// 模拟用户1试图访问用户2的资源
 		c1, _ := gin.CreateTestContext(httptest.NewRecorder())

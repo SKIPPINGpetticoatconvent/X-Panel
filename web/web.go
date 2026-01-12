@@ -123,7 +123,10 @@ type Server struct {
 	tgbotService   service.TelegramService
 	certService    *service.CertService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
-	serverService service.ServerService
+	serverService *service.ServerService
+
+	// TLS Certificate Manager
+	tlsCertManager *service.TLSCertManager
 
 	cron *cron.Cron
 
@@ -150,7 +153,7 @@ func (s *Server) SetCertService(certService *service.CertService) {
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-func NewServer(serverService service.ServerService) *Server {
+func NewServer(serverService *service.ServerService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		ctx:    ctx,
@@ -291,12 +294,17 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	// Apply the redirect middleware (`/xui` to `/panel`)
 	engine.Use(middleware.RedirectMiddleware(basePath))
 
+	// 添加健康检查端点在所有中间件之后但在basePath分组之前，确保不受basePath和分组中间件影响
+	engine.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	g := engine.Group(basePath)
 
 	s.index = controller.NewIndexController(g)
 	// 〔中文注释〕: 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
 	s.server = controller.NewServerController(g, s.serverService)
-	s.panel = controller.NewXUIController(g, s.certService)
+	s.panel = controller.NewXUIController(g, s.certService, s.serverService)
 	s.api = controller.NewAPIController(g, s.serverService)
 
 	return engine, nil
@@ -445,33 +453,28 @@ func (s *Server) Start() (err error) {
 
 	// 再次检查证书，配置 TLS Listener
 	if certFile != "" && keyFile != "" {
-		cert, _ := tls.LoadX509KeyPair(certFile, keyFile) // 这里我们忽略错误，因为上面已经检查过了
-		c := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			// 设置最低 TLS 版本为 1.2，提高兼容性
-			MinVersion: tls.VersionTLS12,
-			// 明确指定密码套件，避免协商失败
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			},
-			// 启用服务器端的密码套件选择偏好
-			PreferServerCipherSuites: true,
-			// 设置会话缓存以提高性能
-			SessionTicketsDisabled: false,
-			// 【关键修复】: 设置 GetCertificate 回调，确保无论客户端发送什么 SNI（包括 IP 地址或空 SNI），
-			// 都返回配置的证书，而不是拒绝连接。这解决了通过 IP 访问时 ERR_CONNECTION_CLOSED 的问题。
-			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-				// 无论 SNI 是什么，都返回配置的证书
-				// 这允许通过 IP 地址访问面板（虽然浏览器会显示证书警告）
-				return &cert, nil
-			},
+		// 初始化 TLS Certificate Manager
+		if s.certService != nil {
+			s.tlsCertManager = s.certService.CreateTLSCertManager()
+		} else {
+			s.tlsCertManager = service.NewTLSCertManager(nil)
 		}
+
+		// 从设置加载证书路径并加载证书
+		certFile, _ := s.settingService.GetCertFile()
+		keyFile, _ := s.settingService.GetKeyFile()
+		if certFile != "" && keyFile != "" {
+			s.tlsCertManager.SetCertPaths(certFile, keyFile)
+			if err := s.tlsCertManager.ReloadCert(); err != nil {
+				logger.Warningf("Failed to load default certificate: %v", err)
+			} else {
+				logger.Info("Loaded default TLS certificate")
+			}
+		}
+
+		// 使用 TLSCertManager 的 TLS 配置
+		c := s.tlsCertManager.GetTLSConfig()
+
 		listener = network.NewAutoHttpsListener(listener)
 		listener = tls.NewListener(listener, c)
 		logger.Info("Web server running HTTPS on", listener.Addr())
@@ -596,34 +599,17 @@ func (s *Server) ResumeHTTPListener() error {
 
 	// 如果是 HTTPS 模式，配置 TLS
 	if s.isHTTPS {
-		certFile, err := s.settingService.GetCertFile()
-		if err != nil {
-			return fmt.Errorf("failed to get cert file: %w", err)
-		}
-		keyFile, err := s.settingService.GetKeyFile()
-		if err != nil {
-			return fmt.Errorf("failed to get key file: %w", err)
+		if s.tlsCertManager == nil {
+			return fmt.Errorf("TLS certificate manager not initialized")
 		}
 
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return fmt.Errorf("failed to load certificates: %w", err)
+		// 重新加载证书
+		if err := s.tlsCertManager.ReloadCert(); err != nil {
+			logger.Warningf("Failed to reload TLS certificate: %v", err)
 		}
 
-		c := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			MinVersion:   tls.VersionTLS12,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			},
-			PreferServerCipherSuites: true,
-			SessionTicketsDisabled:   false,
-			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-				return &cert, nil
-			},
-		}
+		// 使用 TLSCertManager 的 TLS 配置
+		c := s.tlsCertManager.GetTLSConfig()
 		listener = network.NewAutoHttpsListener(listener)
 		listener = tls.NewListener(listener, c)
 	}
