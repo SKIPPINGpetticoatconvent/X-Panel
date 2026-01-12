@@ -347,6 +347,10 @@ func TestDockerE2E(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
+		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
 	}
@@ -575,6 +579,10 @@ func TestDockerE2EPerformance(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
+		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
 	}
@@ -685,6 +693,10 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
+		},
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -804,6 +816,10 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
+		},
+		Cmd: []string{
+			"/bin/sh", "-c",
+			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
