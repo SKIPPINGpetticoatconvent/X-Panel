@@ -92,8 +92,8 @@ type Status struct {
 }
 
 type ServerService struct {
-	xrayService    XrayService
-	inboundService InboundService
+	xrayService    *XrayService
+	inboundService *InboundService
 	tgService      TelegramService
 	certService    *CertService
 	cachedIPv4     string
@@ -118,13 +118,28 @@ func (s *ServerService) SetCertService(certService *CertService) {
 	s.certService = certService
 }
 
+// GetXrayService 获取 Xray 服务实例
+func (s *ServerService) GetXrayService() *XrayService {
+	return s.xrayService
+}
+
+// GetInboundService 获取 Inbound 服务实例
+func (s *ServerService) GetInboundService() *InboundService {
+	return s.inboundService
+}
+
+// GetTelegramService 获取 Telegram 服务实例
+func (s *ServerService) GetTelegramService() TelegramService {
+	return s.tgService
+}
+
 // SetXrayService 设置 Xray 服务实例
-func (s *ServerService) SetXrayService(xrayService XrayService) {
+func (s *ServerService) SetXrayService(xrayService *XrayService) {
 	s.xrayService = xrayService
 }
 
 // SetInboundService 设置 Inbound 服务实例
-func (s *ServerService) SetInboundService(inboundService InboundService) {
+func (s *ServerService) SetInboundService(inboundService *InboundService) {
 	s.inboundService = inboundService
 }
 

@@ -13,6 +13,8 @@ import (
 	"x-ui/web/session"
 	"x-ui/xray"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,6 +39,8 @@ func TestInboundAPI_ResponseFormat(t *testing.T) {
 	router := gin.New()
 
 	// 添加中间件
+	store := cookie.NewStore([]byte("secret"))
+	router.Use(sessions.Sessions("session", store))
 	router.Use(func(c *gin.Context) {
 		// 模拟国际化函数
 		c.Set("I18n", func(i18nType interface{}, key string, params ...string) string {
@@ -51,8 +55,8 @@ func TestInboundAPI_ResponseFormat(t *testing.T) {
 
 	// 创建控制器
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	// 注册路由
@@ -98,8 +102,8 @@ func TestInboundAPI_DataValidation(t *testing.T) {
 	mockXrayService := &service.XrayService{}
 
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	api := router.Group("/api/inbounds")
@@ -168,8 +172,8 @@ func TestInboundAPI_PermissionValidation(t *testing.T) {
 	mockXrayService := &service.XrayService{}
 
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	api := router.Group("/api/inbounds")
@@ -477,8 +481,8 @@ func BenchmarkAPI_GetInbounds(b *testing.B) {
 	mockXrayService := &service.XrayService{}
 
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	api := router.Group("/api/inbounds")

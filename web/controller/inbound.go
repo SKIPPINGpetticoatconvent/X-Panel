@@ -13,12 +13,15 @@ import (
 )
 
 type InboundController struct {
-	inboundService service.InboundService
-	xrayService    service.XrayService
+	inboundService *service.InboundService
+	xrayService    *service.XrayService
 }
 
-func NewInboundController(g *gin.RouterGroup) *InboundController {
-	a := &InboundController{}
+func NewInboundController(g *gin.RouterGroup, inboundService *service.InboundService, xrayService *service.XrayService) *InboundController {
+	a := &InboundController{
+		inboundService: inboundService,
+		xrayService:    xrayService,
+	}
 	a.initRouter(g)
 	return a
 }

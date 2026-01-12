@@ -37,7 +37,7 @@ func (a *XUIController) initRouter(g *gin.RouterGroup) {
 	g.GET("/xray", a.xraySettings)
 	g.GET("/navigation", a.navigation)
 
-	a.inboundController = NewInboundController(g)
+	a.inboundController = NewInboundController(g, a.serverService.GetInboundService(), a.serverService.GetXrayService())
 	a.serverController = NewServerController(g, a.serverService)
 	a.settingController = NewSettingController(g, a.certService)
 	a.xraySettingController = NewXraySettingController(g)

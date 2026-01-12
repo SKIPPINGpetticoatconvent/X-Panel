@@ -11,6 +11,8 @@ import (
 	"x-ui/web/service"
 	"x-ui/web/session"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,6 +41,8 @@ func setupTestRouter() *gin.Engine {
 	router := gin.New()
 
 	// 添加中间件
+	store := cookie.NewStore([]byte("secret"))
+	router.Use(sessions.Sessions("session", store))
 	router.Use(func(c *gin.Context) {
 		// 模拟国际化函数
 		c.Set("I18n", func(i18nType interface{}, key string, params ...string) string {
@@ -56,7 +60,7 @@ func TestInboundController_GetInbounds(t *testing.T) {
 	router := setupTestRouter()
 
 	// 创建控制器
-	NewInboundController(router.Group("/api/inbounds"))
+	NewInboundController(router.Group("/api/inbounds"), &service.InboundService{}, &service.XrayService{})
 
 	// 创建测试请求
 	req, _ := http.NewRequest("GET", "/api/inbounds/list", nil)
@@ -103,7 +107,7 @@ func TestInboundController_AddInbound(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
-	NewInboundController(router.Group("/api/inbounds"))
+	NewInboundController(router.Group("/api/inbounds"), &service.InboundService{}, &service.XrayService{})
 
 	// 执行请求
 	w := httptest.NewRecorder()
@@ -350,7 +354,7 @@ func TestInboundController_ImportInbound(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
-	NewInboundController(router.Group("/api/inbounds"))
+	NewInboundController(router.Group("/api/inbounds"), &service.InboundService{}, &service.XrayService{})
 
 	// 执行请求
 	w := httptest.NewRecorder()
@@ -363,7 +367,7 @@ func TestInboundController_ImportInbound(t *testing.T) {
 // TestInboundController_ClientOperations 测试客户端操作
 func TestInboundController_ClientOperations(t *testing.T) {
 	router := setupTestRouter()
-	NewInboundController(router.Group("/api/inbounds"))
+	NewInboundController(router.Group("/api/inbounds"), &service.InboundService{}, &service.XrayService{})
 
 	// 测试添加客户端
 	addClientData := model.Inbound{

@@ -5,8 +5,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"time"
 
 	"x-ui/logger"
@@ -51,7 +51,7 @@ func (chc *certHealthCheckerImpl) Check(certPath, keyPath string) (time.Time, er
 
 // ValidateIP 验证证书是否包含指定的IP地址
 func (chc *certHealthCheckerImpl) ValidateIP(certPath string, ip string) error {
-	certData, err := ioutil.ReadFile(certPath)
+	certData, err := os.ReadFile(certPath)
 	if err != nil {
 		return fmt.Errorf("读取证书文件失败: %w", err)
 	}
@@ -90,12 +90,12 @@ func (chc *certHealthCheckerImpl) ValidateIP(certPath string, ip string) error {
 
 // ValidateChain 验证证书链完整性
 func (chc *certHealthCheckerImpl) ValidateChain(certPath, caPath string) error {
-	certData, err := ioutil.ReadFile(certPath)
+	certData, err := os.ReadFile(certPath)
 	if err != nil {
 		return fmt.Errorf("读取证书文件失败: %w", err)
 	}
 
-	caData, err := ioutil.ReadFile(caPath)
+	caData, err := os.ReadFile(caPath)
 	if err != nil {
 		return fmt.Errorf("读取CA证书文件失败: %w", err)
 	}

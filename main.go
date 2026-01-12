@@ -74,8 +74,8 @@ func runWebServer() {
 	lastStatus := service.Status{}
 
 	// 初始化 ServerService 的依赖字段
-	serverService.SetXrayService(xrayService)
-	serverService.SetInboundService(inboundService)
+	serverService.SetXrayService(&xrayService)
+	serverService.SetInboundService(&inboundService)
 
 	// 初始化证书服务
 	certService := service.NewCertService(&settingService)
@@ -85,6 +85,7 @@ func runWebServer() {
 
 	// 注入到 XrayService 中
 	xrayService.SetXrayAPI(xrayApi)
+	xrayService.SetInboundService(&inboundService)
 
 	// 注入到 InboundService 中
 	inboundService.SetXrayAPI(xrayApi)

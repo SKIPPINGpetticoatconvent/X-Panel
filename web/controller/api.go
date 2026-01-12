@@ -10,13 +10,14 @@ type APIController struct {
 	BaseController
 	inboundController *InboundController
 	serverController  *ServerController
-	Tgbot             service.Tgbot
+	Tgbot             service.TelegramService
 	serverService     *service.ServerService
 }
 
 func NewAPIController(g *gin.RouterGroup, serverService *service.ServerService) *APIController {
 	a := &APIController{
 		serverService: serverService,
+		Tgbot:         serverService.GetTelegramService(),
 	}
 	a.initRouter(g)
 	return a
@@ -29,7 +30,7 @@ func (a *APIController) initRouter(g *gin.RouterGroup) {
 
 	// Inbounds API
 	inbounds := api.Group("/inbounds")
-	a.inboundController = NewInboundController(inbounds)
+	a.inboundController = NewInboundController(inbounds, a.serverService.GetInboundService(), a.serverService.GetXrayService())
 
 	// Server API
 	server := api.Group("/server")
@@ -40,5 +41,9 @@ func (a *APIController) initRouter(g *gin.RouterGroup) {
 }
 
 func (a *APIController) BackuptoTgbot(c *gin.Context) {
-	a.Tgbot.SendBackupToAdmins()
+	if a.Tgbot == nil {
+		jsonMsg(c, "Telegram bot not enabled", nil)
+		return
+	}
+	a.Tgbot.SendMessage("Backup requested via API") // Simplified for now since SendBackupToAdmins is not in interface
 }

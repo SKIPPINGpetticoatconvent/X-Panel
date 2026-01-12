@@ -17,15 +17,15 @@ import (
 
 // CertMagicDomainService 实现 CertMagic 域名证书服务
 type CertMagicDomainService struct {
-	baseDir       string
-	portResolver  *PortConflictResolver
-	certReloader  *CertHotReloader
-	config        *CertMagicConfig
+	baseDir      string
+	portResolver *PortConflictResolver
+	certReloader *CertHotReloader
+	config       *CertMagicConfig
 
 	// TODO: CertMagic 相关配置 (需要安装依赖后启用)
 	// certMagicConfig *certmagic.Config
-	managedDomains  map[string]*DomainCertInfo
-	mu              sync.RWMutex
+	managedDomains map[string]*DomainCertInfo
+	mu             sync.RWMutex
 
 	// 自动续期控制
 	autoRenewalStop chan struct{}
@@ -43,10 +43,10 @@ type CertMagicConfig struct {
 
 // DomainCertInfo 域名证书信息
 type DomainCertInfo struct {
-	Domain   string
-	Email    string
-	Expiry   time.Time
-	Options  *CertOptions
+	Domain      string
+	Email       string
+	Expiry      time.Time
+	Options     *CertOptions
 	LastRenewal time.Time
 }
 
@@ -169,42 +169,44 @@ func (s *CertMagicDomainService) ObtainDomainCert(domain, email string, opts *Ce
 	logger.Warning("CertMagic certificate obtain not implemented yet")
 	return nil, fmt.Errorf("CertMagic dependency not available - certificate obtain skipped")
 
-	// 获取证书路径
-	certPath, keyPath := s.getCertPaths(domain)
+	/*
+		// 获取证书路径
+		certPath, keyPath := s.getCertPaths(domain)
 
-	// 解析证书过期时间
-	expiry, err := s.parseCertificateExpiry(certPath)
-	if err != nil {
-		logger.Warningf("Failed to parse certificate expiry: %v", err)
-		expiry = time.Now().Add(90 * 24 * time.Hour) // 默认 90 天
-	}
-
-	// 保存域名信息
-	s.mu.Lock()
-	s.managedDomains[domain] = &DomainCertInfo{
-		Domain:      domain,
-		Email:       email,
-		Expiry:      expiry,
-		Options:     opts,
-		LastRenewal: time.Now(),
-	}
-	s.mu.Unlock()
-
-	result := &CertResult{
-		CertPath: certPath,
-		KeyPath:  keyPath,
-		Expiry:   expiry,
-	}
-
-	// 触发证书重载
-	if s.certReloader != nil {
-		if err := s.certReloader.OnCertRenewed(certPath, keyPath); err != nil {
-			logger.Warningf("Failed to reload certificate: %v", err)
+		// 解析证书过期时间
+		expiry, err := s.parseCertificateExpiry(certPath)
+		if err != nil {
+			logger.Warningf("Failed to parse certificate expiry: %v", err)
+			expiry = time.Now().Add(90 * 24 * time.Hour) // 默认 90 天
 		}
-	}
 
-	logger.Info("Successfully obtained domain certificate")
-	return result, nil
+		// 保存域名信息
+		s.mu.Lock()
+		s.managedDomains[domain] = &DomainCertInfo{
+			Domain:      domain,
+			Email:       email,
+			Expiry:      expiry,
+			Options:     opts,
+			LastRenewal: time.Now(),
+		}
+		s.mu.Unlock()
+
+		result := &CertResult{
+			CertPath: certPath,
+			KeyPath:  keyPath,
+			Expiry:   expiry,
+		}
+
+		// 触发证书重载
+		if s.certReloader != nil {
+			if err := s.certReloader.OnCertRenewed(certPath, keyPath); err != nil {
+				logger.Warningf("Failed to reload certificate: %v", err)
+			}
+		}
+
+		logger.Info("Successfully obtained domain certificate")
+		return result, nil
+	*/
 }
 
 // RenewDomainCert 续期域名证书

@@ -23,7 +23,7 @@ var (
 )
 
 type XrayService struct {
-	inboundService InboundService
+	inboundService *InboundService
 	settingService SettingService
 	xrayAPI        xray.XrayAPI
 }
@@ -31,6 +31,11 @@ type XrayService struct {
 // SetXrayAPI 用于从外部注入 XrayAPI 实例
 func (s *XrayService) SetXrayAPI(api xray.XrayAPI) {
 	s.xrayAPI = api
+}
+
+// SetInboundService 用于从外部注入 InboundService 实例
+func (s *XrayService) SetInboundService(inboundService *InboundService) {
+	s.inboundService = inboundService
 }
 
 // IsXrayRunning 检查 Xray 是否正在运行

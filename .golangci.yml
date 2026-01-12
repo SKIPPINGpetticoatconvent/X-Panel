@@ -1,0 +1,17 @@
+run:
+  timeout: 5m
+  tests: false # Don't run linters on test files by default to reduce noise on legacy tests
+
+linters:
+  disable-all: true
+  enable:
+    - govet         # Vet checks (copylocks, etc.)
+    - staticcheck   # Static analysis
+    - gosimple      # Simplification suggestions
+    - unused        # Unused code
+    - ineffassign   # Ineffectual assignments
+    - typecheck     # Type checking
+
+linters-settings:
+  staticcheck:
+    checks: ["all", "-SA1019"] # Disable deprecation warnings (SA1019) for now as there are many
