@@ -22,8 +22,6 @@ import (
 const (
 	imageName     = "x-panel-e2e:latest"
 	containerName = "x-panel-e2e-container"
-	hostPort      = "13688"
-	baseURL       = "http://127.0.0.1:" + hostPort
 	maxRetries    = 60
 	retryInterval = 2 * time.Second
 	username      = "admin"
@@ -343,7 +341,7 @@ func TestDockerE2E(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 		},
-		WaitingFor: wait.ForHTTP("/").
+		WaitingFor: wait.ForHTTP("/health").
 			WithPort("13688/tcp").
 			WithStartupTimeout(60 * time.Second),
 	}
@@ -566,7 +564,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 		},
-		WaitingFor: wait.ForHTTP("/").
+		WaitingFor: wait.ForHTTP("/health").
 			WithPort("13688/tcp").
 			WithStartupTimeout(60 * time.Second),
 	}
@@ -672,7 +670,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 		},
-		WaitingFor: wait.ForHTTP("/").
+		WaitingFor: wait.ForHTTP("/health").
 			WithPort("13688/tcp").
 			WithStartupTimeout(60 * time.Second),
 	}
@@ -786,7 +784,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 		},
-		WaitingFor: wait.ForHTTP("/").
+		WaitingFor: wait.ForHTTP("/health").
 			WithPort("13688/tcp").
 			WithStartupTimeout(60 * time.Second),
 	}
