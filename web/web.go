@@ -118,7 +118,7 @@ type Server struct {
 	panel  *controller.XUIController
 	api    *controller.APIController
 
-	xrayService    service.XrayService
+	xrayService    *service.XrayService
 	settingService service.SettingService
 	tgbotService   service.TelegramService
 	certService    *service.CertService
@@ -139,6 +139,11 @@ type Server struct {
 	router             *gin.Engine  // 保存的路由器，用于重新启动服务器
 	listenAddr         string       // 保存的监听地址
 	isHTTPS            bool         // 是否为 HTTPS 模式
+}
+
+// 【新增方法】：用于 main.go 将创建好的 xrayService 注入进来
+func (s *Server) SetXrayService(xrayService *service.XrayService) {
+	s.xrayService = xrayService
 }
 
 // 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来

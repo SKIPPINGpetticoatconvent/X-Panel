@@ -25,11 +25,11 @@ var (
 type XrayService struct {
 	inboundService *InboundService
 	settingService SettingService
-	xrayAPI        xray.XrayAPI
+	xrayAPI        xray.API
 }
 
 // SetXrayAPI 用于从外部注入 XrayAPI 实例
-func (s *XrayService) SetXrayAPI(api xray.XrayAPI) {
+func (s *XrayService) SetXrayAPI(api xray.API) {
 	s.xrayAPI = api
 }
 

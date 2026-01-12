@@ -84,11 +84,11 @@ func runWebServer() {
 	xrayApi := xray.XrayAPI{}
 
 	// 注入到 XrayService 中
-	xrayService.SetXrayAPI(xrayApi)
+	xrayService.SetXrayAPI(&xrayApi)
 	xrayService.SetInboundService(&inboundService)
 
 	// 注入到 InboundService 中
-	inboundService.SetXrayAPI(xrayApi)
+	inboundService.SetXrayAPI(&xrayApi)
 
 	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
 	tgEnable, err := settingService.GetTgbotEnabled()
@@ -137,6 +137,8 @@ func runWebServer() {
 	}
 	// 注入证书服务
 	server.SetCertService(certService)
+	// 注入 Xray 服务
+	server.SetXrayService(&xrayService)
 
 	global.SetWebServer(server)
 	err = server.Start()
@@ -231,6 +233,8 @@ func runWebServer() {
 			if tgBotService != nil {
 				server.SetTelegramService(tgBotService)
 			}
+			server.SetXrayService(&xrayService)
+			server.SetCertService(certService)
 			global.SetWebServer(server)
 			err = server.Start()
 			if err != nil {

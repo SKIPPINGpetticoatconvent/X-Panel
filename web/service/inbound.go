@@ -19,14 +19,14 @@ import (
 )
 
 type InboundService struct {
-	xrayApi       xray.XrayAPI
+	xrayApi       xray.API
 	tgService     TelegramService
 	settingsCache map[int]map[string]any
 	cacheMutex    sync.RWMutex
 }
 
 // 【新增方法】: 用于从外部注入 XrayAPI 实例
-func (s *InboundService) SetXrayAPI(api xray.XrayAPI) {
+func (s *InboundService) SetXrayAPI(api xray.API) {
 	s.xrayApi = api
 }
 

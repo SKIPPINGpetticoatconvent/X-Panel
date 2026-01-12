@@ -25,6 +25,16 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+type API interface {
+	Init(apiPort int) error
+	Close()
+	AddInbound(inbound []byte) error
+	DelInbound(tag string) error
+	AddUser(Protocol string, inboundTag string, user map[string]any) error
+	RemoveUser(inboundTag, email string) error
+	GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error)
+}
+
 type XrayAPI struct {
 	HandlerServiceClient *command.HandlerServiceClient
 	StatsServiceClient   *statsService.StatsServiceClient
