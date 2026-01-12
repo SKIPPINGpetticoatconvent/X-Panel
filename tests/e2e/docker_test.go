@@ -2,6 +2,7 @@ package e2e_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 const (
@@ -335,12 +340,48 @@ func TestDockerE2E(t *testing.T) {
 
 	// 3. 启动容器
 	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "docker", "run", "-d",
-		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
-		"-e", "XPANEL_RUN_IN_CONTAINER=true",
-		imageName,
-	)
+
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		t.Fatalf("Failed to create Docker client: %v", err)
+	}
+	defer cli.Close()
+
+	// 告诉容器内部暴露什么端口 (Config)
+	exposedPorts := nat.PortSet{
+		"13688/tcp": struct{}{},
+	}
+
+	// 告诉宿主机如何映射端口 (HostConfig) -> 核心修复点
+	portBindings := nat.PortMap{
+		"13688/tcp": []nat.PortBinding{
+			{
+				HostIP:   "0.0.0.0", // 绑定到宿主机的所有 IP
+				HostPort: hostPort,   // 宿主机端口
+			},
+		},
+	}
+
+	// 创建容器
+	resp, err := cli.ContainerCreate(ctx,
+		&container.Config{ // 第一个参数结构体
+			Image:        imageName,
+			ExposedPorts: exposedPorts,
+			Env:          []string{"XPANEL_RUN_IN_CONTAINER=true"},
+		},
+		&container.HostConfig{ // 第二个参数结构体 (HostConfig)
+			PortBindings: portBindings, // 🔴 必须在这里！不要放错位置！
+			AutoRemove:   true,         // 建议开启，方便清理
+		},
+		nil, nil, containerName)
+	if err != nil {
+		t.Fatalf("Failed to create container: %v", err)
+	}
+
+	if _, err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		t.Fatalf("Failed to start container: %v", err)
+	}
 
 	defer func() {
 		t.Logf("Cleaning up container: %s...", containerName)

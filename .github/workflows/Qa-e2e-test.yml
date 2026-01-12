@@ -34,6 +34,15 @@ jobs:
         env:
           TEST_CONTAINER_RUNTIME: docker
 
+      - name: Debug Docker Ports
+        if: always()
+        run: |
+          echo "=== 检查容器端口映射 ==="
+          docker port x-panel-e2e-container || echo "无法获取端口映射"
+          
+          echo "=== 检查 Docker 进程详情 ==="
+          docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Ports}}"
+
       - name: Collect test logs
         if: always()
         run: |
