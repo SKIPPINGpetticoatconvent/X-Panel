@@ -21,6 +21,7 @@ type ServerController struct {
 	serverService    *service.ServerService
 	settingService   service.SettingService
 	publicIPDetector *service.PublicIPDetector
+	wsService        *service.WsService
 
 	lastStatus        *service.Status
 	lastGetStatusTime time.Time
@@ -37,6 +38,7 @@ func NewServerController(g *gin.RouterGroup, serverService *service.ServerServic
 		//    这样一来，这个 Controller 内部使用的就是我们在 main.go 中创建的那个功能完整的服务了。
 		serverService:    serverService,
 		publicIPDetector: service.NewPublicIPDetector(),
+		wsService:        service.GetWsService(),
 	}
 	a.initRouter(g)
 	a.startTask()
@@ -56,6 +58,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 
 	g.POST("/stopXrayService", a.stopXrayService)
 	g.POST("/restartXrayService", a.restartXrayService)
+	g.GET("/ws", a.serverWS)
 	g.POST("/installXray/:version", a.installXray)
 	g.POST("/updateGeofile", a.updateGeofile)
 	g.POST("/updateGeofile/:fileName", a.updateGeofile)
@@ -85,10 +88,24 @@ func (a *ServerController) startTask() {
 	c.AddFunc("@every 2s", func() {
 		now := time.Now()
 		if now.Sub(a.lastGetStatusTime) > time.Minute*3 {
-			return
+			// If no normal HTTP requests, check if we have active WS clients
+			// If active WS clients exist, we should continue refreshing
+			// However, since we are using lazy refresh in Broadcast, we can just refresh here
+			// and let Broadcast handle the pushing.
+			// Ideally, we only refresh if there are listeners.
+			// For simplicity: continue refreshing if WS clients are connected
 		}
 		a.refreshStatus()
+
+		// Push update to WebSocket clients
+		if a.lastStatus != nil {
+			a.wsService.Broadcast(a.lastStatus)
+		}
 	})
+}
+
+func (a *ServerController) serverWS(c *gin.Context) {
+	a.wsService.HandleConnection(c)
 }
 
 func (a *ServerController) status(c *gin.Context) {
