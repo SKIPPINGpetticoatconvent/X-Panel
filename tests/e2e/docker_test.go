@@ -347,6 +347,7 @@ func TestDockerE2E(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"/bin/sh", "-c",
 			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
@@ -579,6 +580,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"/bin/sh", "-c",
 			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
@@ -694,6 +696,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"/bin/sh", "-c",
 			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
@@ -817,6 +820,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"/bin/sh", "-c",
 			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
