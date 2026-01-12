@@ -349,10 +349,9 @@ func TestDockerE2E(t *testing.T) {
 		},
 		// 覆盖 Entrypoint 以确保 Cmd 能够执行
 		Entrypoint: []string{"/bin/sh", "-c"},
-		// 强制初始化并重置 webBasePath 为 /，解决 404 问题
+		// 初始化并启动应用
 		Cmd: []string{
 			"./x-ui setting -username admin -password admin -port 13688 && " +
-				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
 				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
@@ -583,11 +582,10 @@ func TestDockerE2EPerformance(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		// 覆盖 Entrypoint 并强制重置数据库配置
+		// 覆盖 Entrypoint 并初始化应用
 		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"./x-ui setting -username admin -password admin -port 13688 && " +
-				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
 				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
@@ -701,11 +699,10 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		// 覆盖 Entrypoint 并强制重置数据库配置
+		// 覆盖 Entrypoint 并初始化应用
 		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"./x-ui setting -username admin -password admin -port 13688 && " +
-				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
 				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
@@ -827,11 +824,10 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		// 覆盖 Entrypoint 并强制重置数据库配置
+		// 覆盖 Entrypoint 并初始化应用
 		Entrypoint: []string{"/bin/sh", "-c"},
 		Cmd: []string{
 			"./x-ui setting -username admin -password admin -port 13688 && " +
-				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
 				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
