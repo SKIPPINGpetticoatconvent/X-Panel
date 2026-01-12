@@ -1,0 +1,826 @@
+?   	x-ui	[no test files]
+?   	x-ui/config	[no test files]
+?   	x-ui/database	[no test files]
+?   	x-ui/database/model	[no test files]
+?   	x-ui/logger	[no test files]
+?   	x-ui/sub	[no test files]
+?   	x-ui/test_scripts	[no test files]
+=== RUN   TestLogStreamerLogRotation
+--- PASS: TestLogStreamerLogRotation (0.60s)
+=== RUN   TestInboundServiceConcurrentCacheAccess
+    performance_stability_test.go:106: Concurrent cache access test completed successfully
+--- PASS: TestInboundServiceConcurrentCacheAccess (0.00s)
+=== RUN   TestInboundServiceBulkTrafficUpdates
+    performance_stability_test.go:170: Bulk traffic data handling test completed successfully
+--- PASS: TestInboundServiceBulkTrafficUpdates (0.00s)
+PASS
+ok  	x-ui/test_suite	(cached)
+=== RUN   TestLogStreamerLogRotation
+--- PASS: TestLogStreamerLogRotation (0.60s)
+=== RUN   TestInboundServiceConcurrentCacheAccess
+    performance_stability_test.go:106: Concurrent cache access test completed successfully
+--- PASS: TestInboundServiceConcurrentCacheAccess (0.00s)
+=== RUN   TestInboundServiceBulkTrafficUpdates
+    performance_stability_test.go:170: Bulk traffic data handling test completed successfully
+--- PASS: TestInboundServiceBulkTrafficUpdates (0.00s)
+=== RUN   TestSQLInjection
+=== RUN   TestSQLInjection/InboundRemarkSQLInjection
+=== RUN   TestSQLInjection/EmailSQLInjection
+--- PASS: TestSQLInjection (0.00s)
+    --- PASS: TestSQLInjection/InboundRemarkSQLInjection (0.00s)
+    --- PASS: TestSQLInjection/EmailSQLInjection (0.00s)
+=== RUN   TestXSS
+=== RUN   TestXSS/RemarkXSS
+=== RUN   TestXSS/HTMLResponseEscaping
+--- PASS: TestXSS (0.00s)
+    --- PASS: TestXSS/RemarkXSS (0.00s)
+    --- PASS: TestXSS/HTMLResponseEscaping (0.00s)
+=== RUN   TestCSRF
+=== RUN   TestCSRF/MissingCSRFToken
+=== RUN   TestCSRF/RefererCheck
+--- PASS: TestCSRF (0.00s)
+    --- PASS: TestCSRF/MissingCSRFToken (0.00s)
+    --- PASS: TestCSRF/RefererCheck (0.00s)
+=== RUN   TestInputValidation
+=== RUN   TestInputValidation/PortValidation
+=== RUN   TestInputValidation/PortValidation/ValidPort
+=== RUN   TestInputValidation/PortValidation/MinPort
+=== RUN   TestInputValidation/PortValidation/MaxPort
+=== RUN   TestInputValidation/PortValidation/ZeroPort
+=== RUN   TestInputValidation/PortValidation/NegativePort
+=== RUN   TestInputValidation/PortValidation/TooHighPort
+=== RUN   TestInputValidation/ProtocolValidation
+=== RUN   TestInputValidation/ProtocolValidation/vmess
+=== RUN   TestInputValidation/ProtocolValidation/vless
+=== RUN   TestInputValidation/ProtocolValidation/trojan
+=== RUN   TestInputValidation/ProtocolValidation/shadowsocks
+=== RUN   TestInputValidation/ProtocolValidation/http
+=== RUN   TestInputValidation/ProtocolValidation/socks
+=== RUN   TestInputValidation/ProtocolValidation/wireguard
+=== RUN   TestInputValidation/ProtocolValidation/tunnel
+=== RUN   TestInputValidation/RemarkLengthValidation
+=== RUN   TestInputValidation/TrafficLimitsValidation
+=== RUN   TestInputValidation/TrafficLimitsValidation/ValidLimits
+=== RUN   TestInputValidation/TrafficLimitsValidation/ZeroLimits
+=== RUN   TestInputValidation/TrafficLimitsValidation/NegativeUp
+=== RUN   TestInputValidation/TrafficLimitsValidation/NegativeDown
+=== RUN   TestInputValidation/TrafficLimitsValidation/NegativeTotal
+=== RUN   TestInputValidation/JSONValidation
+--- PASS: TestInputValidation (0.00s)
+    --- PASS: TestInputValidation/PortValidation (0.00s)
+        --- PASS: TestInputValidation/PortValidation/ValidPort (0.00s)
+        --- PASS: TestInputValidation/PortValidation/MinPort (0.00s)
+        --- PASS: TestInputValidation/PortValidation/MaxPort (0.00s)
+        --- PASS: TestInputValidation/PortValidation/ZeroPort (0.00s)
+        --- PASS: TestInputValidation/PortValidation/NegativePort (0.00s)
+        --- PASS: TestInputValidation/PortValidation/TooHighPort (0.00s)
+    --- PASS: TestInputValidation/ProtocolValidation (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/vmess (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/vless (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/trojan (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/shadowsocks (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/http (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/socks (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/wireguard (0.00s)
+        --- PASS: TestInputValidation/ProtocolValidation/tunnel (0.00s)
+    --- PASS: TestInputValidation/RemarkLengthValidation (0.00s)
+    --- PASS: TestInputValidation/TrafficLimitsValidation (0.00s)
+        --- PASS: TestInputValidation/TrafficLimitsValidation/ValidLimits (0.00s)
+        --- PASS: TestInputValidation/TrafficLimitsValidation/ZeroLimits (0.00s)
+        --- PASS: TestInputValidation/TrafficLimitsValidation/NegativeUp (0.00s)
+        --- PASS: TestInputValidation/TrafficLimitsValidation/NegativeDown (0.00s)
+        --- PASS: TestInputValidation/TrafficLimitsValidation/NegativeTotal (0.00s)
+    --- PASS: TestInputValidation/JSONValidation (0.00s)
+=== RUN   TestSecurityHeaders
+--- PASS: TestSecurityHeaders (0.00s)
+PASS
+ok  	x-ui/tests	(cached)
+🚀 X-Panel 综合测试套件
+=========================
+详细输出: false
+覆盖率报告: false
+基准测试: false
+集成测试: false
+
+=== RUN   TestCertFallback_EndToEnd
+    cert_fallback_test.go:10: Integration test - requires full system setup
+--- SKIP: TestCertFallback_EndToEnd (0.00s)
+=== RUN   TestCertFallback_Recovery
+    cert_fallback_test.go:30: Integration test - requires full system setup
+--- SKIP: TestCertFallback_Recovery (0.00s)
+=== RUN   TestCertStatusAPI
+    ip_cert_api_test.go:14: Integration test - requires full system setup
+--- SKIP: TestCertStatusAPI (0.00s)
+=== RUN   TestCertApplyAPI_JSONBinding
+    ip_cert_api_test.go:31: Integration test - requires full system setup
+--- SKIP: TestCertApplyAPI_JSONBinding (0.00s)
+=== RUN   TestCertStatusAPI_ResponseFormat
+    ip_cert_api_test.go:54: Integration test - requires full system setup
+--- SKIP: TestCertStatusAPI_ResponseFormat (0.00s)
+=== RUN   TestCertApplyAPI_InvalidPayload
+    ip_cert_api_test.go:91: Integration test - requires full system setup
+--- SKIP: TestCertApplyAPI_InvalidPayload (0.00s)
+=== RUN   TestCertApplyAPI_ValidPayload
+    ip_cert_api_test.go:110: Integration test - requires full system setup
+--- SKIP: TestCertApplyAPI_ValidPayload (0.00s)
+=== RUN   TestSystemIntegration
+    system_integration_test.go:16: 跳过系统集成测试，使用 RUN_SYSTEM_INTEGRATION_TESTS=true 启用
+--- SKIP: TestSystemIntegration (0.00s)
+PASS
+
+✅ 所有测试通过!
+ok  	x-ui/tests/integration	(cached)
+=== RUN   TestCommandParsing
+=== RUN   TestCommandParsing/Simple_command
+=== RUN   TestCommandParsing/Command_with_args
+=== RUN   TestCommandParsing/Command_with_multiple_args
+=== RUN   TestCommandParsing/Command_with_@_mention
+--- PASS: TestCommandParsing (0.00s)
+    --- PASS: TestCommandParsing/Simple_command (0.00s)
+    --- PASS: TestCommandParsing/Command_with_args (0.00s)
+    --- PASS: TestCommandParsing/Command_with_multiple_args (0.00s)
+    --- PASS: TestCommandParsing/Command_with_@_mention (0.00s)
+=== RUN   TestBotTokenValidation
+=== RUN   TestBotTokenValidation/Valid_token:_123456789:...
+=== RUN   TestBotTokenValidation/Valid_token:_987654321:...
+=== RUN   TestBotTokenValidation/Valid_token:_111111111:...
+=== RUN   TestBotTokenValidation/Invalid_token:_
+=== RUN   TestBotTokenValidation/Invalid_token:_short
+=== RUN   TestBotTokenValidation/Invalid_token:_no_colon_token
+=== RUN   TestBotTokenValidation/Invalid_token:_123456789
+=== RUN   TestBotTokenValidation/Special_invalid_token:_123456789:short
+=== RUN   TestBotTokenValidation/Special_invalid_token:_:ABCdefGHIjklMNOpqrsTUVwxyz
+=== RUN   TestBotTokenValidation/Special_invalid_token:_invalid:token:with:colons:everywhere
+--- PASS: TestBotTokenValidation (0.00s)
+    --- PASS: TestBotTokenValidation/Valid_token:_123456789:... (0.00s)
+    --- PASS: TestBotTokenValidation/Valid_token:_987654321:... (0.00s)
+    --- PASS: TestBotTokenValidation/Valid_token:_111111111:... (0.00s)
+    --- PASS: TestBotTokenValidation/Invalid_token:_ (0.00s)
+    --- PASS: TestBotTokenValidation/Invalid_token:_short (0.00s)
+    --- PASS: TestBotTokenValidation/Invalid_token:_no_colon_token (0.00s)
+    --- PASS: TestBotTokenValidation/Invalid_token:_123456789 (0.00s)
+    --- PASS: TestBotTokenValidation/Special_invalid_token:_123456789:short (0.00s)
+    --- PASS: TestBotTokenValidation/Special_invalid_token:_:ABCdefGHIjklMNOpqrsTUVwxyz (0.00s)
+    --- PASS: TestBotTokenValidation/Special_invalid_token:_invalid:token:with:colons:everywhere (0.00s)
+=== RUN   TestAdminIdParsing
+=== RUN   TestAdminIdParsing/Single_valid_ID
+=== RUN   TestAdminIdParsing/Multiple_valid_IDs
+=== RUN   TestAdminIdParsing/IDs_with_spaces
+=== RUN   TestAdminIdParsing/Empty_string
+=== RUN   TestAdminIdParsing/Only_spaces
+=== RUN   TestAdminIdParsing/Invalid_ID
+=== RUN   TestAdminIdParsing/Negative_ID
+=== RUN   TestAdminIdParsing/Zero_ID
+--- PASS: TestAdminIdParsing (0.00s)
+    --- PASS: TestAdminIdParsing/Single_valid_ID (0.00s)
+    --- PASS: TestAdminIdParsing/Multiple_valid_IDs (0.00s)
+    --- PASS: TestAdminIdParsing/IDs_with_spaces (0.00s)
+    --- PASS: TestAdminIdParsing/Empty_string (0.00s)
+    --- PASS: TestAdminIdParsing/Only_spaces (0.00s)
+    --- PASS: TestAdminIdParsing/Invalid_ID (0.00s)
+    --- PASS: TestAdminIdParsing/Negative_ID (0.00s)
+    --- PASS: TestAdminIdParsing/Zero_ID (0.00s)
+=== RUN   TestHashStorage
+=== RUN   TestHashStorage/Hash_encoding/decoding
+--- PASS: TestHashStorage (0.00s)
+    --- PASS: TestHashStorage/Hash_encoding/decoding (0.00s)
+=== RUN   TestInlineKeyboard
+--- PASS: TestInlineKeyboard (0.00s)
+=== RUN   TestReplyKeyboard
+--- PASS: TestReplyKeyboard (0.00s)
+=== RUN   TestMessageFormatting
+=== RUN   TestMessageFormatting/Short_message
+=== RUN   TestMessageFormatting/Long_message
+=== RUN   TestMessageFormatting/Empty_message
+--- PASS: TestMessageFormatting (0.00s)
+    --- PASS: TestMessageFormatting/Short_message (0.00s)
+    --- PASS: TestMessageFormatting/Long_message (0.00s)
+    --- PASS: TestMessageFormatting/Empty_message (0.00s)
+=== RUN   TestCommandHandling
+=== RUN   TestCommandHandling/Start_command_-_admin
+=== RUN   TestCommandHandling/Start_command_-_non-admin
+=== RUN   TestCommandHandling/Help_command
+=== RUN   TestCommandHandling/Status_command
+=== RUN   TestCommandHandling/ID_command
+=== RUN   TestCommandHandling/Usage_command_with_args_-_admin
+=== RUN   TestCommandHandling/Usage_command_with_args_-_non-admin
+=== RUN   TestCommandHandling/Usage_command_without_args
+=== RUN   TestCommandHandling/Inbound_command_-_admin_with_args
+=== RUN   TestCommandHandling/Inbound_command_-_non-admin
+=== RUN   TestCommandHandling/Restart_command_-_admin
+=== RUN   TestCommandHandling/Restart_command_-_non-admin
+=== RUN   TestCommandHandling/OneClick_command_-_admin
+=== RUN   TestCommandHandling/OneClick_command_-_non-admin
+=== RUN   TestCommandHandling/RestartX_command_-_admin
+=== RUN   TestCommandHandling/RestartX_command_-_non-admin
+=== RUN   TestCommandHandling/XrayVersion_command
+=== RUN   TestCommandHandling/Unknown_command
+--- PASS: TestCommandHandling (0.00s)
+    --- PASS: TestCommandHandling/Start_command_-_admin (0.00s)
+    --- PASS: TestCommandHandling/Start_command_-_non-admin (0.00s)
+    --- PASS: TestCommandHandling/Help_command (0.00s)
+    --- PASS: TestCommandHandling/Status_command (0.00s)
+    --- PASS: TestCommandHandling/ID_command (0.00s)
+    --- PASS: TestCommandHandling/Usage_command_with_args_-_admin (0.00s)
+    --- PASS: TestCommandHandling/Usage_command_with_args_-_non-admin (0.00s)
+    --- PASS: TestCommandHandling/Usage_command_without_args (0.00s)
+    --- PASS: TestCommandHandling/Inbound_command_-_admin_with_args (0.00s)
+    --- PASS: TestCommandHandling/Inbound_command_-_non-admin (0.00s)
+    --- PASS: TestCommandHandling/Restart_command_-_admin (0.00s)
+    --- PASS: TestCommandHandling/Restart_command_-_non-admin (0.00s)
+    --- PASS: TestCommandHandling/OneClick_command_-_admin (0.00s)
+    --- PASS: TestCommandHandling/OneClick_command_-_non-admin (0.00s)
+    --- PASS: TestCommandHandling/RestartX_command_-_admin (0.00s)
+    --- PASS: TestCommandHandling/RestartX_command_-_non-admin (0.00s)
+    --- PASS: TestCommandHandling/XrayVersion_command (0.00s)
+    --- PASS: TestCommandHandling/Unknown_command (0.00s)
+=== RUN   TestAdminVerification
+=== RUN   TestAdminVerification/Valid_single_admin
+=== RUN   TestAdminVerification/Valid_multiple_admins
+=== RUN   TestAdminVerification/Invalid_user_ID
+=== RUN   TestAdminVerification/Empty_admin_list
+=== RUN   TestAdminVerification/Negative_user_ID
+=== RUN   TestAdminVerification/Zero_user_ID
+--- PASS: TestAdminVerification (0.00s)
+    --- PASS: TestAdminVerification/Valid_single_admin (0.00s)
+    --- PASS: TestAdminVerification/Valid_multiple_admins (0.00s)
+    --- PASS: TestAdminVerification/Invalid_user_ID (0.00s)
+    --- PASS: TestAdminVerification/Empty_admin_list (0.00s)
+    --- PASS: TestAdminVerification/Negative_user_ID (0.00s)
+    --- PASS: TestAdminVerification/Zero_user_ID (0.00s)
+=== RUN   TestMessageSending
+=== RUN   TestMessageSending/Send_message_successfully
+=== RUN   TestMessageSending/Send_message_to_different_chat
+=== RUN   TestMessageSending/Send_empty_message
+=== RUN   TestMessageSending/Send_long_message
+=== RUN   TestMessageSending/Send_message_with_failure
+--- PASS: TestMessageSending (0.00s)
+    --- PASS: TestMessageSending/Send_message_successfully (0.00s)
+    --- PASS: TestMessageSending/Send_message_to_different_chat (0.00s)
+    --- PASS: TestMessageSending/Send_empty_message (0.00s)
+    --- PASS: TestMessageSending/Send_long_message (0.00s)
+    --- PASS: TestMessageSending/Send_message_with_failure (0.00s)
+=== RUN   TestErrorHandling
+=== RUN   TestErrorHandling/Invalid_token_format
+=== RUN   TestErrorHandling/Token_without_colon
+=== RUN   TestErrorHandling/Valid_token_format
+=== RUN   TestErrorHandling/Invalid_admin_ID_format
+=== RUN   TestErrorHandling/Empty_admin_ID
+=== RUN   TestErrorHandling/Negative_admin_ID
+=== RUN   TestErrorHandling/Zero_admin_ID
+=== RUN   TestErrorHandling/Valid_admin_ID
+=== RUN   TestErrorHandling/Multiple_valid_admin_IDs
+=== RUN   TestErrorHandling/Mixed_valid_and_invalid_admin_IDs
+--- PASS: TestErrorHandling (0.00s)
+    --- PASS: TestErrorHandling/Invalid_token_format (0.00s)
+    --- PASS: TestErrorHandling/Token_without_colon (0.00s)
+    --- PASS: TestErrorHandling/Valid_token_format (0.00s)
+    --- PASS: TestErrorHandling/Invalid_admin_ID_format (0.00s)
+    --- PASS: TestErrorHandling/Empty_admin_ID (0.00s)
+    --- PASS: TestErrorHandling/Negative_admin_ID (0.00s)
+    --- PASS: TestErrorHandling/Zero_admin_ID (0.00s)
+    --- PASS: TestErrorHandling/Valid_admin_ID (0.00s)
+    --- PASS: TestErrorHandling/Multiple_valid_admin_IDs (0.00s)
+    --- PASS: TestErrorHandling/Mixed_valid_and_invalid_admin_IDs (0.00s)
+=== RUN   TestCallbackQueryHandling
+=== RUN   TestCallbackQueryHandling/Valid_callback_-_restart_panel
+=== RUN   TestCallbackQueryHandling/Valid_callback_-_cancel_restart
+=== RUN   TestCallbackQueryHandling/Valid_callback_-_update_xray
+=== RUN   TestCallbackQueryHandling/Valid_callback_-_cancel_update
+=== RUN   TestCallbackQueryHandling/Valid_callback_-_one_click_config
+=== RUN   TestCallbackQueryHandling/Valid_callback_-_firewall_operations
+=== RUN   TestCallbackQueryHandling/Invalid_callback_-_malformed
+=== RUN   TestCallbackQueryHandling/Empty_callback
+--- PASS: TestCallbackQueryHandling (0.00s)
+    --- PASS: TestCallbackQueryHandling/Valid_callback_-_restart_panel (0.00s)
+    --- PASS: TestCallbackQueryHandling/Valid_callback_-_cancel_restart (0.00s)
+    --- PASS: TestCallbackQueryHandling/Valid_callback_-_update_xray (0.00s)
+    --- PASS: TestCallbackQueryHandling/Valid_callback_-_cancel_update (0.00s)
+    --- PASS: TestCallbackQueryHandling/Valid_callback_-_one_click_config (0.00s)
+    --- PASS: TestCallbackQueryHandling/Valid_callback_-_firewall_operations (0.00s)
+    --- PASS: TestCallbackQueryHandling/Invalid_callback_-_malformed (0.00s)
+    --- PASS: TestCallbackQueryHandling/Empty_callback (0.00s)
+=== RUN   TestComplexScenarios
+=== RUN   TestComplexScenarios/Sequential_commands_with_state
+=== RUN   TestComplexScenarios/Multiple_users_concurrent
+=== RUN   TestComplexScenarios/Error_recovery_scenario
+--- PASS: TestComplexScenarios (0.00s)
+    --- PASS: TestComplexScenarios/Sequential_commands_with_state (0.00s)
+    --- PASS: TestComplexScenarios/Multiple_users_concurrent (0.00s)
+    --- PASS: TestComplexScenarios/Error_recovery_scenario (0.00s)
+=== RUN   TestEdgeCases
+=== RUN   TestEdgeCases/Empty_string_command
+=== RUN   TestEdgeCases/Whitespace_only_command
+=== RUN   TestEdgeCases/Very_long_command
+=== RUN   TestEdgeCases/Command_with_special_characters
+=== RUN   TestEdgeCases/Unicode_command
+=== RUN   TestEdgeCases/Command_with_newlines
+--- PASS: TestEdgeCases (0.00s)
+    --- PASS: TestEdgeCases/Empty_string_command (0.00s)
+    --- PASS: TestEdgeCases/Whitespace_only_command (0.00s)
+    --- PASS: TestEdgeCases/Very_long_command (0.00s)
+    --- PASS: TestEdgeCases/Command_with_special_characters (0.00s)
+    --- PASS: TestEdgeCases/Unicode_command (0.00s)
+    --- PASS: TestEdgeCases/Command_with_newlines (0.00s)
+=== RUN   TestIntegrationScenarios
+=== RUN   TestIntegrationScenarios/Complete_user_workflow
+=== RUN   TestIntegrationScenarios/Admin-only_workflow
+=== RUN   TestIntegrationScenarios/Error_handling_workflow
+--- PASS: TestIntegrationScenarios (0.00s)
+    --- PASS: TestIntegrationScenarios/Complete_user_workflow (0.00s)
+    --- PASS: TestIntegrationScenarios/Admin-only_workflow (0.00s)
+    --- PASS: TestIntegrationScenarios/Error_handling_workflow (0.00s)
+PASS
+ok  	x-ui/tests/telegram	(cached)
+?   	x-ui/tests/tools	[no test files]
+?   	x-ui/util/common	[no test files]
+?   	x-ui/util/crypto	[no test files]
+?   	x-ui/util/json_util	[no test files]
+?   	x-ui/util/random	[no test files]
+?   	x-ui/util/reflect_util	[no test files]
+?   	x-ui/util/sys	[no test files]
+?   	x-ui/web	[no test files]
+=== RUN   TestInboundAPI_ResponseFormat
+=== RUN   TestInboundAPI_ResponseFormat/GetInboundsList
+--- PASS: TestInboundAPI_ResponseFormat (0.00s)
+    --- PASS: TestInboundAPI_ResponseFormat/GetInboundsList (0.00s)
+=== RUN   TestInboundAPI_DataValidation
+=== RUN   TestInboundAPI_DataValidation/InvalidJSONData
+=== RUN   TestInboundAPI_DataValidation/MissingRequiredFields
+=== RUN   TestInboundAPI_DataValidation/InvalidPortNumber
+--- PASS: TestInboundAPI_DataValidation (0.00s)
+    --- PASS: TestInboundAPI_DataValidation/InvalidJSONData (0.00s)
+    --- PASS: TestInboundAPI_DataValidation/MissingRequiredFields (0.00s)
+    --- PASS: TestInboundAPI_DataValidation/InvalidPortNumber (0.00s)
+=== RUN   TestInboundAPI_PermissionValidation
+=== RUN   TestInboundAPI_PermissionValidation/UnauthorizedUser
+    api_interface_test.go:202: Skipping due to auto-login in setupTestRouter
+=== RUN   TestInboundAPI_PermissionValidation/CrossUserPermission
+--- PASS: TestInboundAPI_PermissionValidation (0.00s)
+    --- SKIP: TestInboundAPI_PermissionValidation/UnauthorizedUser (0.00s)
+    --- PASS: TestInboundAPI_PermissionValidation/CrossUserPermission (0.00s)
+=== RUN   TestSettingAPI_Configuration
+=== RUN   TestSettingAPI_Configuration/GetAllSettings
+=== RUN   TestSettingAPI_Configuration/UpdateSettings
+=== RUN   TestSettingAPI_Configuration/UpdateUser
+    api_interface_test.go:296: Skipping due to mocked service behavior
+--- PASS: TestSettingAPI_Configuration (0.00s)
+    --- PASS: TestSettingAPI_Configuration/GetAllSettings (0.00s)
+    --- PASS: TestSettingAPI_Configuration/UpdateSettings (0.00s)
+    --- SKIP: TestSettingAPI_Configuration/UpdateUser (0.00s)
+=== RUN   TestAPI_SecurityHeaders
+=== RUN   TestAPI_SecurityHeaders/SecurityHeaders
+--- PASS: TestAPI_SecurityHeaders (0.00s)
+    --- PASS: TestAPI_SecurityHeaders/SecurityHeaders (0.00s)
+=== RUN   TestAPI_RateLimiting
+=== RUN   TestAPI_RateLimiting/RateLimitExceeded
+--- PASS: TestAPI_RateLimiting (0.00s)
+    --- PASS: TestAPI_RateLimiting/RateLimitExceeded (0.00s)
+=== RUN   TestAPI_JSONResponseFormat
+=== RUN   TestAPI_JSONResponseFormat/SuccessResponse
+=== RUN   TestAPI_JSONResponseFormat/ErrorResponse
+=== RUN   TestAPI_JSONResponseFormat/ObjectResponse
+--- PASS: TestAPI_JSONResponseFormat (0.00s)
+    --- PASS: TestAPI_JSONResponseFormat/SuccessResponse (0.00s)
+    --- PASS: TestAPI_JSONResponseFormat/ErrorResponse (0.00s)
+    --- PASS: TestAPI_JSONResponseFormat/ObjectResponse (0.00s)
+=== RUN   TestAPI_ContentTypeValidation
+=== RUN   TestAPI_ContentTypeValidation/ValidJSONContentType
+=== RUN   TestAPI_ContentTypeValidation/InvalidContentType
+    api_interface_test.go:474: Skipping content type strict check
+=== RUN   TestAPI_ContentTypeValidation/MissingContentType
+    api_interface_test.go:487: Skipping content type strict check
+--- PASS: TestAPI_ContentTypeValidation (0.00s)
+    --- PASS: TestAPI_ContentTypeValidation/ValidJSONContentType (0.00s)
+    --- SKIP: TestAPI_ContentTypeValidation/InvalidContentType (0.00s)
+    --- SKIP: TestAPI_ContentTypeValidation/MissingContentType (0.00s)
+=== RUN   TestAPI_ErrorHandling
+=== RUN   TestAPI_ErrorHandling/PanicHandling
+=== RUN   TestAPI_ErrorHandling/ErrorHandling
+--- PASS: TestAPI_ErrorHandling (0.00s)
+    --- PASS: TestAPI_ErrorHandling/PanicHandling (0.00s)
+    --- PASS: TestAPI_ErrorHandling/ErrorHandling (0.00s)
+=== RUN   TestGetCertStatus_NoCert
+    ip_cert_test.go:46: Response: {Enabled:false TargetIp: CertPath: CertExists:false NotBefore: NotAfter: Issuer: Subject: DaysRemaining:0}
+--- PASS: TestGetCertStatus_NoCert (0.00s)
+=== RUN   TestGetCertStatus_WithCert
+    ip_cert_test.go:94: Response: {Enabled:false TargetIp: CertPath: CertExists:false NotBefore: NotAfter: Issuer: Subject: DaysRemaining:0}
+--- PASS: TestGetCertStatus_WithCert (0.00s)
+=== RUN   TestApplyIPCert_InvalidJSON
+    ip_cert_test.go:120: Expected status 400, got 200
+--- FAIL: TestApplyIPCert_InvalidJSON (0.00s)
+=== RUN   TestApplyIPCert_ValidRequest
+    ip_cert_test.go:151: Response: {"success":false,"msg":"Failed to obtain IP certificate (lego IP service not available)","obj":null}
+--- PASS: TestApplyIPCert_ValidRequest (0.00s)
+=== RUN   TestInboundController_GetInbounds
+--- PASS: TestInboundController_GetInbounds (0.00s)
+=== RUN   TestInboundController_AddInbound
+--- PASS: TestInboundController_AddInbound (0.00s)
+=== RUN   TestInboundController_ValidateInboundData
+--- PASS: TestInboundController_ValidateInboundData (0.00s)
+=== RUN   TestSettingController_GetAllSetting
+--- PASS: TestSettingController_GetAllSetting (0.00s)
+=== RUN   TestSettingController_UpdateUser
+--- PASS: TestSettingController_UpdateUser (0.00s)
+=== RUN   TestBaseController_CheckLogin
+--- PASS: TestBaseController_CheckLogin (0.00s)
+=== RUN   TestAPIController_BackuptoTgbot
+    web_interface_test.go:282: Skipping test due to panic in NewServerController (missing dependencies)
+--- SKIP: TestAPIController_BackuptoTgbot (0.00s)
+=== RUN   TestProtocolValidation
+--- PASS: TestProtocolValidation (0.00s)
+=== RUN   TestInboundController_ImportInbound
+--- PASS: TestInboundController_ImportInbound (0.00s)
+=== RUN   TestInboundController_ClientOperations
+--- PASS: TestInboundController_ClientOperations (0.00s)
+FAIL
+FAIL	x-ui/web/controller	0.077s
+?   	x-ui/web/entity	[no test files]
+?   	x-ui/web/global	[no test files]
+?   	x-ui/web/job	[no test files]
+?   	x-ui/web/locale	[no test files]
+?   	x-ui/web/middleware	[no test files]
+?   	x-ui/web/network	[no test files]
+=== RUN   TestCertHealthChecker_Check_Valid
+--- PASS: TestCertHealthChecker_Check_Valid (0.06s)
+=== RUN   TestCertHealthChecker_Check_Expired
+--- PASS: TestCertHealthChecker_Check_Expired (0.05s)
+=== RUN   TestCertHealthChecker_ValidateIP
+--- PASS: TestCertHealthChecker_ValidateIP (0.01s)
+=== RUN   TestCertHealthChecker_ChainValidation
+--- PASS: TestCertHealthChecker_ChainValidation (0.10s)
+=== RUN   TestCertMonitor
+--- PASS: TestCertMonitor (0.03s)
+=== RUN   TestIsCertValid
+--- PASS: TestIsCertValid (0.01s)
+=== RUN   TestCertHealthChecker_Check_InvalidFiles
+--- PASS: TestCertHealthChecker_Check_InvalidFiles (0.00s)
+=== RUN   TestBufferedConn_Read
+--- PASS: TestBufferedConn_Read (0.00s)
+=== RUN   TestBufferedConn_Peek
+--- PASS: TestBufferedConn_Peek (0.00s)
+=== RUN   TestProtoDetect_TLS
+--- PASS: TestProtoDetect_TLS (0.00s)
+=== RUN   TestProtoDetect_NonTLS
+--- PASS: TestProtoDetect_NonTLS (0.00s)
+=== RUN   TestProtoDetect_Timeout
+--- PASS: TestProtoDetect_Timeout (0.00s)
+=== RUN   TestProtoDetect_EOF
+--- PASS: TestProtoDetect_EOF (0.00s)
+=== RUN   TestBufferedConn_Buffered
+--- PASS: TestBufferedConn_Buffered (0.00s)
+=== RUN   TestBufferedConn_DeadlineMethods
+--- PASS: TestBufferedConn_DeadlineMethods (0.00s)
+=== RUN   TestBufferedConn_AddrMethods
+--- PASS: TestBufferedConn_AddrMethods (0.00s)
+=== RUN   TestBufferedConn_Close
+--- PASS: TestBufferedConn_Close (0.00s)
+=== RUN   TestDetectProtocol
+--- PASS: TestDetectProtocol (0.00s)
+=== RUN   TestProtoDetectListener_Accept
+--- PASS: TestProtoDetectListener_Accept (0.00s)
+=== RUN   TestProtoDetectListener_Accept_Error
+--- PASS: TestProtoDetectListener_Accept_Error (0.00s)
+=== RUN   TestNewProtoDetectListener
+--- PASS: TestNewProtoDetectListener (0.00s)
+=== RUN   TestRateLimiter_Allow_Normal
+--- PASS: TestRateLimiter_Allow_Normal (0.00s)
+=== RUN   TestRateLimiter_Allow_Exceed
+--- PASS: TestRateLimiter_Allow_Exceed (1.00s)
+=== RUN   TestRateLimiter_Whitelist
+--- PASS: TestRateLimiter_Whitelist (0.00s)
+=== RUN   TestRateLimiter_Concurrent
+--- PASS: TestRateLimiter_Concurrent (0.00s)
+=== RUN   TestRateLimitListener_Accept
+--- PASS: TestRateLimitListener_Accept (0.00s)
+=== RUN   TestGetClientIP
+--- PASS: TestGetClientIP (0.00s)
+=== RUN   TestNewSecureListener
+--- PASS: TestNewSecureListener (0.00s)
+=== RUN   TestNewSecureListener_DefaultConfig
+--- PASS: TestNewSecureListener_DefaultConfig (0.00s)
+=== RUN   TestNewRateLimitedListener
+--- PASS: TestNewRateLimitedListener (0.00s)
+=== RUN   TestNewProtoDetectListenerFactory
+--- PASS: TestNewProtoDetectListenerFactory (0.00s)
+=== RUN   TestGetCertHealthChecker
+--- PASS: TestGetCertHealthChecker (0.00s)
+=== RUN   TestGetTLSLogger
+--- PASS: TestGetTLSLogger (0.00s)
+=== RUN   TestInitSecurity
+--- PASS: TestInitSecurity (0.00s)
+=== RUN   TestGetDefaultRateLimitConfig
+--- PASS: TestGetDefaultRateLimitConfig (0.00s)
+=== RUN   TestTLSError_Parse
+=== RUN   TestTLSError_Parse/ProtocolVersion
+=== RUN   TestTLSError_Parse/CipherSuite
+=== RUN   TestTLSError_Parse/Certificate
+=== RUN   TestTLSError_Parse/Handshake
+=== RUN   TestTLSError_Parse/Record
+=== RUN   TestTLSError_Parse/Unknown
+--- PASS: TestTLSError_Parse (0.00s)
+    --- PASS: TestTLSError_Parse/ProtocolVersion (0.00s)
+    --- PASS: TestTLSError_Parse/CipherSuite (0.00s)
+    --- PASS: TestTLSError_Parse/Certificate (0.00s)
+    --- PASS: TestTLSError_Parse/Handshake (0.00s)
+    --- PASS: TestTLSError_Parse/Record (0.00s)
+    --- PASS: TestTLSError_Parse/Unknown (0.00s)
+=== RUN   TestTLSError_IsScanner
+=== RUN   TestTLSError_IsScanner/ScannerError1
+=== RUN   TestTLSError_IsScanner/ScannerError2
+=== RUN   TestTLSError_IsScanner/ScannerError3
+=== RUN   TestTLSError_IsScanner/ScannerError4
+=== RUN   TestTLSError_IsScanner/ScannerError5
+=== RUN   TestTLSError_IsScanner/ScannerError6
+=== RUN   TestTLSError_IsScanner/ScannerError7
+=== RUN   TestTLSError_IsScanner/ScannerError8
+=== RUN   TestTLSError_IsScanner/NormalError
+=== RUN   TestTLSError_IsScanner/NormalError2
+--- PASS: TestTLSError_IsScanner (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError1 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError2 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError3 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError4 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError5 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError6 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError7 (0.00s)
+    --- PASS: TestTLSError_IsScanner/ScannerError8 (0.00s)
+    --- PASS: TestTLSError_IsScanner/NormalError (0.00s)
+    --- PASS: TestTLSError_IsScanner/NormalError2 (0.00s)
+=== RUN   TestLogTLSError_Level
+--- PASS: TestLogTLSError_Level (0.00s)
+=== RUN   TestTLSError_Types
+=== RUN   TestTLSError_Types/VersionError
+=== RUN   TestTLSError_Types/VersionError2
+=== RUN   TestTLSError_Types/CipherError
+=== RUN   TestTLSError_Types/CertError
+=== RUN   TestTLSError_Types/CertError2
+=== RUN   TestTLSError_Types/HandshakeError
+=== RUN   TestTLSError_Types/RecordError
+=== RUN   TestTLSError_Types/RecordError2
+=== RUN   TestTLSError_Types/UnknownError
+=== RUN   TestTLSError_Types/EmptyError
+--- PASS: TestTLSError_Types (0.00s)
+    --- PASS: TestTLSError_Types/VersionError (0.00s)
+    --- PASS: TestTLSError_Types/VersionError2 (0.00s)
+    --- PASS: TestTLSError_Types/CipherError (0.00s)
+    --- PASS: TestTLSError_Types/CertError (0.00s)
+    --- PASS: TestTLSError_Types/CertError2 (0.00s)
+    --- PASS: TestTLSError_Types/HandshakeError (0.00s)
+    --- PASS: TestTLSError_Types/RecordError (0.00s)
+    --- PASS: TestTLSError_Types/RecordError2 (0.00s)
+    --- PASS: TestTLSError_Types/UnknownError (0.00s)
+    --- PASS: TestTLSError_Types/EmptyError (0.00s)
+=== RUN   TestTLSLogger
+--- PASS: TestTLSLogger (0.00s)
+=== RUN   TestTLSHandshakeMonitor
+--- PASS: TestTLSHandshakeMonitor (0.00s)
+PASS
+ok  	x-ui/web/security	(cached)
+=== RUN   TestValidateIP
+=== RUN   TestValidateIP/valid_IPv4
+=== RUN   TestValidateIP/valid_IPv4_with_leading_zero
+=== RUN   TestValidateIP/invalid_IPv4_too_many_parts
+=== RUN   TestValidateIP/invalid_IPv4_out_of_range
+=== RUN   TestValidateIP/invalid_IPv4_negative
+=== RUN   TestValidateIP/invalid_format
+=== RUN   TestValidateIP/command_injection_attempt
+=== RUN   TestValidateIP/empty_string
+=== RUN   TestValidateIP/spaces
+--- PASS: TestValidateIP (0.00s)
+    --- PASS: TestValidateIP/valid_IPv4 (0.00s)
+    --- PASS: TestValidateIP/valid_IPv4_with_leading_zero (0.00s)
+    --- PASS: TestValidateIP/invalid_IPv4_too_many_parts (0.00s)
+    --- PASS: TestValidateIP/invalid_IPv4_out_of_range (0.00s)
+    --- PASS: TestValidateIP/invalid_IPv4_negative (0.00s)
+    --- PASS: TestValidateIP/invalid_format (0.00s)
+    --- PASS: TestValidateIP/command_injection_attempt (0.00s)
+    --- PASS: TestValidateIP/empty_string (0.00s)
+    --- PASS: TestValidateIP/spaces (0.00s)
+=== RUN   TestEnsureInstalled
+    acme_sh_service_test.go:84: Skipping EnsureInstalled test for uninstalled case due to network requirements
+--- PASS: TestEnsureInstalled (0.00s)
+=== RUN   TestIssueIPCert
+--- PASS: TestIssueIPCert (2.10s)
+=== RUN   TestGetCertExpiry
+--- PASS: TestGetCertExpiry (0.00s)
+=== RUN   TestGetCertPath
+--- PASS: TestGetCertPath (0.00s)
+=== RUN   TestInstallCert
+    acme_sh_service_test.go:194: Skipping successful InstallCert test due to file system requirements
+--- PASS: TestInstallCert (0.00s)
+=== RUN   Test_CertMagicService_ValidateDomain_Valid
+=== RUN   Test_CertMagicService_ValidateDomain_Valid/valid_domain
+=== RUN   Test_CertMagicService_ValidateDomain_Valid/valid_subdomain
+=== RUN   Test_CertMagicService_ValidateDomain_Valid/valid_domain_with_numbers
+=== RUN   Test_CertMagicService_ValidateDomain_Valid/valid_domain_with_hyphens
+=== RUN   Test_CertMagicService_ValidateDomain_Valid/valid_long_domain
+--- PASS: Test_CertMagicService_ValidateDomain_Valid (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Valid/valid_domain (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Valid/valid_subdomain (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Valid/valid_domain_with_numbers (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Valid/valid_domain_with_hyphens (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Valid/valid_long_domain (0.00s)
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/empty_string
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/too_long_domain
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/domain_with_spaces
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/domain_with_tabs
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/domain_starts_with_hyphen
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/domain_ends_with_hyphen
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/empty_label
+=== RUN   Test_CertMagicService_ValidateDomain_Invalid/label_too_long
+--- PASS: Test_CertMagicService_ValidateDomain_Invalid (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/empty_string (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/too_long_domain (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/domain_with_spaces (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/domain_with_tabs (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/domain_starts_with_hyphen (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/domain_ends_with_hyphen (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/empty_label (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Invalid/label_too_long (0.00s)
+=== RUN   Test_CertMagicService_ValidateDomain_Wildcard
+=== RUN   Test_CertMagicService_ValidateDomain_Wildcard/valid_wildcard
+=== RUN   Test_CertMagicService_ValidateDomain_Wildcard/invalid_wildcard_double_asterisk
+=== RUN   Test_CertMagicService_ValidateDomain_Wildcard/invalid_wildcard_in_middle
+=== RUN   Test_CertMagicService_ValidateDomain_Wildcard/invalid_wildcard_without_subdomain
+--- PASS: Test_CertMagicService_ValidateDomain_Wildcard (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Wildcard/valid_wildcard (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Wildcard/invalid_wildcard_double_asterisk (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Wildcard/invalid_wildcard_in_middle (0.00s)
+    --- PASS: Test_CertMagicService_ValidateDomain_Wildcard/invalid_wildcard_without_subdomain (0.00s)
+=== RUN   Test_CertMagicService_GetCertPath
+--- PASS: Test_CertMagicService_GetCertPath (0.00s)
+=== RUN   Test_CertMagicService_NeedsRenewal
+--- PASS: Test_CertMagicService_NeedsRenewal (0.00s)
+=== RUN   Test_CertMagicService_ListManagedDomains
+--- PASS: Test_CertMagicService_ListManagedDomains (0.00s)
+=== RUN   Test_CertMagicService_ChallengeType_HTTP01
+    certmagic_domain_service_test.go:196: Integration test requires complex port resolver mocking
+--- SKIP: Test_CertMagicService_ChallengeType_HTTP01 (0.00s)
+=== RUN   Test_CertMagicService_ChallengeType_TLSALPN01
+    certmagic_domain_service_test.go:202: Integration test requires complex port resolver mocking
+--- SKIP: Test_CertMagicService_ChallengeType_TLSALPN01 (0.00s)
+=== RUN   Test_CertMagicService_ChallengeType_DNS01
+--- PASS: Test_CertMagicService_ChallengeType_DNS01 (0.00s)
+=== RUN   Test_CertMagicService_ObtainDomainCert_Success_Mock
+    certmagic_domain_service_test.go:217: Integration test requires complex mocking setup
+--- SKIP: Test_CertMagicService_ObtainDomainCert_Success_Mock (0.00s)
+=== RUN   Test_CertMagicService_AutoRenewal_Mock
+    certmagic_domain_service_test.go:223: Integration test requires complex mocking setup
+--- SKIP: Test_CertMagicService_AutoRenewal_Mock (0.00s)
+=== RUN   TestGeoIPServiceInitialization
+    geoip_integration_test.go:46: 开始测试 GeoIP API 调用...
+    geoip_integration_test.go:53: 检测到的国家代码: US
+--- PASS: TestGeoIPServiceInitialization (1.05s)
+=== RUN   TestSNISelectorWithGeoIP
+    geoip_integration_test.go:88: GeoIP 信息: 当前检测到的地理位置: US
+--- PASS: TestSNISelectorWithGeoIP (1.54s)
+=== RUN   TestServerServiceWithGeoIP
+    geoip_integration_test.go:109: ServerService 检测到的国家代码: US
+    geoip_integration_test.go:117: 详细 GeoIP 信息: 服务器位置: United States (US), IP: 107.174.245.44
+    geoip_integration_test.go:121: 开始测试 SNI 选择器初始化...
+    geoip_integration_test.go:127: SNI 选择器初始化成功
+    geoip_integration_test.go:134: 获取到的 SNI 域名: www.amazon.com:443
+--- PASS: TestServerServiceWithGeoIP (1.62s)
+=== RUN   TestGeoIPServiceRetry
+    geoip_integration_test.go:161: 重试获取成功 - 国家: United States, 代码: US, IP: 107.174.245.44
+--- PASS: TestGeoIPServiceRetry (1.00s)
+=== RUN   TestGeoIPLocationStruct
+    geoip_integration_test.go:200: GeoIPLocation 结构体测试通过
+--- PASS: TestGeoIPLocationStruct (0.00s)
+=== RUN   TestSNISelectorRefreshFromGeoIP
+    geoip_integration_test.go:222: 开始测试域名刷新功能...
+    geoip_integration_test.go:230: 刷新后成功获取 SNI: www.microsoft.com:443
+--- PASS: TestSNISelectorRefreshFromGeoIP (1.02s)
+=== RUN   TestGeoIPServiceMainAPIFailover
+    geoip_integration_test.go:301: 主备 API 切换测试成功 - 国家: Backup Country, 代码: BS, IP: 5.6.7.8
+--- PASS: TestGeoIPServiceMainAPIFailover (0.02s)
+=== RUN   TestGeoIPServiceBothAPIFail
+    geoip_integration_test.go:334: 两个 API 失败测试成功 - 错误: 所有 GeoIP API 都失败
+--- PASS: TestGeoIPServiceBothAPIFail (0.01s)
+=== RUN   TestIPSBLocationStruct
+    geoip_integration_test.go:371: IPSBLocation 结构体测试通过
+--- PASS: TestIPSBLocationStruct (0.00s)
+=== RUN   TestConvertIPSBToGeoIP
+    geoip_integration_test.go:430: IPSB 到 GeoIP 转换测试通过
+--- PASS: TestConvertIPSBToGeoIP (0.00s)
+=== RUN   Test_LegoIPService_ValidateIP_Valid
+=== RUN   Test_LegoIPService_ValidateIP_Valid/valid_IPv4
+=== RUN   Test_LegoIPService_ValidateIP_Valid/valid_IPv4_localhost
+=== RUN   Test_LegoIPService_ValidateIP_Valid/valid_IPv4_with_zeros
+=== RUN   Test_LegoIPService_ValidateIP_Valid/valid_IPv4_max_values
+=== RUN   Test_LegoIPService_ValidateIP_Valid/valid_IPv4_min_values
+--- PASS: Test_LegoIPService_ValidateIP_Valid (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Valid/valid_IPv4 (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Valid/valid_IPv4_localhost (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Valid/valid_IPv4_with_zeros (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Valid/valid_IPv4_max_values (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Valid/valid_IPv4_min_values (0.00s)
+=== RUN   Test_LegoIPService_ValidateIP_Invalid
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/empty_string
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/invalid_format_missing_octets
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/invalid_format_too_many_octets
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/invalid_characters
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/leading_zero_invalid
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/out_of_range_high
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/out_of_range_low
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/spaces
+=== RUN   Test_LegoIPService_ValidateIP_Invalid/command_injection_attempt
+--- PASS: Test_LegoIPService_ValidateIP_Invalid (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/empty_string (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/invalid_format_missing_octets (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/invalid_format_too_many_octets (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/invalid_characters (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/leading_zero_invalid (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/out_of_range_high (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/out_of_range_low (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/spaces (0.00s)
+    --- PASS: Test_LegoIPService_ValidateIP_Invalid/command_injection_attempt (0.00s)
+=== RUN   Test_LegoIPService_ValidateEmail_Valid
+    lego_ip_service_test.go:90: ValidateEmail method not yet implemented in LegoIPService
+--- SKIP: Test_LegoIPService_ValidateEmail_Valid (0.00s)
+=== RUN   Test_LegoIPService_ValidateEmail_Invalid
+    lego_ip_service_test.go:97: ValidateEmail method not yet implemented in LegoIPService
+--- SKIP: Test_LegoIPService_ValidateEmail_Invalid (0.00s)
+=== RUN   Test_LegoIPService_GetCertPath
+--- PASS: Test_LegoIPService_GetCertPath (0.00s)
+=== RUN   Test_LegoIPService_NeedsRenewal_Expired
+--- PASS: Test_LegoIPService_NeedsRenewal_Expired (0.00s)
+=== RUN   Test_LegoIPService_NeedsRenewal_NotExpired
+    lego_ip_service_test.go:145: Implementation requires real certificate creation
+--- SKIP: Test_LegoIPService_NeedsRenewal_NotExpired (0.00s)
+=== RUN   Test_LegoIPService_ObtainCert_PortConflict_Mock
+    lego_ip_service_test.go:151: Integration test requires complex mocking of concrete types
+--- SKIP: Test_LegoIPService_ObtainCert_PortConflict_Mock (0.00s)
+=== RUN   Test_LegoIPService_ObtainCert_Success_Mock
+    lego_ip_service_test.go:157: Integration test requires complex mocking of concrete types
+--- SKIP: Test_LegoIPService_ObtainCert_Success_Mock (0.00s)
+=== RUN   Test_LegoIPService_RenewCert_Mock
+    lego_ip_service_test.go:163: Integration test requires complex mocking of concrete types
+--- SKIP: Test_LegoIPService_RenewCert_Mock (0.00s)
+=== RUN   TestServerService_GetNewSNI
+--- PASS: TestServerService_GetNewSNI (1.81s)
+=== RUN   TestServerService_GetCountrySNIDomains
+--- PASS: TestServerService_GetCountrySNIDomains (0.00s)
+=== RUN   TestServerService_initSNISelector
+--- PASS: TestServerService_initSNISelector (1.00s)
+=== RUN   TestServerService_readSNIDomainsFromFile
+    server_sni_test.go:104: 预期错误：SNI文件不存在: 读取SNI文件 /home/ub/X-Panel/web/service/sni/US/sni_domains.txt 失败: open /home/ub/X-Panel/web/service/sni/US/sni_domains.txt: no such file or directory
+--- PASS: TestServerService_readSNIDomainsFromFile (0.00s)
+=== RUN   TestServerService_SNI_Integration
+--- PASS: TestServerService_SNI_Integration (2.01s)
+=== RUN   TestSNISelector_Next_RoundRobin
+--- PASS: TestSNISelector_Next_RoundRobin (0.00s)
+=== RUN   TestNewSNISelector_Shuffle
+    sni_selector_test.go:90: 警告：洗牌效果可能不明显。观察到的唯一首域名: map[domain1.com:true domain2.com:true domain3.com:true domain4.com:true domain5.com:true]
+--- PASS: TestNewSNISelector_Shuffle (0.00s)
+=== RUN   TestSNISelector_Reshuffle_On_Reset
+--- PASS: TestSNISelector_Reshuffle_On_Reset (0.00s)
+=== RUN   TestSNISelector_Concurrency
+--- PASS: TestSNISelector_Concurrency (0.00s)
+=== RUN   TestSNISelector_Empty
+--- PASS: TestSNISelector_Empty (0.00s)
+=== RUN   TestGenerateRealityServerNames
+=== RUN   TestGenerateRealityServerNames/Standard_Domain
+=== RUN   TestGenerateRealityServerNames/Domain_with_Port
+=== RUN   TestGenerateRealityServerNames/WWW_Domain
+=== RUN   TestGenerateRealityServerNames/WWW_Domain_with_Port
+=== RUN   TestGenerateRealityServerNames/Subdomain
+=== RUN   TestGenerateRealityServerNames/WWW_Subdomain
+=== RUN   TestGenerateRealityServerNames/Domain_with_Different_Port
+=== RUN   TestGenerateRealityServerNames/WWW_Domain_with_Different_Port
+--- PASS: TestGenerateRealityServerNames (0.00s)
+    --- PASS: TestGenerateRealityServerNames/Standard_Domain (0.00s)
+    --- PASS: TestGenerateRealityServerNames/Domain_with_Port (0.00s)
+    --- PASS: TestGenerateRealityServerNames/WWW_Domain (0.00s)
+    --- PASS: TestGenerateRealityServerNames/WWW_Domain_with_Port (0.00s)
+    --- PASS: TestGenerateRealityServerNames/Subdomain (0.00s)
+    --- PASS: TestGenerateRealityServerNames/WWW_Subdomain (0.00s)
+    --- PASS: TestGenerateRealityServerNames/Domain_with_Different_Port (0.00s)
+    --- PASS: TestGenerateRealityServerNames/WWW_Domain_with_Different_Port (0.00s)
+=== RUN   TestGenerateRealityServerNames_EdgeCases
+=== RUN   TestGenerateRealityServerNames_EdgeCases/Single_Level_WWW
+=== RUN   TestGenerateRealityServerNames_EdgeCases/Multiple_WWW_prefixes_should_not_occur
+=== RUN   TestGenerateRealityServerNames_EdgeCases/Domain_without_TLD
+=== RUN   TestGenerateRealityServerNames_EdgeCases/WWW_Domain_without_TLD
+--- PASS: TestGenerateRealityServerNames_EdgeCases (0.00s)
+    --- PASS: TestGenerateRealityServerNames_EdgeCases/Single_Level_WWW (0.00s)
+    --- PASS: TestGenerateRealityServerNames_EdgeCases/Multiple_WWW_prefixes_should_not_occur (0.00s)
+    --- PASS: TestGenerateRealityServerNames_EdgeCases/Domain_without_TLD (0.00s)
+    --- PASS: TestGenerateRealityServerNames_EdgeCases/WWW_Domain_without_TLD (0.00s)
+=== RUN   TestTLSCertManager_GetTLSConfig
+--- PASS: TestTLSCertManager_GetTLSConfig (0.00s)
+=== RUN   TestTLSCertManager_SetCertPaths
+--- PASS: TestTLSCertManager_SetCertPaths (0.00s)
+=== RUN   TestTLSCertManager_SetCertPaths_Empty
+--- PASS: TestTLSCertManager_SetCertPaths_Empty (0.00s)
+=== RUN   Test_GetXrayErr_WhenPIsNil_ReturnsNil
+--- PASS: Test_GetXrayErr_WhenPIsNil_ReturnsNil (0.00s)
+=== RUN   Test_GetXrayErr_WhenGetErrReturnsNil_ReturnsNil
+--- PASS: Test_GetXrayErr_WhenGetErrReturnsNil_ReturnsNil (0.00s)
+PASS
+ok  	x-ui/web/service	(cached)
+?   	x-ui/web/session	[no test files]
+?   	x-ui/xray	[no test files]
+FAIL

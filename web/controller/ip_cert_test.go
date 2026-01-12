@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"x-ui/web/locale"
 	"x-ui/web/service"
 
 	"github.com/gin-gonic/gin"
@@ -112,12 +113,25 @@ func TestApplyIPCert_InvalidJSON(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 
+	// Mock I18nWeb since jsonMsg calls it
+	c.Set("I18n", func(i18nType locale.I18nType, key string, params ...string) string {
+		return key
+	})
+
 	// Execute
 	ctrl.applyIPCert(c)
 
-	// Assert - should fail due to missing targetIp field
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", w.Code)
+	// Assert - should return 200 but with success: false in body
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Errorf("Failed to unmarshal response: %v", err)
+	}
+	if success, ok := response["success"].(bool); !ok || success {
+		t.Errorf("Expected success: false, got %v", success)
 	}
 }
 

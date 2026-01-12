@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	// 导入所有测试包
-	// _ "x-ui/tests/e2e"
+	// _ "x-ui/tests/e2e" -> REMOVED
 	_ "x-ui/web/controller"
 	_ "x-ui/web/service"
 )
