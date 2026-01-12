@@ -173,6 +173,11 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 		logger.Warningf("Failed to set IP cert path: %v", err)
 	}
 
+	// Automatically switch to IP certificate mode
+	if err := c.settingService.SetCertSource("ip"); err != nil {
+		logger.Warningf("Failed to set cert source to ip: %v", err)
+	}
+
 	// 触发 TLS 证书重载
 	if c.tlsCertManager != nil {
 		certPath := installPath + ".crt"
@@ -217,6 +222,11 @@ func (c *CertService) ObtainDomainCert(domain, email string, opts *CertOptions) 
 	installPath := "bin/cert/domains/" + domain
 	if err := c.settingService.SetDomainCertPath(installPath); err != nil {
 		logger.Warningf("Failed to set domain cert path: %v", err)
+	}
+
+	// Automatically switch to domain certificate mode
+	if err := c.settingService.SetCertSource("domain"); err != nil {
+		logger.Warningf("Failed to set cert source to domain: %v", err)
 	}
 
 	// 触发 TLS 证书重载
@@ -513,6 +523,11 @@ func (c *CertService) GenerateSelfSignedCert(domain string, days int, targetDir 
 		}
 		if err := c.settingService.SetKeyFile(keyPath); err != nil {
 			logger.Warningf("Failed to set key file setting: %v", err)
+		}
+
+		// Automatically switch to manual certificate mode
+		if err := c.settingService.SetCertSource("manual"); err != nil {
+			logger.Warningf("Failed to set cert source to manual: %v", err)
 		}
 
 		// Reload TLS
