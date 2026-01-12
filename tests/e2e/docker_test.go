@@ -336,7 +336,12 @@ func TestDockerE2E(t *testing.T) {
 
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
-		Image:        imageName,
+		FromDockerfile: testcontainers.FromDockerfile{
+			Context:       "../../",
+			Dockerfile:    "Dockerfile",
+			PrintBuildLog: true,
+			KeepImage:     false,
+		},
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
@@ -559,7 +564,12 @@ func TestDockerE2EPerformance(t *testing.T) {
 
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
-		Image:        imageName,
+		FromDockerfile: testcontainers.FromDockerfile{
+			Context:       "../../",
+			Dockerfile:    "Dockerfile",
+			PrintBuildLog: true,
+			KeepImage:     false,
+		},
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
@@ -665,7 +675,12 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
-		Image:        imageName,
+		FromDockerfile: testcontainers.FromDockerfile{
+			Context:       "../../",
+			Dockerfile:    "Dockerfile",
+			PrintBuildLog: true,
+			KeepImage:     false,
+		},
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
@@ -779,7 +794,12 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 
 	// 使用 Testcontainers 创建容器
 	req := testcontainers.ContainerRequest{
-		Image:        imageName,
+		FromDockerfile: testcontainers.FromDockerfile{
+			Context:       "../../",
+			Dockerfile:    "Dockerfile",
+			PrintBuildLog: true,
+			KeepImage:     false,
+		},
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
