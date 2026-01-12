@@ -294,6 +294,11 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	// Apply the redirect middleware (`/xui` to `/panel`)
 	engine.Use(middleware.RedirectMiddleware(basePath))
 
+	// 添加健康检查端点在所有中间件之后但在basePath分组之前，确保不受basePath和分组中间件影响
+	engine.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	g := engine.Group(basePath)
 
 	s.index = controller.NewIndexController(g)

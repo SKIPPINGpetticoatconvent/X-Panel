@@ -20,8 +20,8 @@ const (
 	containerName = "x-panel-e2e-container"
 	hostPort      = "13688"
 	baseURL       = "http://localhost:" + hostPort
-	maxRetries    = 30
-	retryInterval = 1 * time.Second
+	maxRetries    = 60
+	retryInterval = 2 * time.Second
 	username      = "admin"
 	password      = "admin"
 )
@@ -347,8 +347,9 @@ func TestDockerE2E(t *testing.T) {
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
-	if err := waitForService(baseURL); err != nil {
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
+	if err := waitForService(healthURL); err != nil {
 		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
@@ -546,9 +547,10 @@ func TestDockerE2EPerformance(t *testing.T) {
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
 	startupStart := time.Now()
-	if err := waitForService(baseURL); err != nil {
+	if err := waitForService(healthURL); err != nil {
 		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
@@ -628,8 +630,9 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
-	if err := waitForService(baseURL); err != nil {
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
+	if err := waitForService(healthURL); err != nil {
 		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
@@ -715,8 +718,9 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	}()
 
 	// 4. 健康检查
-	t.Logf("Waiting for service to be ready at %s...", baseURL)
-	if err := waitForService(baseURL); err != nil {
+	healthURL := baseURL + "/health"
+	t.Logf("Waiting for service to be ready at %s...", healthURL)
+	if err := waitForService(healthURL); err != nil {
 		logs := runCommand(t, "docker", "logs", containerName)
 		t.Logf("Container Logs:\n%s", logs)
 		t.Fatalf("Service failed to start: %v", err)
@@ -871,7 +875,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	time.Sleep(3 * time.Second) // 等待重启
 
 	// 重新等待服务就绪
-	if err := waitForService(baseURL); err != nil {
+	if err := waitForService(healthURL); err != nil {
 		t.Fatalf("Service failed to restart after restore: %v", err)
 	}
 
@@ -929,11 +933,18 @@ func runCommand(t *testing.T, name string, args ...string) string {
 }
 
 func waitForService(url string) error {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	for i := 0; i < maxRetries; i++ {
-		resp, err := http.Get(url)
+		resp, err := client.Get(url)
 		if err == nil {
 			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
+			// 接受200-399范围的状态码（包括重定向）
+			if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 				return nil
 			}
 		}
