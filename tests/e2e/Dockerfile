@@ -43,8 +43,8 @@ FROM alpine:latest
 WORKDIR /app
 ENV TZ=Asia/Shanghai
 
-# 安装运行时依赖 + 测试工具 (sqlite)
-RUN apk add --no-cache ca-certificates tzdata fail2ban bash curl sqlite
+# 安装运行时依赖
+RUN apk add --no-cache ca-certificates tzdata fail2ban bash curl
 
 # 🟢 关键修改：从 builder 的输出目录一次性复制所有文件
 # 这样保证文件结构正确，且不会因为缺少某个文件报错
