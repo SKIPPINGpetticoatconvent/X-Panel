@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
-	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/challenge/http01"
+	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
 
 	"x-ui/logger"
@@ -42,18 +42,18 @@ type LegoCertInfo struct {
 
 // LegoIPService Lego IP 证书服务结构体
 type LegoIPService struct {
-	baseDir       string
-	portResolver  *PortConflictResolver
-	certReloader  *CertHotReloader
-	legoConfig    *LegoConfig
+	baseDir      string
+	portResolver *PortConflictResolver
+	certReloader *CertHotReloader
+	legoConfig   *LegoConfig
 }
 
 // LegoConfig Lego 配置
 type LegoConfig struct {
-	ACMEServerURL   string
-	UserAgent       string
-	KeyType         string
-	ChallengeTypes  []string // 支持的挑战类型优先级 ["tls-alpn-01", "http-01"]
+	ACMEServerURL  string
+	UserAgent      string
+	KeyType        string
+	ChallengeTypes []string // 支持的挑战类型优先级 ["tls-alpn-01", "http-01"]
 }
 
 // LegoUser 实现 lego.User 接口
@@ -225,6 +225,7 @@ func (s *LegoIPService) ObtainIPCert(ctx context.Context, ip, email string) (*Ce
 		request := certificate.ObtainRequest{
 			Domains: []string{ip},
 			Bundle:  true,
+			Profile: "shortlived", // Required for IP certificates - Let's Encrypt only allows IP SAN with shortlived profile
 		}
 
 		logger.Infof("Starting certificate obtain request for domains: %v using %s challenge", request.Domains, challengeType)
@@ -395,8 +396,6 @@ func (s *LegoIPService) createLegoUser(email string) (*LegoUser, error) {
 		key:   privateKey,
 	}, nil
 }
-
-
 
 // saveCertificate 保存证书到文件
 func (s *LegoIPService) saveCertificate(ip string, cert *certificate.Resource) (certPath, keyPath string, err error) {
