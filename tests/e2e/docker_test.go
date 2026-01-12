@@ -338,7 +338,7 @@ func TestDockerE2E(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "Dockerfile",
+			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -346,11 +346,6 @@ func TestDockerE2E(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
-		},
-		Entrypoint: []string{"/bin/sh", "-c"},
-		Cmd: []string{
-			"/bin/sh", "-c",
-			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -571,7 +566,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "Dockerfile",
+			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -579,11 +574,6 @@ func TestDockerE2EPerformance(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
-		},
-		Entrypoint: []string{"/bin/sh", "-c"},
-		Cmd: []string{
-			"/bin/sh", "-c",
-			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -687,7 +677,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "Dockerfile",
+			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -695,11 +685,6 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
-		},
-		Entrypoint: []string{"/bin/sh", "-c"},
-		Cmd: []string{
-			"/bin/sh", "-c",
-			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -811,7 +796,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "Dockerfile",
+			Dockerfile:    "tests/e2e/Dockerfile",
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -819,11 +804,6 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
-		},
-		Entrypoint: []string{"/bin/sh", "-c"},
-		Cmd: []string{
-			"/bin/sh", "-c",
-			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
