@@ -347,6 +347,14 @@ func TestDockerE2E(t *testing.T) {
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
+		// 覆盖 Entrypoint 以确保 Cmd 能够执行
+		Entrypoint: []string{"/bin/sh", "-c"},
+		// 强制初始化并重置 webBasePath 为 /，解决 404 问题
+		Cmd: []string{
+			"./x-ui setting -username admin -password admin -port 13688 && " +
+				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
+				"./x-ui",
+		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
 	}
@@ -379,7 +387,7 @@ func TestDockerE2E(t *testing.T) {
 	t.Logf("Container is running at: %s", baseURL)
 
 	// 执行健康检查
-	resp, err := http.Get(baseURL)
+	resp, err := http.Get(baseURL + "/health")
 	if err != nil {
 		t.Fatalf("Health check failed: %v", err)
 	}
@@ -566,7 +574,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "tests/e2e/Dockerfile",
+			Dockerfile:    "Dockerfile", // 假设 Dockerfile 在根目录
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -574,6 +582,13 @@ func TestDockerE2EPerformance(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
+		},
+		// 覆盖 Entrypoint 并强制重置数据库配置
+		Entrypoint: []string{"/bin/sh", "-c"},
+		Cmd: []string{
+			"./x-ui setting -username admin -password admin -port 13688 && " +
+				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
+				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -606,7 +621,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
 
 	// 执行健康检查
-	resp, err := http.Get(baseURL)
+	resp, err := http.Get(baseURL + "/health")
 	if err != nil {
 		t.Fatalf("Health check failed: %v", err)
 	}
@@ -677,7 +692,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "tests/e2e/Dockerfile",
+			Dockerfile:    "Dockerfile", // 假设 Dockerfile 在根目录
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -685,6 +700,13 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
+		},
+		// 覆盖 Entrypoint 并强制重置数据库配置
+		Entrypoint: []string{"/bin/sh", "-c"},
+		Cmd: []string{
+			"./x-ui setting -username admin -password admin -port 13688 && " +
+				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
+				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -717,7 +739,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
 
 	// 执行健康检查
-	resp, err := http.Get(baseURL)
+	resp, err := http.Get(baseURL + "/health")
 	if err != nil {
 		t.Fatalf("Health check failed: %v", err)
 	}
@@ -796,7 +818,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       "../../",
-			Dockerfile:    "tests/e2e/Dockerfile",
+			Dockerfile:    "Dockerfile", // 假设 Dockerfile 在根目录
 			PrintBuildLog: true,
 			KeepImage:     false,
 		},
@@ -804,6 +826,13 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
 			"XUI_ENABLE_FAIL2BAN":     "false",
+		},
+		// 覆盖 Entrypoint 并强制重置数据库配置
+		Entrypoint: []string{"/bin/sh", "-c"},
+		Cmd: []string{
+			"./x-ui setting -username admin -password admin -port 13688 && " +
+				"sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && " +
+				"./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -836,7 +865,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
 
 	// 执行健康检查
-	resp, err := http.Get(baseURL)
+	resp, err := http.Get(baseURL + "/health")
 	if err != nil {
 		t.Fatalf("Health check failed: %v", err)
 	}
