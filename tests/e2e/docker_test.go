@@ -349,7 +349,7 @@ func TestDockerE2E(t *testing.T) {
 		},
 		Cmd: []string{
 			"/bin/sh", "-c",
-			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
+			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -581,7 +581,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 		},
 		Cmd: []string{
 			"/bin/sh", "-c",
-			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
+			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -696,7 +696,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 		},
 		Cmd: []string{
 			"/bin/sh", "-c",
-			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
+			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
@@ -819,7 +819,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 		},
 		Cmd: []string{
 			"/bin/sh", "-c",
-			"./x-ui setting -username admin -password admin -port 13688 -webBasePath / && ./x-ui",
+			"apk add --no-cache sqlite && ./x-ui setting -username admin -password admin -port 13688 && sqlite3 /etc/x-ui/x-ui.db \"UPDATE settings SET value='/' WHERE key='webBasePath';\" && ./x-ui",
 		},
 		WaitingFor: wait.ForLog("Web server running HTTP").
 			WithStartupTimeout(2 * time.Minute),
