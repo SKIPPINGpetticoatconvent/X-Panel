@@ -27,29 +27,13 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Install Testcontainers
+        run: |
+          go get github.com/testcontainers/testcontainers-go@latest
+          go mod tidy
+
       - name: Run E2E tests
         env:
           TEST_CONTAINER_RUNTIME: docker
         run: |
           go test -v -timeout 20m ./tests/e2e/...
-
-      - name: Debug Docker Ports
-        if: always()
-        run: |
-          echo "=== 检查容器端口映射 ==="
-          docker port x-panel-e2e-container || echo "无法获取端口映射"
-
-          echo "=== 检查 Docker 进程详情 ==="
-          docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Ports}}"
-
-      - name: Collect test logs
-        if: always()
-        run: |
-          docker logs x-panel-e2e-container || true
-          docker ps -a || true
-
-      - name: Cleanup containers
-        if: always()
-        run: |
-          docker rm -f x-panel-e2e-container || true
-          docker rmi x-panel-e2e:latest || true

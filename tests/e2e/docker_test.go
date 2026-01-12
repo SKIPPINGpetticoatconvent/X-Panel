@@ -15,11 +15,8 @@ import (
 	"testing"
 	"time"
 
-	// 核心 Docker 包
-	"github.com/docker/docker/api/types"           // 👈 必须有
-	"github.com/docker/docker/api/types/container" // 👈 必须有
-	"github.com/docker/docker/client"              // 👈 必须有
-	"github.com/docker/go-connections/nat"         // 👈 必须有
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -333,74 +330,63 @@ func (c *Client) BackupToTgBot() error {
 }
 
 func TestDockerE2E(t *testing.T) {
-	// 1. 清理旧环境
-	runCommand(t, "docker", "rm", "-f", containerName)
-
-	// 2. 构建镜像
-	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "docker", "build", "-t", imageName, "../..")
-
-	// 3. 启动容器
-	t.Logf("Starting container: %s...", containerName)
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
 
 	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+
+	// 使用 Testcontainers 创建容器
+	req := testcontainers.ContainerRequest{
+		Image:        imageName,
+		ExposedPorts: []string{"13688/tcp"},
+		Env: map[string]string{
+			"XPANEL_RUN_IN_CONTAINER": "true",
+		},
+		WaitingFor: wait.ForHTTP("/").
+			WithPort("13688/tcp").
+			WithStartupTimeout(60 * time.Second),
+	}
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
 	if err != nil {
-		t.Fatalf("Failed to create Docker client: %v", err)
-	}
-	defer cli.Close()
-
-	// 告诉容器内部暴露什么端口 (Config)
-	exposedPorts := nat.PortSet{
-		"13688/tcp": struct{}{},
-	}
-
-	// 告诉宿主机如何映射端口 (HostConfig) -> 核心修复点
-	portBindings := nat.PortMap{
-		"13688/tcp": []nat.PortBinding{
-			{
-				HostIP:   "0.0.0.0", // 绑定到宿主机的所有 IP
-				HostPort: hostPort,   // 宿主机端口
-			},
-		},
-	}
-
-	// 创建容器
-	resp, err := cli.ContainerCreate(ctx,
-		&container.Config{ // 第一个参数结构体
-			Image:        imageName,
-			ExposedPorts: exposedPorts,
-			Env:          []string{"XPANEL_RUN_IN_CONTAINER=true"},
-		},
-		&container.HostConfig{ // 第二个参数结构体 (HostConfig)
-			PortBindings: portBindings, // 🔴 必须在这里！不要放错位置！
-			AutoRemove:   true,         // 建议开启，方便清理
-		},
-		nil, nil, containerName)
-	if err != nil {
-		t.Fatalf("Failed to create container: %v", err)
-	}
-
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		t.Fatalf("Failed to start container: %v", err)
 	}
-
 	defer func() {
-		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "docker", "rm", "-f", containerName)
+		if err := container.Terminate(ctx); err != nil {
+			t.Logf("Failed to terminate container: %v", err)
+		}
 	}()
 
-	// 4. 健康检查
-	healthURL := baseURL + "/health"
-	t.Logf("Waiting for service to be ready at %s...", healthURL)
-	if err := waitForService(healthURL); err != nil {
-		logs := runCommand(t, "docker", "logs", containerName)
-		t.Logf("Container Logs:\n%s", logs)
-		t.Fatalf("Service failed to start: %v", err)
+	// 获取映射的端口（Testcontainers 自动处理端口映射）
+	mappedPort, err := container.MappedPort(ctx, "13688/tcp")
+	if err != nil {
+		t.Fatalf("Failed to get mapped port: %v", err)
 	}
-	t.Log("Service is ready!")
 
-	// 5. 业务逻辑测试
+	host, err := container.Host(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get host: %v", err)
+	}
+
+	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
+	t.Logf("Container is running at: %s", baseURL)
+
+	// 执行健康检查
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("Health check failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
+		t.Errorf("Unexpected status code: %d", resp.StatusCode)
+	}
+
+	// 业务逻辑测试
 	client, err := NewClient(baseURL)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -567,43 +553,62 @@ func TestDockerE2E(t *testing.T) {
 
 // TestDockerE2EPerformance 性能测试
 func TestDockerE2EPerformance(t *testing.T) {
-	// 1. 清理旧环境
-	runCommand(t, "docker", "rm", "-f", containerName)
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
 
-	// 2. 构建镜像
-	t.Logf("Building Docker image: %s...", imageName)
-	startTime := time.Now()
-	runCommand(t, "docker", "build", "-t", imageName, "../..")
-	buildTime := time.Since(startTime)
-	t.Logf("Build time: %v", buildTime)
+	ctx := context.Background()
 
-	// 3. 启动容器
-	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "docker", "run", "-d",
-		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
-		"-e", "XPANEL_RUN_IN_CONTAINER=true",
-		imageName,
-	)
+	// 使用 Testcontainers 创建容器
+	req := testcontainers.ContainerRequest{
+		Image:        imageName,
+		ExposedPorts: []string{"13688/tcp"},
+		Env: map[string]string{
+			"XPANEL_RUN_IN_CONTAINER": "true",
+		},
+		WaitingFor: wait.ForHTTP("/").
+			WithPort("13688/tcp").
+			WithStartupTimeout(60 * time.Second),
+	}
 
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatalf("Failed to start container: %v", err)
+	}
 	defer func() {
-		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "docker", "rm", "-f", containerName)
+		if err := container.Terminate(ctx); err != nil {
+			t.Logf("Failed to terminate container: %v", err)
+		}
 	}()
 
-	// 4. 健康检查
-	healthURL := baseURL + "/health"
-	t.Logf("Waiting for service to be ready at %s...", healthURL)
-	startupStart := time.Now()
-	if err := waitForService(healthURL); err != nil {
-		logs := runCommand(t, "docker", "logs", containerName)
-		t.Logf("Container Logs:\n%s", logs)
-		t.Fatalf("Service failed to start: %v", err)
+	// 获取映射的端口
+	mappedPort, err := container.MappedPort(ctx, "13688/tcp")
+	if err != nil {
+		t.Fatalf("Failed to get mapped port: %v", err)
 	}
-	startupTime := time.Since(startupStart)
-	t.Logf("Service startup time: %v", startupTime)
 
-	// 5. API性能测试
+	host, err := container.Host(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get host: %v", err)
+	}
+
+	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
+
+	// 执行健康检查
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("Health check failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
+		t.Errorf("Unexpected status code: %d", resp.StatusCode)
+	}
+
+	// API性能测试
 	client, err := NewClient(baseURL)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -654,37 +659,62 @@ func TestDockerE2EPerformance(t *testing.T) {
 
 // TestDockerE2EErrorHandling 错误处理测试
 func TestDockerE2EErrorHandling(t *testing.T) {
-	// 1. 清理旧环境
-	runCommand(t, "docker", "rm", "-f", containerName)
-
-	// 2. 构建镜像
-	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "docker", "build", "-t", imageName, "../..")
-
-	// 3. 启动容器
-	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "docker", "run", "-d",
-		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
-		"-e", "XPANEL_RUN_IN_CONTAINER=true",
-		imageName,
-	)
-
-	defer func() {
-		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "docker", "rm", "-f", containerName)
-	}()
-
-	// 4. 健康检查
-	healthURL := baseURL + "/health"
-	t.Logf("Waiting for service to be ready at %s...", healthURL)
-	if err := waitForService(healthURL); err != nil {
-		logs := runCommand(t, "docker", "logs", containerName)
-		t.Logf("Container Logs:\n%s", logs)
-		t.Fatalf("Service failed to start: %v", err)
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
 	}
 
-	// 5. 错误处理测试
+	ctx := context.Background()
+
+	// 使用 Testcontainers 创建容器
+	req := testcontainers.ContainerRequest{
+		Image:        imageName,
+		ExposedPorts: []string{"13688/tcp"},
+		Env: map[string]string{
+			"XPANEL_RUN_IN_CONTAINER": "true",
+		},
+		WaitingFor: wait.ForHTTP("/").
+			WithPort("13688/tcp").
+			WithStartupTimeout(60 * time.Second),
+	}
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatalf("Failed to start container: %v", err)
+	}
+	defer func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Logf("Failed to terminate container: %v", err)
+		}
+	}()
+
+	// 获取映射的端口
+	mappedPort, err := container.MappedPort(ctx, "13688/tcp")
+	if err != nil {
+		t.Fatalf("Failed to get mapped port: %v", err)
+	}
+
+	host, err := container.Host(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get host: %v", err)
+	}
+
+	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
+
+	// 执行健康检查
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("Health check failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
+		t.Errorf("Unexpected status code: %d", resp.StatusCode)
+	}
+
+	// 错误处理测试
 	client, err := NewClient(baseURL)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -743,37 +773,64 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 
 // TestDockerE2EBackupRestore 备份恢复E2E测试
 func TestDockerE2EBackupRestore(t *testing.T) {
-	// 1. 清理旧环境
-	runCommand(t, "docker", "rm", "-f", containerName)
-
-	// 2. 构建镜像
-	t.Logf("Building Docker image: %s...", imageName)
-	runCommand(t, "docker", "build", "-t", imageName, "../..")
-
-	// 3. 启动容器
-	t.Logf("Starting container: %s...", containerName)
-	runCommand(t, "docker", "run", "-d",
-		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
-		"-e", "XPANEL_RUN_IN_CONTAINER=true",
-		imageName,
-	)
-
-	defer func() {
-		t.Logf("Cleaning up container: %s...", containerName)
-		runCommand(t, "docker", "rm", "-f", containerName)
-	}()
-
-	// 4. 健康检查
-	healthURL := baseURL + "/health"
-	t.Logf("Waiting for service to be ready at %s...", healthURL)
-	if err := waitForService(healthURL); err != nil {
-		logs := runCommand(t, "docker", "logs", containerName)
-		t.Logf("Container Logs:\n%s", logs)
-		t.Fatalf("Service failed to start: %v", err)
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
 	}
 
-	// 5. 备份恢复测试
+	ctx := context.Background()
+
+	// 使用 Testcontainers 创建容器
+	req := testcontainers.ContainerRequest{
+		Image:        imageName,
+		ExposedPorts: []string{"13688/tcp"},
+		Env: map[string]string{
+			"XPANEL_RUN_IN_CONTAINER": "true",
+		},
+		WaitingFor: wait.ForHTTP("/").
+			WithPort("13688/tcp").
+			WithStartupTimeout(60 * time.Second),
+	}
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		t.Fatalf("Failed to start container: %v", err)
+	}
+	defer func() {
+		if err := container.Terminate(ctx); err != nil {
+			t.Logf("Failed to terminate container: %v", err)
+		}
+	}()
+
+	// 获取映射的端口
+	mappedPort, err := container.MappedPort(ctx, "13688/tcp")
+	if err != nil {
+		t.Fatalf("Failed to get mapped port: %v", err)
+	}
+
+	host, err := container.Host(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get host: %v", err)
+	}
+
+	baseURL := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
+
+	// 执行健康检查
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("Health check failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
+		t.Errorf("Unexpected status code: %d", resp.StatusCode)
+	}
+
+	healthURL := baseURL + "/health"
+
+	// 备份恢复测试
 	client, err := NewClient(baseURL)
 	if err != nil {
 		t.Fatalf("Failed to create client: %v", err)
@@ -830,18 +887,18 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	// 5.2 执行数据库备份
 	t.Log("Performing database backup...")
 	backupURL := baseURL + "/panel/api/server/getDb"
-	resp, err := client.http.Get(backupURL)
+	backupResp, err := client.http.Get(backupURL)
 	if err != nil {
 		t.Fatalf("Failed to download database backup: %v", err)
 	}
-	defer resp.Body.Close()
+	defer backupResp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Backup download failed with status: %d", resp.StatusCode)
+	if backupResp.StatusCode != http.StatusOK {
+		t.Fatalf("Backup download failed with status: %d", backupResp.StatusCode)
 	}
 
 	// 读取备份数据
-	backupData, err := io.ReadAll(resp.Body)
+	backupData, err := io.ReadAll(backupResp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read backup data: %v", err)
 	}
@@ -891,24 +948,24 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	}
 	w.Close()
 
-	req, err := http.NewRequest("POST", restoreURL, &b)
+	httpReq, err := http.NewRequest("POST", restoreURL, &b)
 	if err != nil {
 		t.Fatalf("Failed to create restore request: %v", err)
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	httpReq.Header.Set("Content-Type", w.FormDataContentType())
 
 	// 使用已登录的客户端发送请求
-	resp, err = client.http.Do(req)
+	restoreResp, err := client.http.Do(httpReq)
 	if err != nil {
 		t.Fatalf("Failed to send restore request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer restoreResp.Body.Close()
 
 	var restoreResult struct {
 		Success bool   `json:"success"`
 		Msg     string `json:"msg"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&restoreResult); err != nil {
+	if err := json.NewDecoder(restoreResp.Body).Decode(&restoreResult); err != nil {
 		t.Fatalf("Failed to decode restore response: %v", err)
 	}
 
