@@ -39,7 +39,13 @@ docker-compose.override.yml
 # Ignore .env (Environment Variables) file
 .env
 
-# Test 
+# Test
 
 test_scripts
 test_suite
+
+# E2E Testing
+/tmp/x-panel-e2e/
+.env.e2e.local
+tests/e2e/testdata/*.db
+tests/e2e/testdata/*.log

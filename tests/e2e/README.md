@@ -1,165 +1,74 @@
-# E2E 测试文档
+# E2E Testing for X-Panel
 
-本文档说明如何运行 X-Panel 项目的端到端（E2E）测试。
+This directory contains End-to-End (E2E) tests for X-Panel.
 
-## 前置条件
+## Environment Configuration
 
-在运行 E2E 测试之前，请确保您的系统已安装以下软件：
+E2E tests use a separate configuration to isolate test environment from user/production environment.
 
-1. **Go** (版本 1.18 或更高)
-   - 安装包：https://golang.org/dl/
-   - 验证安装：`go version`
+### Configuration Files
 
-2. **Docker** (版本 3.0 或更高)
-   - Windows/macOS：https://docker.io/getting-started/installation
-   - Linux：使用包管理器安装（如 `sudo apt install docker` 或 `sudo yum install docker`）
-   - 验证安装：`docker version`
+- **`.env.e2e`** (project root): Environment variables for E2E testing
+- **`tests/e2e/config/e2e_config.go`**: Go configuration loader and helper functions
 
-## 运行测试
+### Environment Variables
 
-在项目根目录执行以下命令运行 E2E 测试：
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GO_ENV` | `test` | Environment identifier |
+| `XUI_DB_FOLDER` | `/tmp/x-panel-e2e/db` | Database directory |
+| `XUI_LOG_FOLDER` | `/tmp/x-panel-e2e/logs` | Log directory |
+| `XUI_LOG_LEVEL` | `debug` | Log level |
+| `XUI_DEBUG` | `true` | Debug mode |
+| `XUI_BIN_FOLDER` | `bin` | Binary files directory |
+| `XUI_SNI_FOLDER` | `bin/sni` | SNI files directory |
+| `XPANEL_RUN_IN_CONTAINER` | `true` | Container mode flag |
+| `XUI_ENABLE_FAIL2BAN` | `false` | Fail2ban (disabled in tests) |
+| `XUI_TEST_PORT` | `13688` | Test web panel port |
+| `XUI_TEST_USERNAME` | `e2e_admin` | Test admin username |
+| `XUI_TEST_PASSWORD` | `e2e_test_pass_123` | Test admin password |
+
+## Running E2E Tests
+
+### Prerequisites
+
+1. Docker installed and running
+2. Go 1.21 or later
+
+### Quick Start
 
 ```bash
-# 运行所有 E2E 测试
+# Load E2E environment and run tests
+source .env.e2e
 go test -v ./tests/e2e/...
 
-# 运行基础功能测试
-go test -v -run TestDockerE2E ./tests/e2e/
-
-# 运行性能测试
-go test -v -run TestDockerE2EPerformance ./tests/e2e/
-
-# 运行错误处理测试
-go test -v -run TestDockerE2EErrorHandling ./tests/e2e/
-
-# 运行备份恢复测试
-go test -v -run TestDockerE2EBackupRestore ./tests/e2e/
-
-# 运行 Telegram 测试
-go test -v -run TestTelegramE2E ./tests/e2e/
-
-# 运行特定测试用时分析
-go test -v -bench=. -run=^$ ./tests/e2e/
+# Or use the test script
+./scripts/run-e2e-tests.sh
 ```
 
-### 测试流程
+### Custom Configuration
 
-#### 基础E2E测试 (TestDockerE2E)
-
-测试将执行以下步骤：
-
-1. **清理环境**：删除可能存在的旧测试容器
-2. **构建镜像**：使用当前 Dockerfile 构建 Docker 镜像 `x-panel-e2e:latest`
-3. **启动容器**：在后台启动 X-Panel 容器，映射端口 13688
-4. **健康检查**：等待服务启动并响应 HTTP 请求（最多等待 30 秒）
-5. **功能验证**：
-   - 用户登录
-   - 服务器状态检查
-   - 设置管理
-   - SNI功能测试
-   - 入站管理（添加、更新、删除）
-   - 客户端管理（添加、流量查询、重置流量）
-   - 备份功能测试
-6. **清理环境**：测试完成后自动清理测试容器
-
-#### 性能测试 (TestDockerE2EPerformance)
-
-验证系统性能指标：
-
-- Docker镜像构建时间
-- 服务启动时间
-- API响应时间（服务器状态、入站列表）
-- 性能断言和阈值检查
-
-#### 错误处理测试 (TestDockerE2EErrorHandling)
-
-验证错误场景的处理：
-
-- 无效登录凭据
-- 删除不存在的资源
-- 无效的输入数据
-- API错误响应
-
-#### Telegram E2E测试
-
-验证Telegram Bot集成功能：
-
-- Telegram配置验证
-- 备份到Telegram功能
-- 消息格式验证
-
-#### 备份恢复E2E测试 (TestDockerE2EBackupRestore)
-
-验证数据库备份和恢复功能：
-
-- 创建测试数据
-- 执行数据库备份
-- 模拟数据丢失
-- 执行数据库恢复
-- 验证数据完整性
-
-### 预期输出
-
-成功的测试应该输出类似以下内容：
-
-```
-=== RUN   TestDockerE2E
-=== RUN   TestDockerE2E
-    docker_test.go:20: Building Docker image: x-panel-e2e:latest...
-    docker_test.go:26: Starting container: x-panel-e2e-container...
-    docker_test.go:38: Waiting for service to be ready at http://localhost:13688...
-    docker_test.go:51: Service is ready!
-    docker_test.go:56: E2E Test Passed Successfully!
---- PASS: TestDockerE2E (35.42s)
-PASS
-ok      github.com/your-org/x-panel/tests/e2e        35.424s
-```
-
-## 故障排除
-
-### 常见问题
-
-1. **端口冲突**
-   - 如果端口 13688 已被占用，测试将失败
-   - 解决方案：停止占用该端口的服务或修改测试配置
-
-2. **Docker 权限问题**
-   - 在 Linux 上，可能需要 sudo 权限运行 Docker
-   - 解决方案：确保用户有 Docker 运行权限或使用 `sudo`
-
-3. **网络问题**
-   - 如果无法下载 Docker 镜像或访问外网，测试可能超时
-   - 解决方案：检查网络连接和防火墙设置
-
-4. **Go 模块问题**
-   - 如果出现 Go 模块相关错误
-   - 解决方案：在项目根目录运行 `go mod tidy`
-
-### 手动清理
-
-如果测试异常退出，可以手动清理测试环境：
+You can override any environment variable:
 
 ```bash
-# 删除测试容器
-docker rm -f x-panel-e2e-container
-
-# 删除测试镜像
-docker rmi x-panel-e2e:latest
+XUI_TEST_PORT=15000 go test -v ./tests/e2e/...
 ```
 
-## 测试配置
+Or create a local override file `.env.e2e.local` (not tracked by git).
 
-可以通过修改 `tests/e2e/docker_test.go` 中的常量来调整测试参数：
+## Test Isolation
 
-- `imageName`: 测试镜像名称
-- `containerName`: 测试容器名称
-- `hostPort`: 主机端口映射
-- `maxRetries`: 最大重试次数
-- `retryInterval`: 重试间隔
+E2E tests are designed to be completely isolated from user environment:
 
-## 注意事项
+1. **Separate database**: Uses `/tmp/x-panel-e2e/db` instead of `/etc/x-ui`
+2. **Separate logs**: Uses `/tmp/x-panel-e2e/logs` instead of `/var/log`
+3. **Different port**: Uses port 13688 instead of default panel port
+4. **Test credentials**: Uses dedicated test username/password
+5. **Disabled security features**: Fail2ban disabled to prevent test interference
 
-- E2E 测试需要较长时间（通常 30-60 秒）
-- 测试过程中会消耗网络带宽下载依赖
-- 请确保有足够的磁盘空间用于存储 Docker 镜像
-- 测试完成后会自动清理容器，但镜像会保留以供后续使用
+## Cleanup
+
+Test environment is automatically cleaned up after tests. To manually clean:
+
+```bash
+rm -rf /tmp/x-panel-e2e/
