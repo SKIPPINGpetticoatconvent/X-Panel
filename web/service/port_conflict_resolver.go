@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"strings"
+	"syscall"
 	"time"
 
 	"x-ui/logger"
@@ -69,8 +72,25 @@ func (p *PortConflictResolver) CheckPort80() (occupied bool, ownedByPanel bool, 
 		// 需进一步区分是 "connection refused" (未占用) 还是其他错误
 		if isConnectionRefused(err) {
 			occupied = false
+		} else if isTimeout(err) {
+			// 如果是本地检测出现超时，大概率是防火墙 DROP 了，或者没有服务在监听但也没有 REJECT
+			// 在本地环回接口上，如果端口被占用，connect 应该是立即成功
+			// 如果端口未被占用，通常是立即 connection refused
+			// 如果超时，通常是防火墙规则导致的，但也可能意味着端口实际上是不可达的（即未被正常服务占用，或者服务不可达）
+			// 对于 ACME 挑战，如果本地都连不上（超时），那外网大概率也连不上，所以这里视为“未被面板占用，但也无法使用”
+			// 但我们更关心的是“是否有进程在占用该端口”。
+			// 如果超时，我们无法确定是否有进程。
+			// 策略：尝试检测 IPv6 或认为它是被防火墙屏蔽的空闲端口 (风险：万一是有个僵死进程?)
+			// 保守策略：认为是占用的。但为了解决用户的 i/o timeout 问题，我们可以尝试更激进的策略。
+			// 如果是 127.0.0.1 超时，很可能是防火墙 DROP。
+			// 我们可以尝试 bind 一下端口来验证是否真的被占用。
+			if canBind(80) {
+				occupied = false
+			} else {
+				occupied = true
+			}
 		} else {
-			// 可能是超时或其他网络问题，视为占用以防万一
+			// 其他错误，视为占用以防万一
 			occupied = true
 		}
 	}
@@ -154,16 +174,40 @@ func isConnectionRefused(err error) bool {
 	if err == nil {
 		return false
 	}
-	// 检查网络错误类型
-	if netErr, ok := err.(net.Error); ok {
-		if opErr, ok := netErr.(*net.OpError); ok {
-			if syscallErr, ok := opErr.Err.(*net.OpError); ok {
-				// 检查是否为 "connection refused"
-				return syscallErr.Err.Error() == "connect: connection refused"
+	// 使用 errors.Is 检查是否为 ECONNREFUSED
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		return true
+	}
+
+	// 遍历错误链
+	for {
+		// 检查是否为 "connection refused" 字符串错误
+		if strings.Contains(err.Error(), "connection refused") {
+			return true
+		}
+
+		// 尝试解包
+		if unwravable, ok := err.(interface{ Unwrap() error }); ok {
+			err = unwravable.Unwrap()
+			if err == nil {
+				break
 			}
+		} else {
+			break
 		}
 	}
 	return false
+}
+
+// isTimeout 检查是否为超时错误
+func isTimeout(err error) bool {
+	if err == nil {
+		return false
+	}
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		return true
+	}
+	return strings.Contains(err.Error(), "i/o timeout")
 }
 
 // IdentifyOccupier 识别占用指定端口的进程 (当前未实现)
@@ -179,4 +223,14 @@ func (p *PortConflictResolver) TemporarilyTakeOver80() error {
 	// TODO: 实现临时接管逻辑
 	// 这需要与 certmagic 集成
 	return fmt.Errorf("TemporarilyTakeOver80 not implemented yet")
+}
+
+// canBind 尝试绑定端口以验证是否被占用
+func canBind(port int) bool {
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	listener.Close()
+	return true
 }
