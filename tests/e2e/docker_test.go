@@ -15,9 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/go-connections/nat"
-	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/client"
+	// 核心 Docker 包
+	"github.com/docker/docker/api/types"           // 👈 必须有
+	"github.com/docker/docker/api/types/container" // 👈 必须有
+	"github.com/docker/docker/client"              // 👈 必须有
+	"github.com/docker/go-connections/nat"         // 👈 必须有
 )
 
 const (
@@ -379,7 +381,7 @@ func TestDockerE2E(t *testing.T) {
 		t.Fatalf("Failed to create container: %v", err)
 	}
 
-	if _, err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		t.Fatalf("Failed to start container: %v", err)
 	}
 
