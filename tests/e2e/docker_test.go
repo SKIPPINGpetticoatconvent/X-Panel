@@ -19,7 +19,7 @@ const (
 	imageName     = "x-panel-e2e:latest"
 	containerName = "x-panel-e2e-container"
 	hostPort      = "13688"
-	baseURL       = "http://localhost:" + hostPort
+	baseURL       = "http://127.0.0.1:" + hostPort
 	maxRetries    = 60
 	retryInterval = 2 * time.Second
 	username      = "admin"
@@ -337,7 +337,7 @@ func TestDockerE2E(t *testing.T) {
 	t.Logf("Starting container: %s...", containerName)
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-p", fmt.Sprintf("0.0.0.0:%s:13688", hostPort),
 		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
@@ -538,7 +538,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 	t.Logf("Starting container: %s...", containerName)
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-p", fmt.Sprintf("0.0.0.0:%s:13688", hostPort),
 		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
@@ -622,7 +622,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	t.Logf("Starting container: %s...", containerName)
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-p", fmt.Sprintf("0.0.0.0:%s:13688", hostPort),
 		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
@@ -711,7 +711,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	t.Logf("Starting container: %s...", containerName)
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
-		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-p", fmt.Sprintf("0.0.0.0:%s:13688", hostPort),
 		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
