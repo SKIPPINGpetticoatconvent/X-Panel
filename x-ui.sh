@@ -252,9 +252,9 @@ reset_user() {
         return 0
     fi
     read -rp "请设置用户名 [默认为随机用户名]: " config_account
-    [[ -z $config_account ]] && config_account=$(date +%s%N | md5sum | cut -c 1-8)
+    [[ -z $config_account ]] && config_account=$(gen_random_string 8)
     read -rp "请设置密码 [默认为随机密码]: " config_password
-    [[ -z $config_password ]] && config_password=$(date +%s%N | md5sum | cut -c 1-8)
+    [[ -z $config_password ]] && config_password=$(gen_random_string 8)
     /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password} >/dev/null 2>&1
     /usr/local/x-ui/x-ui setting -remove_secret >/dev/null 2>&1
     echo -e "面板登录用户名已重置为：${green} ${config_account} ${plain}"
