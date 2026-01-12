@@ -16,7 +16,7 @@ echo "🟢 [Test] Checking setting command help..."
 # 2. 初始化 (生成数据库)
 # 使用 -key=value 格式以确保正确解析
 echo "🟢 [Test] Initializing settings..."
-/app/x-ui setting -webBasePath=/ -username=admin -password=admin -port=13688
+/app/x-ui setting -webBasePath="/" -username=admin -password=admin -port=13688
 
 # 3. 启动
 echo "🟢 [Test] Starting x-ui..."
