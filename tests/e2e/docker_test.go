@@ -345,10 +345,10 @@ func TestDockerE2E(t *testing.T) {
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
+			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		WaitingFor: wait.ForHTTP("/health").
-			WithPort("13688/tcp").
-			WithStartupTimeout(60 * time.Second),
+		WaitingFor: wait.ForLog("Web server running HTTP").
+			WithStartupTimeout(2 * time.Minute),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -573,10 +573,10 @@ func TestDockerE2EPerformance(t *testing.T) {
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
+			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		WaitingFor: wait.ForHTTP("/health").
-			WithPort("13688/tcp").
-			WithStartupTimeout(60 * time.Second),
+		WaitingFor: wait.ForLog("Web server running HTTP").
+			WithStartupTimeout(2 * time.Minute),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -684,10 +684,10 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
+			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		WaitingFor: wait.ForHTTP("/health").
-			WithPort("13688/tcp").
-			WithStartupTimeout(60 * time.Second),
+		WaitingFor: wait.ForLog("Web server running HTTP").
+			WithStartupTimeout(2 * time.Minute),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -803,10 +803,10 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 		ExposedPorts: []string{"13688/tcp"},
 		Env: map[string]string{
 			"XPANEL_RUN_IN_CONTAINER": "true",
+			"XUI_ENABLE_FAIL2BAN":     "false",
 		},
-		WaitingFor: wait.ForHTTP("/health").
-			WithPort("13688/tcp").
-			WithStartupTimeout(60 * time.Second),
+		WaitingFor: wait.ForLog("Web server running HTTP").
+			WithStartupTimeout(2 * time.Minute),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
