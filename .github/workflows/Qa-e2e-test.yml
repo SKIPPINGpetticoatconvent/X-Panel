@@ -21,28 +21,11 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: "stable"
           cache: true
 
       - name: Download dependencies
         run: go mod download
-
-# 核心修复步骤：替换掉原来的 Update Docker SDK
-      - name: Fix Docker Dependencies
-        run: |
-          echo "=== 正在解决 Docker 依赖冲突 ==="
-          # 1. 强制降级 reference 包以修复 SplitHostname 错误
-          go get github.com/distribution/reference@v0.5.0
-          
-          # 2. 锁定 Docker SDK 为稳定版本 (v24.x 是目前兼容性最好的版本之一)
-          # 注意：不要用 latest，容易拉到不兼容的开发版
-          go get github.com/docker/docker@v24.0.7
-          go get github.com/docker/go-connections@v0.4.0
-          
-          # 3. 清理并重新计算依赖树
-          go mod tidy
-          
-          echo "=== 依赖修复完成 ==="
 
       - name: Run E2E tests
         env:
@@ -55,7 +38,7 @@ jobs:
         run: |
           echo "=== 检查容器端口映射 ==="
           docker port x-panel-e2e-container || echo "无法获取端口映射"
-          
+
           echo "=== 检查 Docker 进程详情 ==="
           docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Ports}}"
 
