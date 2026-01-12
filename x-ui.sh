@@ -1390,6 +1390,7 @@ cert_management_menu() {
     echo ""
     echo -e "${green}\t1.${plain} 域名证书申请 (传统域名，如 example.com)"
     echo -e "${green}\t2.${plain} IP证书申请 (纯IP地址，如 107.174.245.44)"
+    echo -e "${green}\t3.${plain} 自签证书申请 (支持 RSA/ECDSA，无需域名)"
     echo -e "${green}\t0.${plain} 返回主菜单"
     read -p "请输入选项: " choice
     case "$choice" in
@@ -1403,6 +1404,10 @@ cert_management_menu() {
     2)
         echo -e "${yellow}正在启动IP证书申请流程...${plain}"
         request_ip_cert
+        ;;
+    3)
+        echo -e "${yellow}正在启动自签证书申请流程...${plain}"
+        ssl_cert_self_signed
         ;;
     *)
         LOGE "无效选项，请重新选择"
@@ -1482,6 +1487,77 @@ request_ip_cert() {
         confirm_restart
     else
         LOGE "IP 证书申请失败，请查看面板日志获取详细信息"
+    fi
+
+    before_show_menu
+}
+
+ssl_cert_self_signed() {
+    echo -e "${green}自签证书申请${plain}"
+    echo ""
+
+    read -rp "请输入证书绑定的域名或IP (例: 1.1.1.1 或 example.com): " cert_domain
+    if [[ -z "$cert_domain" ]]; then
+        LOGE "域名/IP 不能为空"
+        before_show_menu
+        return
+    fi
+
+    echo -e "\n请选择密钥算法:"
+    echo -e "${green}1.${plain} RSA (2048位) - 兼容性好"
+    echo -e "${green}2.${plain} ECDSA (P-256) - 性能好，安全性高"
+    read -rp "请输入选项 [1-2] (默认: 2): " algo_choice
+    
+    local key_file=""
+    local cert_file=""
+    local cert_dir="/root/cert/${cert_domain}_self"
+    mkdir -p "$cert_dir"
+
+    key_file="${cert_dir}/privkey.pem"
+    cert_file="${cert_dir}/fullchain.pem"
+
+    # Days validity
+    read -rp "请输入证书有效期(天) (默认: 3650): " cert_days
+    [[ -z "$cert_days" ]] && cert_days=3650
+
+    if [[ "$algo_choice" == "1" ]]; then
+        LOGI "正在生成 RSA 私钥..."
+        openssl genrsa -out "$key_file" 2048
+    else
+        LOGI "正在生成 ECDSA 私钥 (prime256v1)..."
+        openssl ecparam -genkey -name prime256v1 -out "$key_file"
+    fi
+
+    if [[ $? -ne 0 ]]; then
+        LOGE "私钥生成失败，请检查 openssl 是否安装"
+        return 1
+    fi
+
+    LOGI "正在生成自签名证书..."
+    openssl req -new -x509 -days "$cert_days" -key "$key_file" -out "$cert_file" \
+        -subj "/C=XX/ST=SelfSigned/L=SelfSigned/O=SelfSigned/OU=SelfSigned/CN=${cert_domain}"
+
+    if [[ $? -ne 0 ]]; then
+        LOGE "证书生成失败"
+        return 1
+    fi
+
+    LOGI "证书生成成功!"
+    LOGI "证书: $cert_file"
+    LOGI "私钥: $key_file"
+
+    # Install cert to x-ui
+    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+
+    /usr/local/x-ui/x-ui cert -webCert "$cert_file" -webCertKey "$key_file"
+    
+    if [[ $? == 0 ]]; then
+        LOGI "已将证书应用到面板"
+        echo -e "${green}登录访问面板URL: https://${cert_domain}:${existing_port}${existing_webBasePath}${plain}"
+        confirm_restart
+    else
+        LOGE "应用证书失败"
     fi
 
     before_show_menu
