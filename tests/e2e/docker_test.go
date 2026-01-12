@@ -338,6 +338,7 @@ func TestDockerE2E(t *testing.T) {
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
 
@@ -538,6 +539,7 @@ func TestDockerE2EPerformance(t *testing.T) {
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
 
@@ -621,6 +623,7 @@ func TestDockerE2EErrorHandling(t *testing.T) {
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
 
@@ -709,6 +712,7 @@ func TestDockerE2EBackupRestore(t *testing.T) {
 	runCommand(t, "docker", "run", "-d",
 		"--name", containerName,
 		"-p", fmt.Sprintf("%s:13688", hostPort),
+		"-e", "XPANEL_RUN_IN_CONTAINER=true",
 		imageName,
 	)
 

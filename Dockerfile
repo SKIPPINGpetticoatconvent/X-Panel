@@ -61,6 +61,7 @@ RUN chmod +x \
     /usr/bin/x-ui
 
 ENV XUI_ENABLE_FAIL2BAN="true"
+ENV XPANEL_RUN_IN_CONTAINER=true
 VOLUME [ "/etc/x-ui" ]
 EXPOSE 13688 
 CMD [ "./x-ui" ]

@@ -419,7 +419,12 @@ func (s *Server) Start() (err error) {
 		logger.Info("Access is only possible via SSH tunnel (e.g., http://127.0.0.1).")
 
 		// 无论用户在 listen 中填写什么，都强制使用回环地址
-		listen = fallbackToLocalhost(listen)
+		if os.Getenv("XPANEL_RUN_IN_CONTAINER") == "true" {
+			listen = "0.0.0.0"
+			logger.Info("Running in container mode, listening on 0.0.0.0")
+		} else {
+			listen = fallbackToLocalhost(listen)
+		}
 		listenAddr = net.JoinHostPort(listen, strconv.Itoa(port))
 	}
 
