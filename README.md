@@ -1,5 +1,8 @@
 # X-Panel 面板
 
+[![Lint](https://github.com/SKIPPINGpetticoatconvent/X-Panel/actions/workflows/lint.yml/badge.svg)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/actions/workflows/lint.yml)
+[![Test](https://github.com/SKIPPINGpetticoatconvent/X-Panel/actions/workflows/test.yml/badge.svg)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/actions/workflows/test.yml)
+
 [![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
 
 基于[EGfrthtu/X-Panel](https://github.com/SKIPPINGpetticoatconvent/X-Panel) 的优化版，支持 Xray 核心，提供多协议代理管理面板。

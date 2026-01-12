@@ -1,0 +1,41 @@
+name: Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run Tests
+        # Run all tests (unit + integration) with race detector and coverage
+        # Adjust the path if you want to separate unit/integration, but here we run everything
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.out
+          flags: unittests,integration
+          name: codecov-umbrella
+          fail_ci_if_error: false # Don't fail build if coverage upload fails
