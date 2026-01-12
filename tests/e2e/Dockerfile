@@ -1,7 +1,7 @@
 # ----------------------------------------
 # 第一阶段：构建 (Build Stage)
 # ----------------------------------------
-FROM golang:1.24-alpine AS builder
+FROM golang:alpine AS builder
 WORKDIR /app
 # 安装构建依赖
 RUN apk add --no-cache build-base gcc git
