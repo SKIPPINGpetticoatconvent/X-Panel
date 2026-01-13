@@ -205,7 +205,11 @@ custom_version() {
     download_link="https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh"
 
     # Use the entered panel version in the download link
-    install_command="bash <(curl -Ls $download_link) v$panel_version"
+    if [[ ! "${panel_version}" =~ ^v ]]; then
+        panel_version="v${panel_version}"
+    fi
+    # Use the entered panel version in the download link
+    install_command="bash <(curl -Ls $download_link) ${panel_version}"
 
     echo "下载并安装面板版本 $panel_version..."
     eval $install_command
@@ -980,9 +984,18 @@ ssl_cert_issue() {
      local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
      if [ "${currentCert}" == "${domain}" ]; then 
          local certInfo=$(~/.acme.sh/acme.sh --list) 
-         LOGE "系统已存在此域名的证书。无法再次签发。当前证书详情:" 
+         LOGE "系统已存在此域名的证书。当前证书详情:" 
          LOGI "$certInfo" 
-         exit 1 
+         read -rp "是否删除现有证书并重新签发? [y/N]: " delete_cert
+         if [[ "$delete_cert" == "y" || "$delete_cert" == "Y" ]]; then
+             ~/.acme.sh/acme.sh --remove -d ${domain}
+             rm -rf ~/.acme.sh/${domain}
+             rm -rf /root/cert/${domain}
+             LOGI "已删除现有证书，准备重新签发..."
+         else
+             LOGI "已取消重新签发。"
+             exit 1
+         fi
      else 
          LOGI "您的域名现在可以签发证书了..." 
      fi 
@@ -1242,6 +1255,157 @@ ssl_cert_issue_CF() {
          show_menu 
      fi 
  } 
+
+ssl_cert_issue_ip() {
+    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    
+    # Check for openssl
+    if ! command -v openssl &>/dev/null; then
+        echo -e "${red}Error: openssl is not installed.${plain}"
+        echo -e "${yellow}Installing openssl...${plain}"
+        case "${release}" in
+            ubuntu|debian|armbian)
+                apt-get update && apt-get install -y openssl
+                ;;
+            centos|rhel|almalinux|rocky|ol)
+                yum install -y openssl
+                ;;
+            fedora|amzn|virtuozzo)
+                dnf install -y openssl
+                ;;
+            arch|manjaro|parch)
+                pacman -S --noconfirm openssl
+                ;;
+            alpine)
+                apk add --no-cache openssl
+                ;;
+            opensuse-tumbleweed)
+                zypper install -y openssl
+                ;;
+            *)
+                echo -e "${red}Unsupported OS. Please install openssl manually.${plain}"
+                return 1
+                ;;
+        esac
+    fi
+
+    echo -e "${green}Generating IP Certificate...${plain}"
+
+    local ip=""
+    local ipv4_regex="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
+    # Basic robust IPv6 regex or at least strict enough to simple HTML
+    local ipv6_regex="^([0-9a-fA-F]{1,4}:){1,7}:?([0-9a-fA-F]{1,4}:?){0,6}$"
+
+    # Function to validate IP
+    validate_ip() {
+        local target=$1
+        if [[ -z "$target" ]]; then return 1; fi
+        
+        if [[ "$target" =~ $ipv4_regex ]]; then
+            return 0
+        fi
+        # Check IPv6
+        if [[ "$target" =~ $ipv6_regex ]]; then
+            return 0
+        fi
+        return 1
+    }
+
+    # Sources
+    local ipv4_sources=(
+        "https://api.ipify.org"
+        "https://ifconfig.me"
+        "https://checkip.amazonaws.com"
+        "https://ip.sb"
+    )
+    
+    local ipv6_sources=(
+        "https://api64.ipify.org"
+        "https://ifconfig.co"
+    )
+
+    # Try IPv4 Sources
+    for source in "${ipv4_sources[@]}"; do
+        local temp_ip=$(curl -s4m5 "$source" -k)
+        # trim whitespace
+        temp_ip=$(echo "$temp_ip" | xargs)
+        if validate_ip "$temp_ip"; then
+            ip="$temp_ip"
+            break
+        fi
+    done
+
+    # If no IPv4, Try IPv6 Sources
+    if [[ -z "$ip" ]]; then
+        for source in "${ipv6_sources[@]}"; do
+            local temp_ip=$(curl -s6m5 "$source" -k)
+            temp_ip=$(echo "$temp_ip" | xargs)
+            if validate_ip "$temp_ip"; then
+                ip="$temp_ip"
+                break
+            fi
+        done
+    fi
+
+    if [[ -z "$ip" ]]; then
+        echo -e "${red}Could not automatically detect a valid public IP.${plain}"
+        echo -e "${yellow}All automatic detection methods failed.${plain}"
+        read -p "Please enter your IP manually: " manual_ip
+        if [[ -z "$manual_ip" ]]; then
+            echo -e "${red}IP cannot be empty.${plain}"
+            return 1
+        fi
+        # Basic validation for manual input
+        if ! validate_ip "$manual_ip"; then
+             echo -e "${red}Invalid IP format entered.${plain}"
+             return 1
+        fi
+        ip="$manual_ip"
+    fi
+
+    echo -e "${green}Detected IP: ${ip}${plain}"
+    
+    read -rp "Is this IP correct? [y/n] " confirm
+    if [[ "$confirm" == "n" || "$confirm" == "N" ]]; then
+        read -rp "Please enter your IP: " manual_ip
+        if [[ -z "$manual_ip" ]]; then
+            echo -e "${red}IP cannot be empty.${plain}"
+            return 1
+        fi
+        if ! validate_ip "$manual_ip"; then
+             echo -e "${red}Invalid IP format entered.${plain}"
+             return 1
+        fi
+        ip="$manual_ip"
+        echo -e "${green}Using IP: ${ip}${plain}"
+    fi
+    
+    local cert_dir="/root/cert/${ip}"
+    mkdir -p "$cert_dir"
+
+    local key_file="${cert_dir}/privkey.pem"
+    local cert_file="${cert_dir}/fullchain.pem"
+
+    # Generate Self-Signed Cert with IP SAN
+    openssl req -x509 -newkey rsa:2048 -keyout "$key_file" -out "$cert_file" -days 3650 -nodes -subj "/CN=${ip}" -addext "subjectAltName=IP:${ip}"
+
+    if [[ $? -eq 0 ]]; then
+        echo -e "${green}Certificate generated successfully at ${cert_dir}${plain}"
+        
+        /usr/local/x-ui/x-ui cert -webCert "$cert_file" -webCertKey "$key_file"
+        
+        echo -e "${green}Certificate applied to x-ui settings.${plain}"
+        echo -e "${green}Login URL: https://${ip}:${existing_port}${existing_webBasePath}${plain}"
+        
+        restart
+    else
+        echo -e "${red}Failed to generate certificate.${plain}"
+    fi
+    
+    show_menu
+}
+
 
 warp_cloudflare() {
     echo -e "${green}\t1.${plain} 安装 WARP socks5 代理"
@@ -1783,12 +1947,13 @@ show_menu() {
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} 安装订阅转换 
+  ${green}26.${plain} 申请 IP 证书
 ——————————————————————
 
 
 "
     show_status
-    echo && read -p "请输入选项 [0-25]: " num
+    echo && read -p "请输入选项 [0-26]: " num
 
     case "${num}" in
     0)
@@ -1845,6 +2010,9 @@ show_menu() {
     17)
         check_install && disable
         ;;
+    26)
+        ssl_cert_issue_ip
+        ;;
     18)
         ssl_cert_issue_main
         ;;
@@ -1870,7 +2038,7 @@ show_menu() {
         subconverter
         ;;
     *)
-        LOGE "请输入正确的数字选项 [0-25]"
+        LOGE "请输入正确的数字选项 [0-26]"
         ;;
     esac
 }

@@ -26,7 +26,7 @@ type Release struct {
 // GetPanelLatestVersion 获取面板的最新版本
 func (s *ServerService) GetPanelLatestVersion() (string, error) {
 	const (
-		XPanelURL    = "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest"
+		XPanelURL  = "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest"
 		bufferSize = 8192
 	)
 
@@ -165,7 +165,7 @@ func updateXUICommandScript() error {
 	}
 
 	// 设置执行权限
-	err = os.Chmod("/usr/bin/x-ui", 0755)
+	err = os.Chmod("/usr/bin/x-ui", 0o755)
 	if err != nil {
 		return fmt.Errorf("设置脚本执行权限失败: %v", err)
 	}
@@ -248,7 +248,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 			}
 
 			// 设置执行权限
-			err = os.Chmod(tempBin.Name(), 0755)
+			err = os.Chmod(tempBin.Name(), 0o755)
 			if err != nil {
 				os.Remove(tempBin.Name())
 				return "", fmt.Errorf("设置临时二进制文件执行权限失败: %v", err)
@@ -261,8 +261,6 @@ func downloadAndExtractPanel(url string) (string, error) {
 	logger.Infof("压缩包中的文件列表: %v", fileNames)
 	return "", fmt.Errorf("在tar.gz中未找到x-ui二进制文件")
 }
-
-
 
 // replacePanelBinary 备份并替换面板二进制文件
 func replacePanelBinary(newBinPath string) error {
@@ -296,7 +294,7 @@ func replacePanelBinary(newBinPath string) error {
 	}
 
 	// 设置执行权限
-	err = os.Chmod(binPath, 0755)
+	err = os.Chmod(binPath, 0o755)
 	if err != nil {
 		return fmt.Errorf("设置执行权限失败: %v", err)
 	}
@@ -313,17 +311,6 @@ func runMigrationCommand() error {
 		return fmt.Errorf("执行数据库迁移失败: %v, 输出: %s", err, string(output))
 	}
 	logger.Info("数据库迁移执行成功")
-	return nil
-}
-
-// restartPanelService 重启面板服务
-func restartPanelService() error {
-	cmd := exec.Command("systemctl", "restart", "x-ui")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("重启面板服务失败: %v, 输出: %s", err, string(output))
-	}
-	logger.Info("成功重启面板服务")
 	return nil
 }
 
@@ -440,8 +427,8 @@ func (s *ServerService) UpdatePanel(version string) error {
 			}
 
 			// 停止其他可能的服务
-			exec.Command("systemctl", "stop", "warp-go").Run()
-			exec.Command("wg-quick", "down", "wgcf").Run()
+			_ = exec.Command("systemctl", "stop", "warp-go").Run()
+			_ = exec.Command("wg-quick", "down", "wgcf").Run()
 		}
 
 		// 清理临时文件
@@ -574,7 +561,7 @@ func (s *ServerService) UpdateGeoData() error {
 		}
 
 		// 4. 重启 Xray 服务
-		if updateErr == nil && successCount > 0 {
+		if successCount > 0 {
 			logger.Info("重启 Xray 服务以应用新的 Geo 数据...")
 			err := s.RestartXrayService()
 			if err != nil {
@@ -588,7 +575,7 @@ func (s *ServerService) UpdateGeoData() error {
 
 		// 5. 发送结果通知
 		if tgAvailable {
-			if updateErr == nil && successCount > 0 {
+			if successCount > 0 {
 				// 更新成功通知
 				successMessage := fmt.Sprintf("🎉 **Geo 数据更新成功！**\n\n✅ 成功更新 %d 个文件\n🔄 Xray 服务已重启\n\n更新的文件:\n", successCount)
 				for _, file := range geoFiles {

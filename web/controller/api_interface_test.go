@@ -51,8 +51,8 @@ func TestInboundAPI_ResponseFormat(t *testing.T) {
 
 	// 创建控制器
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	// 注册路由
@@ -98,8 +98,8 @@ func TestInboundAPI_DataValidation(t *testing.T) {
 	mockXrayService := &service.XrayService{}
 
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	api := router.Group("/api/inbounds")
@@ -168,8 +168,8 @@ func TestInboundAPI_PermissionValidation(t *testing.T) {
 	mockXrayService := &service.XrayService{}
 
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	api := router.Group("/api/inbounds")
@@ -202,7 +202,6 @@ func TestInboundAPI_PermissionValidation(t *testing.T) {
 	t.Run("CrossUserPermission", func(t *testing.T) {
 		// 创建两个不同用户的会话
 		user1 := &model.User{Id: 1, Username: "user1"}
-		user2 := &model.User{Id: 2, Username: "user2"}
 
 		// 模拟用户1试图访问用户2的资源
 		c1, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -222,9 +221,9 @@ func TestSettingAPI_Configuration(t *testing.T) {
 	mockPanelService := &service.PanelService{}
 
 	settingController := &SettingController{
-		settingService: *mockSettingService,
-		userService:    *mockUserService,
-		panelService:   *mockPanelService,
+		settingService: mockSettingService,
+		userService:    mockUserService,
+		panelService:   mockPanelService,
 	}
 
 	api := router.Group("/api/setting")
@@ -478,8 +477,8 @@ func BenchmarkAPI_GetInbounds(b *testing.B) {
 	mockXrayService := &service.XrayService{}
 
 	inboundController := &InboundController{
-		inboundService: *mockInboundService,
-		xrayService:    *mockXrayService,
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
 	}
 
 	api := router.Group("/api/inbounds")

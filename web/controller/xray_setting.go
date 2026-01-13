@@ -7,16 +7,23 @@ import (
 )
 
 type XraySettingController struct {
-	XraySettingService service.XraySettingService
-	SettingService     service.SettingService
-	InboundService     service.InboundService
-	OutboundService    service.OutboundService
-	XrayService        service.XrayService
-	WarpService        service.WarpService
+	XraySettingService *service.XraySettingService
+	SettingService     *service.SettingService
+	InboundService     *service.InboundService
+	OutboundService    *service.OutboundService
+	XrayService        *service.XrayService
+	WarpService        *service.WarpService
 }
 
 func NewXraySettingController(g *gin.RouterGroup) *XraySettingController {
-	a := &XraySettingController{}
+	a := &XraySettingController{
+		XraySettingService: &service.XraySettingService{},
+		SettingService:     &service.SettingService{},
+		InboundService:     &service.InboundService{},
+		OutboundService:    &service.OutboundService{},
+		XrayService:        &service.XrayService{},
+		WarpService:        &service.WarpService{},
+	}
 	a.initRouter(g)
 	return a
 }

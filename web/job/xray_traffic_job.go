@@ -6,14 +6,17 @@ import (
 )
 
 type XrayTrafficJob struct {
-	settingService  service.SettingService
-	xrayService     service.XrayService
-	inboundService  service.InboundService
-	outboundService service.OutboundService
+	xrayService     *service.XrayService
+	inboundService  *service.InboundService
+	outboundService *service.OutboundService
 }
 
-func NewXrayTrafficJob() *XrayTrafficJob {
-	return new(XrayTrafficJob)
+func NewXrayTrafficJob(xrayService *service.XrayService, inboundService *service.InboundService, outboundService *service.OutboundService) *XrayTrafficJob {
+	return &XrayTrafficJob{
+		xrayService:     xrayService,
+		inboundService:  inboundService,
+		outboundService: outboundService,
+	}
 }
 
 func (j *XrayTrafficJob) Run() {

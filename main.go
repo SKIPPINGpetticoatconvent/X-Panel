@@ -34,7 +34,7 @@ import (
 func runWebServer() {
 	log.Printf("Starting %v %v", config.GetName(), config.GetVersion())
 
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	// 初始化数据库
 	err := database.InitDB(config.GetDBPath())
@@ -106,10 +106,13 @@ func runWebServer() {
 	//    同理，也为 InboundService 注入
 	inboundService.SetTelegramService(tgBotService)
 
+	// 还需要 OutboundService
+	outboundService := service.OutboundService{}
+
 	var server *web.Server
 
 	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
-	server = web.NewServer(serverService)
+	server = web.NewServer(&serverService, &xrayService, &inboundService, &outboundService)
 	// 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
 	if tgBotService != nil {
 		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
@@ -179,6 +182,33 @@ func runWebServer() {
 		}
 	}()
 
+	// 中文注释: 启动 SSL 证书监控任务 (每6小时检查一次)
+	go func() {
+		// 等待系统完全启动
+		time.Sleep(1 * time.Minute)
+
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+
+		var tgBotService service.TelegramService
+		settingService := service.SettingService{}
+		tgEnable, _ := settingService.GetTgbotEnabled()
+
+		if tgEnable {
+			tgBotService = new(service.Tgbot)
+		}
+
+		monitorJob := job.NewCertMonitorJob(settingService, tgBotService)
+
+		// 启动时立即运行一次检查
+		monitorJob.Run()
+
+		for {
+			<-ticker.C
+			monitorJob.Run()
+		}
+	}()
+
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM)
@@ -205,7 +235,7 @@ func runWebServer() {
 				logger.Debug("Error stopping sub server:", err)
 			}
 
-			server = web.NewServer(serverService)
+			server = web.NewServer(&serverService, &xrayService, &inboundService, &outboundService)
 			// 重新注入 tgBotService
 			if tgBotService != nil {
 				server.SetTelegramService(tgBotService)
@@ -241,8 +271,8 @@ func runWebServer() {
 					logger.Warningf("停止日志转发器失败: %v", err)
 				}
 			}
-			server.Stop()
-			subServer.Stop()
+			_ = server.Stop()
+			_ = subServer.Stop()
 			log.Println("Shutting down servers.")
 			return
 		}
@@ -334,7 +364,7 @@ func showSetting(show bool) {
 		hasDefaultCredential := func() bool {
 			return userModel.Username == "admin" && crypto.CheckPasswordHash(userModel.Password, "admin")
 		}()
-		if hasDefaultCredential == true {
+		if hasDefaultCredential {
 			fmt.Println(Red + "------>> 警告：使用了默认的admin账号/密码，容易被扫描" + Reset)
 		} else {
 			fmt.Println(Green + "------>> 为非默认admin账号/密码，请牢记" + Reset)
@@ -379,7 +409,7 @@ func showSetting(show bool) {
 		fmt.Println("--------------------------------------------------")
 		fmt.Println("")
 		//	fmt.Println("↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑")
-		fmt.Println(fmt.Sprintf("%s请确保 %s%d%s 端口已打开放行%s", Green, Red, port, Green, Reset))
+		fmt.Printf("%s请确保 %s%d%s 端口已打开放行%s\n", Green, Red, port, Green, Reset)
 		fmt.Println(Yellow + "请自行确保此端口没有被其他程序占用" + Reset)
 		//	fmt.Println(Green + "若要登录访问面板，请复制上面的地址到浏览器" + Reset)
 		fmt.Println("")
@@ -487,7 +517,7 @@ func updateSetting(port int, username string, password string, webBasePath strin
 		if err != nil {
 			fmt.Println("Failed to reset two-factor authentication（设置两步验证失败）:", err)
 		} else {
-			settingService.SetTwoFactorToken("")
+			_ = settingService.SetTwoFactorToken("")
 			fmt.Println("Two-factor authentication reset successfully --------->>设置两步验证成功")
 		}
 	}

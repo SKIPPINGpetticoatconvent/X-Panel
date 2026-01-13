@@ -218,7 +218,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level，逐个 inbound 构建 inboundConfig
 	// =================================================================
 	// 触发一次空调用以处理可能的残留任务
-	s.inboundService.AddTraffic(nil, nil)
+	_, _ = s.inboundService.AddTraffic(nil, nil)
 
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
@@ -412,7 +412,7 @@ func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, 
 		return nil, nil, err
 	}
 	apiPort := p.GetAPIPort()
-	s.xrayAPI.Init(apiPort)
+	_ = s.xrayAPI.Init(apiPort)
 	defer s.xrayAPI.Close()
 
 	traffic, clientTraffic, err := s.xrayAPI.GetTraffic(true)
@@ -447,7 +447,7 @@ func (s *XrayService) RestartXray(isForce bool) error {
 			logger.Debug("It does not need to restart Xray")
 			return nil
 		}
-		p.Stop()
+		_ = p.Stop()
 	}
 
 	p = xray.NewProcess(xrayConfig)

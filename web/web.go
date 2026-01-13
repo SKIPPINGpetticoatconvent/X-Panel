@@ -28,7 +28,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron/v3"
+	cron "github.com/robfig/cron/v3"
 )
 
 //go:embed assets/*
@@ -116,11 +116,13 @@ type Server struct {
 	panel  *controller.XUIController
 	api    *controller.APIController
 
-	xrayService    service.XrayService
-	settingService service.SettingService
-	tgbotService   service.TelegramService
+	xrayService     *service.XrayService
+	inboundService  *service.InboundService
+	outboundService *service.OutboundService
+	settingService  service.SettingService
+	tgbotService    service.TelegramService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
-	serverService service.ServerService
+	serverService *service.ServerService
 
 	cron *cron.Cron
 
@@ -134,13 +136,16 @@ func (s *Server) SetTelegramService(tgService service.TelegramService) {
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-func NewServer(serverService service.ServerService) *Server {
+// 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
+func NewServer(serverService *service.ServerService, xrayService *service.XrayService, inboundService *service.InboundService, outboundService *service.OutboundService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
-		ctx:    ctx,
-		cancel: cancel,
-		// 〔中文注释〕: 2. 将传入的 serverService 存储到 Server 结构体的字段中。
-		serverService: serverService,
+		ctx:             ctx,
+		cancel:          cancel,
+		serverService:   serverService,
+		xrayService:     xrayService,
+		inboundService:  inboundService,
+		outboundService: outboundService,
 	}
 }
 
@@ -295,7 +300,7 @@ func (s *Server) startTask() {
 	s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob())
 
 	// Check if xray needs to be restarted every 30 seconds
-	s.cron.AddFunc("@every 30s", func() {
+	_, _ = s.cron.AddFunc("@daily", func() {
 		if s.xrayService.IsNeedRestartAndSetFalse() {
 			err := s.xrayService.RestartXray(false)
 			if err != nil {
@@ -307,11 +312,11 @@ func (s *Server) startTask() {
 	go func() {
 		time.Sleep(time.Second * 5)
 		// Statistics every 30 seconds, start the delay for 5 seconds for the first time, and staggered with the time to restart xray
-		s.cron.AddJob("@every 30s", job.NewXrayTrafficJob())
+		// 启动并忽略可能的错误（AddJob 可能返回 error）
+		_, _ = s.cron.AddJob("30 * * * * *", job.NewXrayTrafficJob(s.xrayService, s.inboundService, s.outboundService))
+		_, _ = s.cron.AddJob("30 * * * * *", job.NewCheckClientIpJob())
+		_, _ = s.cron.AddJob("5 * * * * *", job.NewCertMonitorJob(s.settingService, s.tgbotService))
 	}()
-
-	// check client ips from log file every 10 sec
-	s.cron.AddJob("@every 10s", job.NewCheckClientIpJob())
 
 	// check client ips from log file every day
 	s.cron.AddJob("@daily", job.NewClearLogsJob())
@@ -329,12 +334,12 @@ func (s *Server) startTask() {
 		// Note: Daily report functionality has been removed
 
 		// check for Telegram bot callback query hash storage reset
-		s.cron.AddJob("@every 2m", job.NewCheckHashStorageJob())
+		_, _ = s.cron.AddJob("@every 2m", job.NewCheckHashStorageJob())
 
 		// Check CPU load and alarm to TgBot if threshold passes
 		cpuThreshold, err := s.settingService.GetTgCpu()
 		if (err == nil) && (cpuThreshold > 0) {
-			s.cron.AddJob("@every 30s", job.NewCheckCpuJob())
+			_, _ = s.cron.AddJob("@every 30s", job.NewCheckCpuJob())
 		}
 	} else {
 		s.cron.Remove(entry)
@@ -345,7 +350,7 @@ func (s *Server) Start() (err error) {
 	// This is an anonymous function, no function name
 	defer func() {
 		if err != nil {
-			s.Stop()
+			_ = s.Stop()
 		}
 	}()
 
@@ -470,7 +475,7 @@ func (s *Server) Start() (err error) {
 	}
 
 	go func() {
-		s.httpServer.Serve(listener)
+		_ = s.httpServer.Serve(listener)
 	}()
 
 	s.startTask()
@@ -481,7 +486,7 @@ func (s *Server) Start() (err error) {
 		// 现在直接在注入的实例上调用 Start 方法，而不是 NewTgbot()
 		// 因为 main.go 已经注入了完整的实例
 		if tgbot, ok := s.tgbotService.(*service.Tgbot); ok {
-			tgbot.Start(i18nFS)
+			_ = tgbot.Start(i18nFS)
 		} else {
 			logger.Warning("Telegram Bot 已启用，但注入的实例类型不正确或为 nil，无法启动。")
 		}
@@ -492,7 +497,7 @@ func (s *Server) Start() (err error) {
 
 func (s *Server) Stop() error {
 	s.cancel()
-	s.xrayService.StopXray()
+	_ = s.xrayService.StopXray()
 	if s.cron != nil {
 		s.cron.Stop()
 	}
@@ -519,36 +524,6 @@ func (s *Server) GetCtx() context.Context {
 
 func (s *Server) GetCron() *cron.Cron {
 	return s.cron
-}
-
-// isInternalIP 判断是否为私网或回环IP（支持IPv4和IPv6）
-func isInternalIP(ipStr string) bool {
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return false
-	}
-
-	if ip4 := ip.To4(); ip4 != nil {
-		// IPv4 判断是否在私网/回环网段内
-		for _, privateNet := range privateIPv4Nets {
-			if privateNet.Contains(ip4) {
-				return true
-			}
-		}
-		return false
-	}
-
-	// IPv6 判断回环或链路本地地址
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-		return true
-	}
-
-	// 判断 IPv6 fc00::/7 私网地址段
-	if ip[0]&0xfe == 0xfc {
-		return true
-	}
-
-	return false
 }
 
 // fallbackToLocalhost 根据传入地址返回对应的本地回环地址
