@@ -984,9 +984,18 @@ ssl_cert_issue() {
      local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
      if [ "${currentCert}" == "${domain}" ]; then 
          local certInfo=$(~/.acme.sh/acme.sh --list) 
-         LOGE "系统已存在此域名的证书。无法再次签发。当前证书详情:" 
+         LOGE "系统已存在此域名的证书。当前证书详情:" 
          LOGI "$certInfo" 
-         exit 1 
+         read -rp "是否删除现有证书并重新签发? [y/N]: " delete_cert
+         if [[ "$delete_cert" == "y" || "$delete_cert" == "Y" ]]; then
+             ~/.acme.sh/acme.sh --remove -d ${domain}
+             rm -rf ~/.acme.sh/${domain}
+             rm -rf /root/cert/${domain}
+             LOGI "已删除现有证书，准备重新签发..."
+         else
+             LOGI "已取消重新签发。"
+             exit 1
+         fi
      else 
          LOGI "您的域名现在可以签发证书了..." 
      fi 
@@ -1246,6 +1255,89 @@ ssl_cert_issue_CF() {
          show_menu 
      fi 
  } 
+
+ssl_cert_issue_ip() {
+    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    
+    # Check for openssl
+    if ! command -v openssl &>/dev/null; then
+        echo -e "${red}Error: openssl is not installed.${plain}"
+        echo -e "${yellow}Installing openssl...${plain}"
+        case "${release}" in
+            ubuntu|debian|armbian)
+                apt-get update && apt-get install -y openssl
+                ;;
+            centos|rhel|almalinux|rocky|ol)
+                yum install -y openssl
+                ;;
+            fedora|amzn|virtuozzo)
+                dnf install -y openssl
+                ;;
+            arch|manjaro|parch)
+                pacman -S --noconfirm openssl
+                ;;
+            alpine)
+                apk add --no-cache openssl
+                ;;
+            opensuse-tumbleweed)
+                zypper install -y openssl
+                ;;
+            *)
+                echo -e "${red}Unsupported OS. Please install openssl manually.${plain}"
+                return 1
+                ;;
+        esac
+    fi
+
+    echo -e "${green}Generating IP Certificate...${plain}"
+
+    # Get Public IP
+    local ipv4=$(curl -s4m8 https://ip.sb -k)
+    local ipv6=$(curl -s6m8 https://ip.sb -k)
+    local ip=""
+
+    if [[ -n "$ipv4" ]]; then
+        ip="$ipv4"
+    elif [[ -n "$ipv6" ]]; then
+        ip="$ipv6"
+    else
+        echo -e "${red}Could not detect public IP.${plain}"
+        read -p "Please enter your IP manually: " manual_ip
+        if [[ -z "$manual_ip" ]]; then
+            echo -e "${red}IP cannot be empty.${plain}"
+            return 1
+        fi
+        ip="$manual_ip"
+    fi
+
+    echo -e "${green}Detected IP: ${ip}${plain}"
+    
+    local cert_dir="/root/cert/${ip}"
+    mkdir -p "$cert_dir"
+
+    local key_file="${cert_dir}/privkey.pem"
+    local cert_file="${cert_dir}/fullchain.pem"
+
+    # Generate Self-Signed Cert with IP SAN
+    openssl req -x509 -newkey rsa:2048 -keyout "$key_file" -out "$cert_file" -days 3650 -nodes -subj "/CN=${ip}" -addext "subjectAltName=IP:${ip}"
+
+    if [[ $? -eq 0 ]]; then
+        echo -e "${green}Certificate generated successfully at ${cert_dir}${plain}"
+        
+        /usr/local/x-ui/x-ui cert -webCert "$cert_file" -webCertKey "$key_file"
+        
+        echo -e "${green}Certificate applied to x-ui settings.${plain}"
+        echo -e "${green}Login URL: https://${ip}:${existing_port}${existing_webBasePath}${plain}"
+        
+        restart
+    else
+        echo -e "${red}Failed to generate certificate.${plain}"
+    fi
+    
+    show_menu
+}
+
 
 warp_cloudflare() {
     echo -e "${green}\t1.${plain} 安装 WARP socks5 代理"
@@ -1787,12 +1879,13 @@ show_menu() {
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} 安装订阅转换 
+  ${green}26.${plain} 申请 IP 证书
 ——————————————————————
 
 
 "
     show_status
-    echo && read -p "请输入选项 [0-25]: " num
+    echo && read -p "请输入选项 [0-26]: " num
 
     case "${num}" in
     0)
@@ -1849,6 +1942,9 @@ show_menu() {
     17)
         check_install && disable
         ;;
+    26)
+        ssl_cert_issue_ip
+        ;;
     18)
         ssl_cert_issue_main
         ;;
@@ -1874,7 +1970,7 @@ show_menu() {
         subconverter
         ;;
     *)
-        LOGE "请输入正确的数字选项 [0-25]"
+        LOGE "请输入正确的数字选项 [0-26]"
         ;;
     esac
 }
