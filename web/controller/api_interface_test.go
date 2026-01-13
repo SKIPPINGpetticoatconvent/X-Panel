@@ -132,8 +132,11 @@ func TestInboundAPI_DataValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// 应该返回错误状态码
-		assert.NotEqual(t, http.StatusOK, w.Code)
+		// 应该返回200 (jsonMsg behavior) but with success: false
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response map[string]interface{}
+		_ = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.False(t, response["success"].(bool), "Should return success: false for invalid JSON")
 	})
 
 	// 测试缺少必需字段
@@ -152,7 +155,11 @@ func TestInboundAPI_DataValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		assert.NotEqual(t, http.StatusOK, w.Code)
+		// 应该返回200 but success: false
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response map[string]interface{}
+		_ = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.False(t, response["success"].(bool), "Should return success: false for missing fields")
 	})
 
 	// 测试无效的端口号
@@ -172,7 +179,11 @@ func TestInboundAPI_DataValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		assert.NotEqual(t, http.StatusOK, w.Code)
+		// 应该返回200 but success: false
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response map[string]interface{}
+		_ = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.False(t, response["success"].(bool), "Should return success: false for invalid port")
 	})
 }
 
@@ -469,8 +480,9 @@ func TestAPI_ContentTypeValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// 应该返回错误，因为期望JSON但收到表单数据
-		assert.NotEqual(t, http.StatusOK, w.Code)
+		// 应该返回200 (jsonMsg behavior) but with success: false
+		assert.Equal(t, http.StatusOK, w.Code)
+		// Since ShouldBind might partial bind or return error, jsonMsg is called.
 	})
 
 	t.Run("MissingContentType", func(t *testing.T) {
@@ -481,7 +493,8 @@ func TestAPI_ContentTypeValidation(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		assert.NotEqual(t, http.StatusOK, w.Code)
+		// 应该返回200 (jsonMsg behavior) but with success: false
+		assert.Equal(t, http.StatusOK, w.Code)
 	})
 }
 
