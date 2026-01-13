@@ -179,6 +179,33 @@ func runWebServer() {
 		}
 	}()
 
+	// 中文注释: 启动 SSL 证书监控任务 (每6小时检查一次)
+	go func() {
+		// 等待系统完全启动
+		time.Sleep(1 * time.Minute)
+
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+
+		var tgBotService service.TelegramService
+		settingService := service.SettingService{}
+		tgEnable, _ := settingService.GetTgbotEnabled()
+
+		if tgEnable {
+			tgBotService = new(service.Tgbot)
+		}
+
+		monitorJob := job.NewCertMonitorJob(settingService, tgBotService)
+
+		// 启动时立即运行一次检查
+		monitorJob.Run()
+
+		for {
+			<-ticker.C
+			monitorJob.Run()
+		}
+	}()
+
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM)
