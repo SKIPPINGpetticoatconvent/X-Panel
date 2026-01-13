@@ -20,13 +20,17 @@ type updateUserForm struct {
 }
 
 type SettingController struct {
-	settingService service.SettingService
-	userService    service.UserService
-	panelService   service.PanelService
+	settingService *service.SettingService
+	userService    *service.UserService
+	panelService   *service.PanelService
 }
 
 func NewSettingController(g *gin.RouterGroup) *SettingController {
-	a := &SettingController{}
+	a := &SettingController{
+		settingService: &service.SettingService{},
+		userService:    &service.UserService{},
+		panelService:   &service.PanelService{},
+	}
 	a.initRouter(g)
 	return a
 }

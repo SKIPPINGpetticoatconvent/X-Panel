@@ -17,7 +17,7 @@ var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 type ServerController struct {
 	BaseController
 
-	serverService  service.ServerService
+	serverService  *service.ServerService
 	settingService service.SettingService
 
 	lastStatus        *service.Status
@@ -28,7 +28,7 @@ type ServerController struct {
 }
 
 // 〔中文注释〕: 1. 在函数参数中，增加 serverService service.ServerService，让它可以接收一个服务实例。
-func NewServerController(g *gin.RouterGroup, serverService service.ServerService) *ServerController {
+func NewServerController(g *gin.RouterGroup, serverService *service.ServerService) *ServerController {
 	a := &ServerController{
 		lastGetStatusTime: time.Now(),
 		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。
@@ -157,7 +157,7 @@ func (a *ServerController) getXrayLogs(c *gin.Context) {
 	var freedoms []string
 	var blackholes []string
 
-	//getting tags for freedom and blackhole outbounds
+	// getting tags for freedom and blackhole outbounds
 	config, err := a.settingService.GetDefaultXrayConfig()
 	if err == nil && config != nil {
 		if cfgMap, ok := config.(map[string]interface{}); ok {
@@ -219,7 +219,7 @@ func (a *ServerController) getDb(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename="+filename)
 
 	// Write the file contents to the response
-	c.Writer.Write(db)
+	_, _ = c.Writer.Write(db)
 }
 
 func isValidFilename(filename string) bool {
@@ -341,11 +341,8 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 	jsonObj(c, history, nil)
 }
 
-
-
 // 【新增接口实现】: 前端放行端口
 func (a *ServerController) openPort(c *gin.Context) {
-
 	// 直接使用 c.PostForm("port") 获取表单数据
 	port := c.PostForm("port")
 

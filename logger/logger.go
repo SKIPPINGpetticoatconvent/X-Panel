@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/op/go-logging"
+	logging "github.com/op/go-logging"
 )
 
 // LogListener 定义日志监听器接口
@@ -81,15 +81,15 @@ func (b *ListenerBackend) Log(level logging.Level, calldepth int, rec *logging.R
 }
 
 var (
-	logger           *logging.Logger
-	logBuffer        []struct {
+	logger    *logging.Logger
+	logBuffer []struct {
 		time  string
 		level logging.Level
 		log   string
 	}
-	logBufferMu      sync.RWMutex // 保护 logBuffer 的并发访问
-	listenerBackend  *ListenerBackend
-	localLogEnabled  bool
+	logBufferMu     sync.RWMutex // 保护 logBuffer 的并发访问
+	listenerBackend *ListenerBackend
+	localLogEnabled bool
 )
 
 func init() {
@@ -110,7 +110,7 @@ func InitLogger(level logging.Level, enabled bool) {
 		// 启用本地文件日志
 		fmt.Fprintln(os.Stderr, "[Security] Local file logging is enabled. Log file: x-ui.log")
 		filePath := "x-ui.log"
-		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			logger.Warningf("无法创建日志文件 %s: %v", filePath, err)
 			// 回退到控制台

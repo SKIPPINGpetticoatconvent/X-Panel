@@ -29,19 +29,23 @@ import (
 
 // ActiveClientIPs 中文注释: 用于在内存中跟踪每个用户的活跃IP (TTL机制)
 // 结构: map[用户email] -> map[IP地址] -> 最后活跃时间
-var ActiveClientIPs = make(map[string]map[string]time.Time)
-var activeClientsLock sync.RWMutex
+var (
+	ActiveClientIPs   = make(map[string]map[string]time.Time)
+	activeClientsLock sync.RWMutex
+)
 
 // ClientStatus 中文注释: 用于跟踪每个用户的状态（是否因为设备超限而被禁用）
 // 结构: map[用户email] -> 是否被禁用(true/false)
-var ClientStatus = make(map[string]bool)
-var clientStatusLock sync.RWMutex
+var (
+	ClientStatus     = make(map[string]bool)
+	clientStatusLock sync.RWMutex
+)
 
 // CheckDeviceLimitJob 重构后的设备限制任务，使用 LogStreamer 实现实时监控
 type CheckDeviceLimitJob struct {
-	inboundService  service.InboundService
-	xrayService     *service.XrayService
-	settingService  service.SettingService
+	inboundService service.InboundService
+	xrayService    *service.XrayService
+	settingService service.SettingService
 	// 中文注释: 新增 xrayApi 字段，用于持有 Xray API 客户端实例
 	xrayApi xray.XrayAPI
 	// 中文注释: 使用 LogStreamer 进行实时日志监控
@@ -76,8 +80,8 @@ func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService se
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &CheckDeviceLimitJob{
-		xrayService:     xrayService,
-		settingService:  settingService,
+		xrayService:    xrayService,
+		settingService: settingService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
 		// 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
@@ -256,7 +260,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 		return
 	}
 	// 中文注释: 使用获取到的端口号初始化 API 客户端
-	j.xrayApi.Init(apiPort)
+	_ = j.xrayApi.Init(apiPort)
 	defer j.xrayApi.Close()
 
 	// 中文注释: 优化 - 在一次循环中同时获取 tag 和 protocol
@@ -336,7 +340,8 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	Limit    int
 	Tag      string
 	Protocol model.Protocol
-}) {
+},
+) {
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
@@ -368,7 +373,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	}()
 
 	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
-	j.xrayApi.RemoveUser(info.Tag, email)
+	_ = j.xrayApi.RemoveUser(info.Tag, email)
 
 	// =================================================================
 	// 中文注释: 增加 5000 毫秒延时，解决竞态条件问题
@@ -408,7 +413,8 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	Limit    int
 	Tag      string
 	Protocol model.Protocol
-}) {
+},
+) {
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
@@ -416,7 +422,7 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)
 
 	// 中文注释: 步骤一：先从 Xray-Core 中删除用于"封禁"的那个临时用户。
-	j.xrayApi.RemoveUser(info.Tag, email)
+	_ = j.xrayApi.RemoveUser(info.Tag, email)
 
 	// =================================================================
 	// 中文注释: 同样增加 5000 毫秒延时，确保解封操作的稳定性
@@ -537,7 +543,6 @@ func (j *CheckClientIpJob) hasLimitIp() bool {
 }
 
 func (j *CheckClientIpJob) processLogFile() bool {
-
 	ipRegex := regexp.MustCompile(`from (?:tcp:|udp:)?\[?([0-9a-fA-F\.:]+)\]?:\d+ accepted`)
 	emailRegex := regexp.MustCompile(`email: (.+)$`)
 
@@ -585,7 +590,7 @@ func (j *CheckClientIpJob) processLogFile() bool {
 
 		clientIpsRecord, err := j.getInboundClientIps(email)
 		if err != nil {
-			j.addInboundClientIps(email, ips)
+			_ = j.addInboundClientIps(email, ips)
 			continue
 		}
 
@@ -687,7 +692,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 	shouldCleanLog := false
 	j.disAllowedIps = []string{}
 
-	logIpFile, err := os.OpenFile(xray.GetIPLimitLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	logIpFile, err := os.OpenFile(xray.GetIPLimitLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		logger.Errorf("failed to open IP limit log file: %s", err)
 		return false
