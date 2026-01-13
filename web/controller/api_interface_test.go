@@ -8,11 +8,15 @@ import (
 	"strings"
 	"testing"
 
+	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/web/locale"
 	"x-ui/web/service"
 	"x-ui/web/session"
 	"x-ui/xray"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,14 +36,26 @@ func (m *MockXrayAPI) GetTraffic(clearStats bool) ([]*xray.Traffic, []*xray.Clie
 
 // TestInboundAPI_ResponseFormat 测试入站API响应格式
 func TestInboundAPI_ResponseFormat(t *testing.T) {
+	// Initialize DB for testing
+	err := database.InitDB(":memory:")
+	assert.NoError(t, err)
+	defer database.CloseDB()
+
 	// 设置测试环境
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
+	// 添加session中间件
+	store := cookie.NewStore([]byte("secret"))
+	router.Use(sessions.Sessions("session", store))
+
 	// 添加中间件
 	router.Use(func(c *gin.Context) {
+		// 模拟已登录用户
+		session.SetLoginUser(c, &model.User{Id: 1, Username: "testuser"})
+
 		// 模拟国际化函数
-		c.Set("I18n", func(i18nType interface{}, key string, params ...string) string {
+		c.Set("I18n", func(i18nType locale.I18nType, key string, params ...string) string {
 			return key
 		})
 		c.Next()
@@ -66,12 +82,6 @@ func TestInboundAPI_ResponseFormat(t *testing.T) {
 
 		// 设置用户会话
 		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		c.Request = req
-
-		// 模拟登录用户
-		mockUser := &model.User{Id: 1, Username: "testuser"}
-		session.SetLoginUser(c, mockUser)
 
 		// 执行请求
 		router.ServeHTTP(w, req)
@@ -93,6 +103,12 @@ func TestInboundAPI_ResponseFormat(t *testing.T) {
 // TestInboundAPI_DataValidation 测试API数据验证
 func TestInboundAPI_DataValidation(t *testing.T) {
 	router := setupTestRouter()
+
+	// Simulate Login for DataValidation
+	router.Use(func(c *gin.Context) {
+		session.SetLoginUser(c, &model.User{Id: 1, Username: "testuser"})
+		c.Next()
+	})
 
 	mockInboundService := &service.InboundService{}
 	mockXrayService := &service.XrayService{}
@@ -173,6 +189,14 @@ func TestInboundAPI_PermissionValidation(t *testing.T) {
 	}
 
 	api := router.Group("/api/inbounds")
+	// Add mock auth middleware for PermissionValidation
+	api.Use(func(c *gin.Context) {
+		if !session.IsLogin(c) {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		c.Next()
+	})
 	api.POST("/add", inboundController.addInbound)
 	api.DELETE("/del/:id", inboundController.delInbound)
 	api.PUT("/update/:id", inboundController.updateInbound)
@@ -200,15 +224,7 @@ func TestInboundAPI_PermissionValidation(t *testing.T) {
 
 	// 测试跨用户权限
 	t.Run("CrossUserPermission", func(t *testing.T) {
-		// 创建两个不同用户的会话
-		user1 := &model.User{Id: 1, Username: "user1"}
-
-		// 模拟用户1试图访问用户2的资源
-		c1, _ := gin.CreateTestContext(httptest.NewRecorder())
-		session.SetLoginUser(c1, user1)
-
-		// 这里需要测试用户1是否能访问用户2的入站
-		// 由于我们使用的是模拟服务，实际测试中需要更复杂的权限检查
+		// TODO: Implement cross user permission test properly using router
 	})
 }
 

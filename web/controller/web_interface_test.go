@@ -13,6 +13,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+
+	"x-ui/database"
+	"x-ui/web/locale"
+
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 )
 
 // mockSessionStore 用于测试的会话存储
@@ -36,12 +42,20 @@ func (m *mockSessionStore) Delete(c *gin.Context, key string) {
 // setupTestRouter 设置测试用的Gin路由器
 func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
+	// Initialize DB (ignore error if already init)
+	_ = database.InitDB(":memory:")
+
 	router := gin.New()
+	router.Use(gin.Recovery())
+
+	// Add Session Middleware
+	store := cookie.NewStore([]byte("secret"))
+	router.Use(sessions.Sessions("session", store))
 
 	// 添加中间件
 	router.Use(func(c *gin.Context) {
 		// 模拟国际化函数
-		c.Set("I18n", func(i18nType interface{}, key string, params ...string) string {
+		c.Set("I18n", func(i18nType locale.I18nType, key string, params ...string) string {
 			return key
 		})
 		c.Next()
@@ -58,6 +72,12 @@ func TestInboundController_GetInbounds(t *testing.T) {
 	// 设置测试路由
 	router := setupTestRouter()
 
+	// 模拟登录用户 - 通过中间件 (Must be before controller registration)
+	router.Use(func(c *gin.Context) {
+		session.SetLoginUser(c, &model.User{Id: 1, Username: "testuser"})
+		c.Next()
+	})
+
 	// 创建控制器
 	inboundController := NewInboundController(router.Group("/api/inbounds"))
 	_ = inboundController
@@ -66,13 +86,9 @@ func TestInboundController_GetInbounds(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/inbounds/list", nil)
 
 	// 设置用户会话
+	// 设置用户会话
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = req
-
-	// 模拟登录用户
-	mockUser := &model.User{Id: 1, Username: "testuser"}
-	session.SetLoginUser(c, mockUser)
+	// Manual session setup removed as it is handled by middleware now
 
 	// 执行请求
 	router.ServeHTTP(w, req)
@@ -272,7 +288,7 @@ func TestBaseController_CheckLogin(t *testing.T) {
 	assert.NotNil(t, controller)
 
 	// 测试I18nWeb函数
-	c.Set("I18n", func(i18nType interface{}, key string, params ...string) string {
+	c.Set("I18n", func(i18nType locale.I18nType, key string, params ...string) string {
 		return "translated:" + key
 	})
 
