@@ -89,11 +89,9 @@ type Status struct {
 	} `json:"appStats"`
 }
 
-
-
 type ServerService struct {
-	xrayService    XrayService
-	inboundService InboundService
+	xrayService    *XrayService
+	inboundService *InboundService
 	tgService      TelegramService
 	cachedIPv4     string
 	cachedIPv6     string
@@ -110,6 +108,16 @@ type ServerService struct {
 // 【新增方法】: 用于从外部注入 TelegramService 实例
 func (s *ServerService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
+}
+
+// SetXrayService 用于从外部注入 XrayService 实例
+func (s *ServerService) SetXrayService(xrayService *XrayService) {
+	s.xrayService = xrayService
+}
+
+// SetInboundService 用于从外部注入 InboundService 实例
+func (s *ServerService) SetInboundService(inboundService *InboundService) {
+	s.inboundService = inboundService
 }
 
 func getPublicIP(url string) string {
@@ -581,7 +589,7 @@ func (s *ServerService) UpdateXray(version string) error {
 									return err
 								}
 								defer zipFile.Close()
-								os.MkdirAll(filepath.Dir(fileName), 0755)
+								os.MkdirAll(filepath.Dir(fileName), 0o755)
 								os.Remove(fileName)
 								file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
 								if err != nil {
@@ -671,8 +679,8 @@ func (s *ServerService) GetXrayLogs(
 	showBlocked string,
 	showProxy string,
 	freedoms []string,
-	blackholes []string) []string {
-
+	blackholes []string,
+) []string {
 	countInt, _ := strconv.Atoi(count)
 	var lines []string
 
@@ -693,16 +701,16 @@ func (s *ServerService) GetXrayLogs(
 		line := strings.TrimSpace(scanner.Text())
 
 		if line == "" || strings.Contains(line, "api -> api") {
-			//skipping empty lines and api calls
+			// skipping empty lines and api calls
 			continue
 		}
 
 		if filter != "" && !strings.Contains(line, filter) {
-			//applying filter if it's not empty
+			// applying filter if it's not empty
 			continue
 		}
 
-		//adding suffixes to further distinguish entries by outbound
+		// adding suffixes to further distinguish entries by outbound
 		if hasSuffix(line, freedoms) {
 			if showDirect == "false" {
 				continue
@@ -1163,10 +1171,6 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 	return database.GetLinkHistory()
 }
 
-
-
-
-
 // 【新增方法实现】: 后台前端开放指定端口
 // OpenPort 供前端调用，自动检查/安装 firewalld 并放行指定的端口。
 // 〔中文注释〕: 整个函数逻辑被放入一个 go func() 协程中，实现异步后台执行。
@@ -1343,20 +1347,6 @@ func (s *ServerService) RestartPanel() error {
 	logger.Infof("'%s restart' 命令已成功执行。", scriptPath)
 	return nil
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 【新增方法】: 检测服务器IP地理位置
 func (s *ServerService) GetServerLocation() (string, error) {

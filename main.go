@@ -100,6 +100,9 @@ func runWebServer() {
 	}
 
 	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
+	//    首先注入 XrayService 和 InboundService，确保 GetStatus 方法可以正常调用
+	serverService.SetXrayService(&xrayService)
+	serverService.SetInboundService(&inboundService)
 	//    将 tgBotService 实例注入到 serverService 中。
 	//    这样 serverService 内部的 tgService 字段就不再是 nil 了。
 	serverService.SetTelegramService(tgBotService)
