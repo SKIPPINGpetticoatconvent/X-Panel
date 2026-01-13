@@ -28,7 +28,7 @@ jobs:
     - name: Install Dependencies
       run: |
         go mod download
-        # pip install requests # Uncomment if requests is needed and not standard or verified
+        pip install requests
 
     - name: Install GolangCI-Lint
       run: |
@@ -39,7 +39,7 @@ jobs:
         chmod +x QA/run_qa.sh
         chmod +x QA/static/*
         chmod +x QA/unit/*.sh
-        chmod +x QA/e2e/*.sh
+        find QA/e2e -name "*.sh" -exec chmod +x {} \;
 
     - name: Run QA Framework
       run: ./QA/run_qa.sh
