@@ -17,8 +17,10 @@ type XUIController struct {
 	serverService         *service.ServerService
 }
 
-func NewXUIController(g *gin.RouterGroup) *XUIController {
-	a := &XUIController{}
+func NewXUIController(g *gin.RouterGroup, serverService *service.ServerService) *XUIController {
+	a := &XUIController{
+		serverService: serverService,
+	}
 	a.initRouter(g)
 	return a
 }
