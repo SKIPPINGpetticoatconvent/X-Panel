@@ -2,5 +2,5 @@
 # Unit test runner
 
 echo "Running unit tests..."
-go test -v ./util/... ./database/... ./web/service/...
+go test -v ./util/... ./database/... ./web/service/... ./QA/unit/util/...
 
