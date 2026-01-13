@@ -205,7 +205,11 @@ custom_version() {
     download_link="https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh"
 
     # Use the entered panel version in the download link
-    install_command="bash <(curl -Ls $download_link) v$panel_version"
+    if [[ ! "${panel_version}" =~ ^v ]]; then
+        panel_version="v${panel_version}"
+    fi
+    # Use the entered panel version in the download link
+    install_command="bash <(curl -Ls $download_link) ${panel_version}"
 
     echo "下载并安装面板版本 $panel_version..."
     eval $install_command
