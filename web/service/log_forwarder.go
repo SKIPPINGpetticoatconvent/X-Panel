@@ -9,7 +9,7 @@ import (
 
 	"x-ui/logger"
 
-	"github.com/op/go-logging"
+	logging "github.com/op/go-logging"
 )
 
 // LogForwarder 日志转发器，将日志转发到 Telegram Bot

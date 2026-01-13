@@ -19,14 +19,14 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
+
 	"x-ui/xray"
+
+	"github.com/skip2/go-qrcode"
 
 	"github.com/google/uuid"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
-
-	// 新增 qrcode 包，用于生成二维码
-	"github.com/skip2/go-qrcode"
 )
 
 // checkBBRSupport 检查内核版本和 BBR 模块支持
