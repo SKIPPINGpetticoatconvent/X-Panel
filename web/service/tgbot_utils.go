@@ -226,7 +226,6 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 
 	// 使用全局变量 bot 调用 SendSticker，并传入 context.Background() 和参数指针
 	msg, err := bot.SendSticker(context.Background(), &params)
-
 	if err != nil {
 		logger.Errorf("发送贴纸失败到聊天 ID %d: %v", chatId, err)
 		return nil, err
@@ -637,11 +636,11 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 		}
 	}
 
-	if err := sys.AtomicWriteFile(configFilePath, []byte(baseKernelConfig), 0644); err != nil {
+	if err := sys.AtomicWriteFile(configFilePath, []byte(baseKernelConfig), 0o644); err != nil {
 		errorMsg := fmt.Sprintf("创建基础内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg := "✅ 基础内核参数配置文件已创建"
 	output.WriteString(successMsg + "\n")
@@ -658,7 +657,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 		errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg = "✅ 基础内核参数已应用"
 	output.WriteString(successMsg + "\n")
@@ -669,7 +668,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 		output.WriteString("正在应用 nf_conntrack 参数...\n")
 		f.WriteString("正在应用 nf_conntrack 参数...\n")
 
-		if err := sys.AtomicWriteFile("/etc/sysctl.d/99-nf-conntrack-optimize.conf", []byte(nfConntrackConfig), 0644); err != nil {
+		if err := sys.AtomicWriteFile("/etc/sysctl.d/99-nf-conntrack-optimize.conf", []byte(nfConntrackConfig), 0o644); err != nil {
 			output.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
 			f.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
 		} else {
@@ -695,8 +694,6 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 		output.WriteString("ℹ️ 跳过 nf_conntrack 参数（模块不支持或路径不存在）\n")
 		f.WriteString("ℹ️ 跳过 nf_conntrack 参数（模块不支持或路径不存在）\n")
 	}
-
-
 
 	// 3. 优化文件描述符限制
 	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
@@ -750,7 +747,7 @@ net.ipv4.tcp_congestion_control = bbr
 				f.WriteString("ℹ️ BBR 配置文件备份失败（文件可能不存在）\n")
 			}
 
-			if err := sys.AtomicWriteFile("/etc/sysctl.d/99-bbr-optimize.conf", []byte(bbrConfig), 0644); err != nil {
+			if err := sys.AtomicWriteFile("/etc/sysctl.d/99-bbr-optimize.conf", []byte(bbrConfig), 0o644); err != nil {
 				errorMsg := fmt.Sprintf("创建 BBR 配置文件失败: %v", err)
 				output.WriteString("❌ " + errorMsg + "\n")
 				f.WriteString("❌ " + errorMsg + "\n")
@@ -891,11 +888,11 @@ fs.file-max = 1000000
 	}
 
 	// 使用安全写入方式创建内核配置文件
-	if err := sys.AtomicWriteFile(configFilePath, []byte(kernelConfig), 0644); err != nil {
+	if err := sys.AtomicWriteFile(configFilePath, []byte(kernelConfig), 0o644); err != nil {
 		errorMsg := fmt.Sprintf("创建内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg := "✅ 内核参数配置文件已创建"
 	output.WriteString(successMsg + "\n")
@@ -912,13 +909,11 @@ fs.file-max = 1000000
 		errorMsg := fmt.Sprintf("应用内核参数失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
 		f.WriteString("❌ " + errorMsg + "\n")
-		return output.String(), fmt.Errorf(errorMsg)
+		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg = "✅ 内核参数已应用"
 	output.WriteString(successMsg + "\n")
 	f.WriteString(successMsg + "\n")
-
-
 
 	// 2. 文件描述符限制优化
 	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
@@ -941,8 +936,6 @@ root hard nofile 1000000`
 	successMsg = "✅ 文件描述符限制已优化至 100万"
 	output.WriteString(successMsg + "\n")
 	f.WriteString(successMsg + "\n")
-
-
 
 	// 4. BBR 启用
 	bbrMsg := "\n=== BBR 拥塞控制算法启用 ===\n"
@@ -1013,8 +1006,6 @@ func (t *Tgbot) getSystemStatusAfterOptimization() string {
 		status.WriteString("\n**⚙️ 关键内核参数:**\n")
 		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
 	}
-
-
 
 	// 获取BBR状态
 	cmd = exec.Command("bash", "-c", "sysctl net.ipv4.tcp_congestion_control net.core.default_qdisc")
@@ -1098,8 +1089,6 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 	}()
 }
 
-
-
 // 【新增函数】: 安装 Firewalld
 func (t *Tgbot) installFirewalld(chatId int64) {
 	go func() {
@@ -1147,21 +1136,18 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 		// 首先尝试 apt (Debian/Ubuntu)
 		cmd = exec.CommandContext(ctx, "bash", "-c", "apt update -qq && apt install -y -qq fail2ban")
 		output, err = cmd.CombinedOutput()
-
 		if err != nil {
 			// 如果 apt 失败，尝试 yum (CentOS/RHEL)
 			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
 			cmd = exec.CommandContext(ctx, "bash", "-c", "yum install -y fail2ban")
 			output, err = cmd.CombinedOutput()
-
 			if err != nil {
 				// 如果 yum 失败，尝试 dnf (Fedora/RHEL 8+)
 				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
 				cmd = exec.CommandContext(ctx, "bash", "-c", "dnf install -y fail2ban")
 				output, err = cmd.CombinedOutput()
-
 				if err != nil {
 					t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装失败**\n\n尝试了 apt、yum 和 dnf 包管理器，但都失败了。\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 					return
@@ -1175,7 +1161,6 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 
 		cmd = exec.CommandContext(ctx, "systemctl", "enable", "fail2ban")
 		output, err = cmd.CombinedOutput()
-
 		if err != nil {
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但启用服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
@@ -1186,7 +1171,6 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 
 		cmd = exec.CommandContext(ctx, "systemctl", "start", "fail2ban")
 		output, err = cmd.CombinedOutput()
-
 		if err != nil {
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但启动服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
@@ -1203,7 +1187,6 @@ banaction_allports = firewallcmd-rich-rules
 backend = systemd
 EOF`)
 		output, err = cmd.CombinedOutput()
-
 		if err != nil {
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但配置 Firewalld 失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
@@ -1215,7 +1198,6 @@ EOF`)
 
 		cmd = exec.CommandContext(ctx, "systemctl", "restart", "fail2ban")
 		output, err = cmd.CombinedOutput()
-
 		if err != nil {
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 配置成功，但重启服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
@@ -1239,7 +1221,6 @@ func (t *Tgbot) getFail2BanStatus() (string, bool) {
 	// 获取服务状态
 	cmd = exec.CommandContext(ctx, "systemctl", "is-active", "fail2ban")
 	output, err := cmd.Output()
-
 	if err != nil {
 		return "状态未知", true
 	}
@@ -1434,15 +1415,12 @@ func (t *Tgbot) detectSystemType() string {
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", "cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'")
 	output, err := cmd.Output()
-
 	if err != nil {
 		return "Unknown"
 	}
 
 	return strings.TrimSpace(string(output))
 }
-
-
 
 // 【新增辅助函数】: 获取 Firewalld 状态
 func (t *Tgbot) getFirewalldStatus() (string, bool) {
@@ -1458,7 +1436,6 @@ func (t *Tgbot) getFirewalldStatus() (string, bool) {
 	// 获取状态
 	cmd = exec.CommandContext(ctx, "bash", "-c", "systemctl is-active firewalld")
 	output, err := cmd.Output()
-
 	if err != nil {
 		return "状态未知", true
 	}
@@ -1524,5 +1501,3 @@ func (t *Tgbot) sendLongMessage(chatId int64, content string) {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("<pre>%s</pre>", buffer.String()))
 	}
 }
-
-
