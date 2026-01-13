@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -8,10 +9,12 @@ import (
 	"testing"
 
 	"x-ui/database/model"
+	"x-ui/web/global"
 	"x-ui/web/service"
 	"x-ui/web/session"
 
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 
 	"x-ui/database"
@@ -64,6 +67,14 @@ func setupTestRouter() *gin.Engine {
 	return router
 }
 
+// Helper to mock login
+func mockLoginMiddleware(router *gin.Engine) {
+	router.Use(func(c *gin.Context) {
+		session.SetLoginUser(c, &model.User{Id: 1, Username: "testuser"})
+		c.Next()
+	})
+}
+
 // TestInboundController_GetInbounds 测试获取入站列表
 func TestInboundController_GetInbounds(t *testing.T) {
 	// 创建模拟服务
@@ -71,12 +82,7 @@ func TestInboundController_GetInbounds(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
-
-	// 模拟登录用户 - 通过中间件 (Must be before controller registration)
-	router.Use(func(c *gin.Context) {
-		session.SetLoginUser(c, &model.User{Id: 1, Username: "testuser"})
-		c.Next()
-	})
+	mockLoginMiddleware(router)
 
 	// 创建控制器
 	inboundController := NewInboundController(router.Group("/api/inbounds"))
@@ -86,9 +92,7 @@ func TestInboundController_GetInbounds(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/inbounds/list", nil)
 
 	// 设置用户会话
-	// 设置用户会话
 	w := httptest.NewRecorder()
-	// Manual session setup removed as it is handled by middleware now
 
 	// 执行请求
 	router.ServeHTTP(w, req)
@@ -123,6 +127,8 @@ func TestInboundController_AddInbound(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
+	mockLoginMiddleware(router)
+
 	NewInboundController(router.Group("/api/inbounds"))
 
 	// 执行请求
@@ -130,7 +136,7 @@ func TestInboundController_AddInbound(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	// 验证响应状态码
-	assert.NotEqual(t, http.StatusOK, w.Code, "Should handle missing session gracefully")
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 // TestInboundController_ValidateInboundData 测试入站数据验证
@@ -221,6 +227,12 @@ func TestSettingController_GetAllSetting(t *testing.T) {
 	}
 	_ = settingController
 
+	// Fix: Use correct group path to match request: /api/setting/all
+	// The controller adds /setting to the group, so passing accessing /api should work if group is /api
+	// Controller initRouter: g = g.Group("/setting")
+	// If we pass router.Group("/api"), then path becomes /api/setting/all
+	settingController.initRouter(router.Group("/api"))
+
 	// 创建测试请求
 	req, _ := http.NewRequest("POST", "/api/setting/all", nil)
 
@@ -262,14 +274,17 @@ func TestSettingController_UpdateUser(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
-	NewSettingController(router.Group("/api/setting"))
+	mockLoginMiddleware(router)
+
+	NewSettingController(router.Group("/api"))
 
 	// 执行请求
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	// 验证响应状态码
-	assert.NotEqual(t, http.StatusOK, w.Code, "Should handle missing session gracefully")
+	// Even on error (invalid password), it returns 200 with success: false
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 // TestBaseController_CheckLogin 测试登录检查
@@ -296,16 +311,32 @@ func TestBaseController_CheckLogin(t *testing.T) {
 	assert.Equal(t, "translated:test.key", result)
 }
 
+// Mock WebServer for testing
+type MockWebServer struct{}
+
+func (m *MockWebServer) GetCron() *cron.Cron {
+	return cron.New()
+}
+
+func (m *MockWebServer) GetCtx() context.Context {
+	return context.Background()
+}
+
 // TestAPIController_BackuptoTgbot 测试备份到Telegram
 func TestAPIController_BackuptoTgbot(t *testing.T) {
 	// 创建模拟服务器服务
 	mockServerService := &service.ServerService{}
 
+	// Mock global WebServer to prevent panic in startTask
+	global.SetWebServer(&MockWebServer{})
+
 	// 设置测试路由
 	router := setupTestRouter()
+	mockLoginMiddleware(router)
 
 	// 创建API控制器
-	apiController := NewAPIController(router.Group("/panel/api"), mockServerService)
+	// Controller calls initRouter which appends /panel/api, so we pass root group
+	apiController := NewAPIController(router.Group("/"), mockServerService)
 	_ = apiController
 
 	// 创建测试请求
@@ -387,6 +418,8 @@ func TestInboundController_ImportInbound(t *testing.T) {
 
 	// 设置测试路由
 	router := setupTestRouter()
+	mockLoginMiddleware(router)
+
 	NewInboundController(router.Group("/api/inbounds"))
 
 	// 执行请求
@@ -394,12 +427,14 @@ func TestInboundController_ImportInbound(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	// 验证响应状态码
-	assert.NotEqual(t, http.StatusOK, w.Code, "Should handle missing session gracefully")
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 // TestInboundController_ClientOperations 测试客户端操作
 func TestInboundController_ClientOperations(t *testing.T) {
 	router := setupTestRouter()
+	mockLoginMiddleware(router)
+
 	controller := NewInboundController(router.Group("/api/inbounds"))
 	_ = controller
 
@@ -419,5 +454,5 @@ func TestInboundController_ClientOperations(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	// 验证响应
-	assert.NotEqual(t, http.StatusOK, w.Code, "Should handle missing session gracefully")
+	assert.Equal(t, http.StatusOK, w.Code)
 }
