@@ -1,0 +1,3 @@
+BASE_URL = "http://127.0.0.1:13688"
+DEFAULT_USERNAME = "admin"
+DEFAULT_PASSWORD = "admin"
