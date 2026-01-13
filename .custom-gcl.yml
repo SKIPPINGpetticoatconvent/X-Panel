@@ -1,6 +1,6 @@
-# NilAway as a golangci-lint plugin
-# Requires golangci-lint >= v1.57.0
-version: v1.59.0
+# NilAway as a golangci-lint module plugin
+# Reference: https://golangci-lint.run/docs/plugins/module-plugins/
+version: v2.0.2
 plugins:
   - module: "go.uber.org/nilaway"
     import: "go.uber.org/nilaway/cmd/gclplugin"
