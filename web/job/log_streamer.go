@@ -83,7 +83,7 @@ func (ls *LogStreamer) Stop() error {
 	ls.cancel()
 
 	if ls.tailer != nil {
-		ls.tailer.Stop()
+		_ = ls.tailer.Stop()
 		ls.tailer.Cleanup()
 	}
 

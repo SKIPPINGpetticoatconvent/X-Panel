@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"       // 新增：用于 exec.Command（getDomain 等）
 	"path/filepath" // 新增：用于 filepath.Base / Dir（getDomain 用到）
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -79,51 +78,6 @@ func (t *Tgbot) checkBBRSupport() (string, bool, error) {
 	bbrAvailable := strings.TrimSpace(string(modprobeOutput)) == "supported"
 
 	return kernelVersion, bbrAvailable, nil
-}
-
-// enableBBR 启用 BBR 拥塞控制算法
-func (t *Tgbot) enableBBR() error {
-	// 检查 BBR 支持
-	kernelVersion, bbrSupported, err := t.checkBBRSupport()
-	if err != nil {
-		return fmt.Errorf("检查 BBR 支持失败: %v", err)
-	}
-
-	if !bbrSupported {
-		logger.Info(fmt.Sprintf("BBR 不支持，内核版本: %s，需要 Linux 内核 4.9+", kernelVersion))
-		return fmt.Errorf("BBR 不支持，内核版本 %s，需要 Linux 内核 4.9+", kernelVersion)
-	}
-
-	// 创建 BBR 配置文件
-	bbrConfig := `# ===== BBR 拥塞控制算法配置 =====
-# 启用 BBR 拥塞控制算法以提升网络性能
-net.core.default_qdisc = fq
-net.ipv4.tcp_congestion_control = bbr
-`
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf(`cat > /etc/sysctl.d/99-bbr-optimize.conf << 'EOF'
-%s
-EOF`, bbrConfig))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("创建 BBR 配置文件失败: %v, 输出: %s", err, string(output))
-	}
-
-	// 应用 BBR 设置
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-bbr-optimize.conf")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("应用 BBR 设置失败: %v, 输出: %s", err, string(output))
-	}
-
-	logger.Info("BBR 拥塞控制算法已成功启用")
-	return nil
 }
 
 func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool) {
@@ -576,7 +530,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				case "add_client_reset_exp_c":
 					client_ExpiryTime = 0
 					days, _ := strconv.Atoi(dataArray[1])
-					var date int64 = 0
+					var date int64
 					if client_ExpiryTime > 0 {
 						if client_ExpiryTime-time.Now().Unix()*1000 < 0 {
 							date = -int64(days * 24 * 60 * 60000)
@@ -926,26 +880,26 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.errorOperation"))
 					}
 				case "get_clients":
-				inboundId := dataArray[1]
-				inboundIdInt, err := strconv.Atoi(inboundId)
-				if err != nil {
-					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-					return
-				}
-				inbound, err := t.inboundService.GetInbound(inboundIdInt)
-				if err != nil {
-					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-					return
-				}
-				clients, err := t.getInboundClients(inboundIdInt)
-				if err != nil {
-					t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
-					return
-				}
-				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
-			case "log_settings":
-				t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
-				t.showLogSettings(chatId)
+					inboundId := dataArray[1]
+					inboundIdInt, err := strconv.Atoi(inboundId)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					inbound, err := t.inboundService.GetInbound(inboundIdInt)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					clients, err := t.getInboundClients(inboundIdInt)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
+				case "log_settings":
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
+					t.showLogSettings(chatId)
 				case "add_client_to":
 					// assign default values to clients variables
 					client_Id = uuid.New().String()
@@ -1303,7 +1257,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "get_sorted_traffic_usage_report":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		emails, err := t.inboundService.getAllEmails()
-
 		if err != nil {
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.errorOperation"), tu.ReplyKeyboardRemove())
 			return
@@ -1376,7 +1329,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ...........")
 		t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
 		t.remoteCreateOneClickInbound("switch_vision", chatId)
-
 
 	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
 	case "restart_panel":
@@ -1538,8 +1490,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "firewall_check_status":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔍 正在检测防火墙状态...")
 		t.checkFirewallStatus(chatId)
-
-
 
 	case "firewall_install_firewalld":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📦 正在安装 Firewalld...")
@@ -1837,7 +1787,6 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
 }
 
 func (t *Tgbot) SubmitAddClient() (bool, error) {
-
 	inbound, err := t.inboundService.GetInbound(receiver_inbound_ID)
 	if err != nil {
 		logger.Warning("getIboundClients run failed:", err)
@@ -1896,7 +1845,7 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
 		),
-	
+
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("xrayversion")),
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
@@ -2001,15 +1950,6 @@ func (t *Tgbot) SendBackupToAdmins() {
 	}
 }
 
-func (t *Tgbot) sendExhaustedToAdmins() {
-	if !t.IsRunning() {
-		return
-	}
-	for _, adminId := range adminIds {
-		t.getExhausted(int64(adminId))
-	}
-}
-
 func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 	info := t.prepareServerUsageInfo()
 
@@ -2022,12 +1962,6 @@ func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 		t.SendMsgToTgbot(chatId, info, keyboard)
 	}
 
-	return info
-}
-
-// Send server usage without an inline keyboard
-func (t *Tgbot) sendServerUsage() string {
-	info := t.prepareServerUsageInfo()
 	return info
 }
 
@@ -2136,6 +2070,7 @@ func (t *Tgbot) getInboundUsages() string {
 	}
 	return info
 }
+
 func (t *Tgbot) getInbounds() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
@@ -2226,11 +2161,9 @@ func (t *Tgbot) getInboundClients(id int) (*telego.InlineKeyboardMarkup, error) 
 			for _, client := range clients {
 				buttons = append(buttons, tu.InlineKeyboardButton(client.Email).WithCallbackData(t.encodeQuery("client_get_usage "+client.Email)))
 			}
-
 		} else {
 			return nil, errors.New(t.I18nBot("tgbot.answers.getClientsFailed"))
 		}
-
 	}
 	cols := 0
 	if len(buttons) < 6 {
@@ -2601,7 +2534,6 @@ func (t *Tgbot) addClient(chatId int64, msg string, messageID ...int) {
 			t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
 		}
 	}
-
 }
 
 func (t *Tgbot) searchInbound(chatId int64, remark string) {
@@ -2733,86 +2665,6 @@ func (t *Tgbot) getExhausted(chatId int64) {
 	} else {
 		t.SendMsgToTgbot(chatId, output)
 	}
-}
-
-func (t *Tgbot) notifyExhausted() {
-	trDiff := int64(0)
-	exDiff := int64(0)
-	now := time.Now().Unix() * 1000
-
-	TrafficThreshold, err := t.settingService.GetTrafficDiff()
-	if err == nil && TrafficThreshold > 0 {
-		trDiff = int64(TrafficThreshold) * 1073741824
-	}
-	ExpireThreshold, err := t.settingService.GetExpireDiff()
-	if err == nil && ExpireThreshold > 0 {
-		exDiff = int64(ExpireThreshold) * 86400000
-	}
-	inbounds, err := t.inboundService.GetAllInbounds()
-	if err != nil {
-		logger.Warning("Unable to load Inbounds", err)
-	}
-
-	var chatIDsDone []int64
-	for _, inbound := range inbounds {
-		if inbound.Enable {
-			if len(inbound.ClientStats) > 0 {
-				clients, err := t.inboundService.GetClients(inbound)
-				if err == nil {
-					for _, client := range clients {
-						if client.TgID != 0 {
-							chatID := client.TgID
-							if !int64Contains(chatIDsDone, chatID) && !checkAdmin(chatID) {
-								var disabledClients []xray.ClientTraffic
-								var exhaustedClients []xray.ClientTraffic
-								traffics, err := t.inboundService.GetClientTrafficTgBot(client.TgID)
-								if err == nil && len(traffics) > 0 {
-									output := t.I18nBot("tgbot.messages.exhaustedCount", "Type=="+t.I18nBot("tgbot.clients"))
-									for _, traffic := range traffics {
-										if traffic.Enable {
-											if (traffic.ExpiryTime > 0 && (traffic.ExpiryTime-now < exDiff)) ||
-												(traffic.Total > 0 && (traffic.Total-(traffic.Up+traffic.Down) < trDiff)) {
-												exhaustedClients = append(exhaustedClients, *traffic)
-											}
-										} else {
-											disabledClients = append(disabledClients, *traffic)
-										}
-									}
-									if len(exhaustedClients) > 0 {
-										output += t.I18nBot("tgbot.messages.disabled", "Disabled=="+strconv.Itoa(len(disabledClients)))
-										if len(disabledClients) > 0 {
-											output += t.I18nBot("tgbot.clients") + ":\r\n"
-											for _, traffic := range disabledClients {
-												output += " " + traffic.Email
-											}
-											output += "\r\n"
-										}
-										output += "\r\n"
-										output += t.I18nBot("tgbot.messages.depleteSoon", "Deplete=="+strconv.Itoa(len(exhaustedClients)))
-										for _, traffic := range exhaustedClients {
-											output += t.clientInfoMsg(&traffic, true, false, false, true, true, false)
-											output += "\r\n"
-										}
-										t.SendMsgToTgbot(chatID, output)
-									}
-									chatIDsDone = append(chatIDsDone, chatID)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-func int64Contains(slice []int64, item int64) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }
 
 func (t *Tgbot) onlineClients(chatId int64, messageID ...int) {
@@ -3011,12 +2863,6 @@ func (t *Tgbot) deleteMessageTgBot(chatId int64, messageID int) {
 	}
 }
 
-func (t *Tgbot) isSingleWord(text string) bool {
-	text = strings.TrimSpace(text)
-	re := regexp.MustCompile(`\s+`)
-	return re.MatchString(text)
-}
-
 // 〔中文注释〕: 新增方法，实现 TelegramService 接口。
 // 当设备限制任务需要发送消息时，会调用此方法。
 // 该方法内部调用了已有的 SendMsgToTgbotAdmins 函数，将消息发送给所有管理员。
@@ -3076,8 +2922,6 @@ func (t *Tgbot) sendDirectOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "【直连】类别 - 适合优化线路直连：\n\n🚀 Vless + TCP + Reality: 高性能直连，优秀兼容性\n⚡ Vless + XHTTP + Reality: 新型传输，更佳隐蔽性", directKeyboard)
 }
 
-
-
 // 远程创建【一键配置】入站，增加一个 type 参数
 func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	var err error
@@ -3107,7 +2951,6 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	inboundService.SetTelegramService(t) // 将当前的 bot 实例注入
 
 	createdInbound, _, err := inboundService.AddInbound(newInbound)
-
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))
 		return
@@ -3845,8 +3688,6 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
-
-
 
 // 【新增方法】: 检查面板更新
 func (t *Tgbot) checkPanelUpdate(chatId int64) {

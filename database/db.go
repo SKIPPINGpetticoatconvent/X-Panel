@@ -55,7 +55,6 @@ func initUser() error {
 	}
 	if empty {
 		hashedPassword, err := crypto.HashPasswordAsBcrypt(defaultPassword)
-
 		if err != nil {
 			log.Printf("Error hashing default password: %v", err)
 			return err
@@ -156,6 +155,9 @@ func InitDB(dbPath string) error {
 	}
 
 	isUsersEmpty, err := isTableEmpty("users")
+	if err != nil {
+		return err
+	}
 
 	if err := initUser(); err != nil {
 		return err

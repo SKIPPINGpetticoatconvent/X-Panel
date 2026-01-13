@@ -199,18 +199,6 @@ func (t *Tgbot) openPortWithFirewalld(port int) error {
 // 【数据结构和辅助函数：已移除新闻相关代码】
 // =========================================================================================
 
-// 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
-func safeRandomInt(max int) int {
-	if max <= 0 {
-		return 0
-	}
-	result, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
-	if err != nil {
-		return time.Now().Nanosecond() % max
-	}
-	return int(result.Int64())
-}
-
 // =========================================================================================
 // 【辅助函数：每日一语】 (最终修复：严格遵循官方文档 Token 机制，增强健壮性)
 // =========================================================================================
@@ -503,18 +491,18 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 	startTime := time.Now()
 	logMsg := fmt.Sprintf("X-Panel 1C1G 机器优化开始时间: %s\n", startTime.Format("2006-01-02 15:04:05"))
 	output.WriteString(logMsg)
-	f.WriteString(logMsg)
+	_, _ = f.WriteString(logMsg)
 
 	// 初始化 nf_conntrack 支持状态
 	nfConntrackSupported := false
 
 	// 1. 内核参数优化
 	output.WriteString("=== 内核参数优化 ===\n")
-	f.WriteString("=== 内核参数优化 ===\n")
+	_, _ = f.WriteString("=== 内核参数优化 ===\n")
 
 	// 先检查并尝试加载 nf_conntrack 模块
 	output.WriteString("正在检查 nf_conntrack 模块...\n")
-	f.WriteString("正在检查 nf_conntrack 模块...\n")
+	_, _ = f.WriteString("正在检查 nf_conntrack 模块...\n")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -525,8 +513,8 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 	cmd.Stderr = f
 	if err := cmd.Run(); err == nil {
 		// 模块已加载，继续执行
-		output.WriteString("✅ nf_conntrack 模块已加载\n")
-		f.WriteString("✅ nf_conntrack 模块已加载\n")
+		_, _ = output.WriteString("✅ nf_conntrack 模块已加载\n")
+		_, _ = f.WriteString("✅ nf_conntrack 模块已加载\n")
 		// 检查 /proc/sys/net/netfilter 路径是否存在
 		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -538,8 +526,8 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 
 		if strings.TrimSpace(string(checkOutput)) == "exists" {
 			nfConntrackSupported = true
-			output.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
-			f.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
+			_, _ = output.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
+			_, _ = f.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
 		} else {
 			output.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
 			f.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
@@ -1135,13 +1123,13 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 
 		// 首先尝试 apt (Debian/Ubuntu)
 		cmd = exec.CommandContext(ctx, "bash", "-c", "apt update -qq && apt install -y -qq fail2ban")
-		output, err = cmd.CombinedOutput()
+		_, err = cmd.CombinedOutput()
 		if err != nil {
 			// 如果 apt 失败，尝试 yum (CentOS/RHEL)
 			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
 			cmd = exec.CommandContext(ctx, "bash", "-c", "yum install -y fail2ban")
-			output, err = cmd.CombinedOutput()
+			_, err = cmd.CombinedOutput()
 			if err != nil {
 				// 如果 yum 失败，尝试 dnf (Fedora/RHEL 8+)
 				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
@@ -1406,20 +1394,6 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 
 		t.SendMsgToTgbot(chatId, resultMsg.String())
 	}()
-}
-
-// 【新增辅助函数】: 检测系统类型
-func (t *Tgbot) detectSystemType() string {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "bash", "-c", "cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'")
-	output, err := cmd.Output()
-	if err != nil {
-		return "Unknown"
-	}
-
-	return strings.TrimSpace(string(output))
 }
 
 // 【新增辅助函数】: 获取 Firewalld 状态
