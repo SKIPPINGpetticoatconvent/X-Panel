@@ -84,9 +84,15 @@ func (p *PortConflictResolver) CheckPort80() (occupied bool, ownedByPanel bool, 
 			// 保守策略：认为是占用的。但为了解决用户的 i/o timeout 问题，我们可以尝试更激进的策略。
 			// 如果是 127.0.0.1 超时，很可能是防火墙 DROP。
 			// 我们可以尝试 bind 一下端口来验证是否真的被占用。
-			if canBind(80) {
+			// 我们可以尝试 bind 一下端口来验证是否真的被占用。
+			if err := canBind(80); err == nil {
+				// 能够绑定，说明端口是空闲的
 				occupied = false
 			} else {
+				// 绑定失败，记录具体错误以便排查
+				// 如果是地址被占用，则确认被占用
+				// 如果是权限不足，也视为被占用（无法使用） but log it
+				logger.Warningf("Port 80 check timeout, and bind failed: %v", err)
 				occupied = true
 			}
 		} else {
@@ -226,11 +232,11 @@ func (p *PortConflictResolver) TemporarilyTakeOver80() error {
 }
 
 // canBind 尝试绑定端口以验证是否被占用
-func canBind(port int) bool {
+func canBind(port int) error {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		return false
+		return err
 	}
 	listener.Close()
-	return true
+	return nil
 }

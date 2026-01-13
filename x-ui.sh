@@ -1408,6 +1408,7 @@ cert_management_menu() {
 }
 
 set_cert_source() {
+    local back_function="${1:-cert_management_menu}"
     echo -e "${yellow}切换证书来源模式${plain}"
     echo -e "${green}1.${plain} 手动配置 (manual)"
     echo -e "${green}2.${plain} IP 证书 (ip)"
@@ -1416,7 +1417,7 @@ set_cert_source() {
     read -r -p "请输入选项: " choice
     case "$choice" in
     0)
-        cert_management_menu
+        $back_function
         ;;
     1)
         /usr/local/x-ui/x-ui setting -certSource manual
@@ -1435,7 +1436,7 @@ set_cert_source() {
         ;;
     *)
         LOGE "无效选项"
-        set_cert_source
+        set_cert_source "$back_function"
         ;;
     esac
 }
@@ -2012,12 +2013,14 @@ show_menu() {
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} 安装订阅转换 
+  ${green}26.${plain} IP 证书申请管理 (快捷)
+  ${green}27.${plain} 切换证书模式 (IPv4/Domain/Manual)
 ——————————————————————
 
 
 "
     show_status
-    echo && read -r -p "请输入选项 [0-26]: " num
+    echo && read -r -p "请输入选项 [0-27]: " num
 
     case "${num}" in
     0)
@@ -2102,10 +2105,13 @@ show_menu() {
         subconverter
         ;;
     26)
-        request_ip_cert
+        check_install && request_ip_cert
+        ;;
+    27)
+        set_cert_source show_menu
         ;;
     *)
-        LOGE "请输入正确的数字选项 [0-26]"
+        LOGE "请输入正确的数字选项 [0-27]"
         ;;
     esac
 }

@@ -173,20 +173,7 @@ func (c *CertService) ObtainIPCert(ip, email string) error {
 		logger.Warningf("Failed to set IP cert path: %v", err)
 	}
 
-	// Automatically switch to IP certificate mode
-	if err := c.settingService.SetCertSource("ip"); err != nil {
-		logger.Warningf("Failed to set cert source to ip: %v", err)
-	}
-
-	// 触发 TLS 证书重载
-	if c.tlsCertManager != nil {
-		certPath := installPath + ".crt"
-		keyPath := installPath + ".key"
-		c.tlsCertManager.SetCertPaths(certPath, keyPath)
-		if err := c.tlsCertManager.ReloadCert(); err != nil {
-			logger.Warningf("Failed to reload IP certificate in TLS manager: %v", err)
-		}
-	}
+	logger.Info("Successfully obtained IP certificate. Please manually switch to IP mode to apply.")
 
 	logger.Info("Successfully obtained IP certificate")
 	return nil
@@ -224,20 +211,7 @@ func (c *CertService) ObtainDomainCert(domain, email string, opts *CertOptions) 
 		logger.Warningf("Failed to set domain cert path: %v", err)
 	}
 
-	// Automatically switch to domain certificate mode
-	if err := c.settingService.SetCertSource("domain"); err != nil {
-		logger.Warningf("Failed to set cert source to domain: %v", err)
-	}
-
-	// 触发 TLS 证书重载
-	if c.tlsCertManager != nil {
-		certPath := installPath + ".crt"
-		keyPath := installPath + ".key"
-		c.tlsCertManager.SetCertPaths(certPath, keyPath)
-		if err := c.tlsCertManager.ReloadCert(); err != nil {
-			logger.Warningf("Failed to reload domain certificate in TLS manager: %v", err)
-		}
-	}
+	logger.Info("Successfully obtained domain certificate. Please manually switch to Domain mode to apply.")
 
 	logger.Info("Successfully obtained domain certificate")
 	return nil
@@ -525,20 +499,7 @@ func (c *CertService) GenerateSelfSignedCert(domain string, days int, targetDir 
 			logger.Warningf("Failed to set key file setting: %v", err)
 		}
 
-		// Automatically switch to manual certificate mode
-		if err := c.settingService.SetCertSource("manual"); err != nil {
-			logger.Warningf("Failed to set cert source to manual: %v", err)
-		}
-
-		// Reload TLS
-		if c.tlsCertManager != nil {
-			c.tlsCertManager.SetCertPaths(certPath, keyPath)
-			if err := c.tlsCertManager.ReloadCert(); err != nil {
-				logger.Warningf("Failed to reload self-signed certificate in TLS manager: %v", err)
-				return certPath, keyPath, fmt.Errorf("generated but failed to reload: %w", err)
-			}
-		}
-		logger.Info("Self-signed certificate applied and TLS reloaded")
+		logger.Info("Self-signed certificate generated. Please manually apply it via settings.")
 	}
 
 	return certPath, keyPath, nil
