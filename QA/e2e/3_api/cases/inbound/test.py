@@ -82,7 +82,7 @@ class TestInbound(unittest.TestCase):
         self.assertTrue(resp.json()["success"], f"Failed to add inbound: {resp.text}")
 
         # 2. Verify in List
-        list_resp = self.client.post("/panel/api/inbounds/list")
+        list_resp = self.client.get("/panel/api/inbounds/list")
         self.assertTrue(list_resp.json()["success"])
 
         found = False
