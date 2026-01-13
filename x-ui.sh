@@ -1292,26 +1292,94 @@ ssl_cert_issue_ip() {
 
     echo -e "${green}Generating IP Certificate...${plain}"
 
-    # Get Public IP
-    local ipv4=$(curl -s4m8 https://ip.sb -k)
-    local ipv6=$(curl -s6m8 https://ip.sb -k)
     local ip=""
+    local ipv4_regex="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
+    # Basic robust IPv6 regex or at least strict enough to simple HTML
+    local ipv6_regex="^([0-9a-fA-F]{1,4}:){1,7}:?([0-9a-fA-F]{1,4}:?){0,6}$"
 
-    if [[ -n "$ipv4" ]]; then
-        ip="$ipv4"
-    elif [[ -n "$ipv6" ]]; then
-        ip="$ipv6"
-    else
-        echo -e "${red}Could not detect public IP.${plain}"
+    # Function to validate IP
+    validate_ip() {
+        local target=$1
+        if [[ -z "$target" ]]; then return 1; fi
+        
+        if [[ "$target" =~ $ipv4_regex ]]; then
+            return 0
+        fi
+        # Check IPv6
+        if [[ "$target" =~ $ipv6_regex ]]; then
+            return 0
+        fi
+        return 1
+    }
+
+    # Sources
+    local ipv4_sources=(
+        "https://api.ipify.org"
+        "https://ifconfig.me"
+        "https://checkip.amazonaws.com"
+        "https://ip.sb"
+    )
+    
+    local ipv6_sources=(
+        "https://api64.ipify.org"
+        "https://ifconfig.co"
+    )
+
+    # Try IPv4 Sources
+    for source in "${ipv4_sources[@]}"; do
+        local temp_ip=$(curl -s4m5 "$source" -k)
+        # trim whitespace
+        temp_ip=$(echo "$temp_ip" | xargs)
+        if validate_ip "$temp_ip"; then
+            ip="$temp_ip"
+            break
+        fi
+    done
+
+    # If no IPv4, Try IPv6 Sources
+    if [[ -z "$ip" ]]; then
+        for source in "${ipv6_sources[@]}"; do
+            local temp_ip=$(curl -s6m5 "$source" -k)
+            temp_ip=$(echo "$temp_ip" | xargs)
+            if validate_ip "$temp_ip"; then
+                ip="$temp_ip"
+                break
+            fi
+        done
+    fi
+
+    if [[ -z "$ip" ]]; then
+        echo -e "${red}Could not automatically detect a valid public IP.${plain}"
+        echo -e "${yellow}All automatic detection methods failed.${plain}"
         read -p "Please enter your IP manually: " manual_ip
         if [[ -z "$manual_ip" ]]; then
             echo -e "${red}IP cannot be empty.${plain}"
             return 1
         fi
+        # Basic validation for manual input
+        if ! validate_ip "$manual_ip"; then
+             echo -e "${red}Invalid IP format entered.${plain}"
+             return 1
+        fi
         ip="$manual_ip"
     fi
 
     echo -e "${green}Detected IP: ${ip}${plain}"
+    
+    read -rp "Is this IP correct? [y/n] " confirm
+    if [[ "$confirm" == "n" || "$confirm" == "N" ]]; then
+        read -rp "Please enter your IP: " manual_ip
+        if [[ -z "$manual_ip" ]]; then
+            echo -e "${red}IP cannot be empty.${plain}"
+            return 1
+        fi
+        if ! validate_ip "$manual_ip"; then
+             echo -e "${red}Invalid IP format entered.${plain}"
+             return 1
+        fi
+        ip="$manual_ip"
+        echo -e "${green}Using IP: ${ip}${plain}"
+    fi
     
     local cert_dir="/root/cert/${ip}"
     mkdir -p "$cert_dir"
