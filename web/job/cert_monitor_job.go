@@ -109,19 +109,58 @@ func (j *CertMonitorJob) Run() {
 		logger.Error(err)
 	}
 
-	// 4. Send Notification
+	// 4. Delete Old Cert Files
+	j.cleanupOldCerts(certFile, keyFile)
+
+	// 5. Send Notification
 	j.sendAlert(fmt.Sprintf(
 		"🚨 <b>SSL Certificate Expired</b>\n\n"+
 			"The domain certificate for %s was about to expire.\n\n"+
 			"✅ <b>Failover Successful</b>\n"+
 			"Switched to Self-Signed IP Certificate.\n"+
 			"<b>New Access Address:</b> https://%s:%d\n\n"+
+			"🗑️ <b>Cleanup:</b> Old certificate files have been deleted.\n"+
 			"Panel is restarting...",
 		cert.Subject.CommonName, ip, func() int { p, _ := j.settingService.GetPort(); return p }(),
 	))
 
-	// 5. Restart Panel
+	// 6. Restart Panel
 	j.panelService.RestartPanel(3 * time.Second)
+}
+
+func (j *CertMonitorJob) cleanupOldCerts(certPath, keyPath string) {
+	// Helper to safely remove file and empty parent dir
+	remove := func(path string) {
+		if path == "" {
+			return
+		}
+
+		// 1. Remove the file
+		err := os.Remove(path)
+		if err != nil && !os.IsNotExist(err) {
+			logger.Warningf("[CertMonitor] Failed to delete old cert file %s: %v", path, err)
+			return
+		}
+		logger.Infof("[CertMonitor] Deleted old cert file: %s", path)
+
+		// 2. Try to remove parent dir if it is a subdir of /root/cert/
+		// e.g. /root/cert/example.com/
+		dir := filepath.Dir(path)
+		absDir, _ := filepath.Abs(dir)
+
+		// Safety check: Ensure we are inside /root/cert and NOT deleting /root/cert itself
+		// Assuming standard path /root/cert/<domain>/
+		if strings.HasPrefix(absDir, "/root/cert/") && absDir != "/root/cert" {
+			// We use Remove, not RemoveAll, to be safe. Only delete if empty (which it should be if we deleted both key and cert)
+			// But since we call this twice (once for key, once for cert), the first time dir won't be empty.
+			// The second time it might be.
+			os.Remove(absDir)
+			// We ignore error here because if it's not empty, we shouldn't delete it.
+		}
+	}
+
+	remove(certPath)
+	remove(keyPath)
 }
 
 func (j *CertMonitorJob) detectPublicIP() (string, error) {
