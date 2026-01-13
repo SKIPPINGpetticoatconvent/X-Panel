@@ -13,6 +13,16 @@ linters:
     - staticcheck
     - typecheck
     - unused
+    - nilaway  # NilAway: Uber's nil pointer detector
+
+linters-settings:
+  custom:
+    nilaway:
+      type: "module"
+      description: Static analysis tool to detect potential nil panics in Go code.
+      settings:
+        # Settings must be a "map from string to string" to mimic command line flags
+        include-pkgs: "x-ui"
 
 issues:
   exclude-dirs:
