@@ -4,7 +4,7 @@ import (
 	"context"
 	_ "unsafe"
 
-	"github.com/robfig/cron/v3"
+	cron "github.com/robfig/cron/v3"
 )
 
 var (

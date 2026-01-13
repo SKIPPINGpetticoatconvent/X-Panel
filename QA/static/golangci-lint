@@ -1,0 +1,10 @@
+#!/bin/bash
+# Static analysis using golangci-lint
+
+echo "Running golangci-lint..."
+if ! command -v golangci-lint &> /dev/null; then
+    echo "golangci-lint could not be found. Please install it."
+    exit 1
+fi
+
+golangci-lint run ./...

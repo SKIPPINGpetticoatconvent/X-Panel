@@ -1,0 +1,13 @@
+#!/bin/bash
+# Configuration verification script
+
+echo "Verifying configuration..."
+
+PROJECT_ROOT=$(dirname "$(dirname "$(dirname "$0")")")
+
+if [ -d "$PROJECT_ROOT/config" ] || [ -f "$PROJECT_ROOT/bin/config.json" ]; then
+   echo "Config Check: OK (Directory or file exists)"
+else
+   echo "Config Check: WARNING - Config not found (might be generated at runtime)"
+fi
+

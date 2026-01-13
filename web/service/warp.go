@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+
 	"x-ui/logger"
 	"x-ui/util/common"
 )
@@ -164,7 +165,7 @@ func (s *WarpService) SetWarpLicense(license string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	s.SettingService.SetWarp(string(newWarpData))
+	_ = s.SettingService.SetWarp(string(newWarpData))
 
 	return string(newWarpData), nil
 }

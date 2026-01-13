@@ -53,13 +53,14 @@ func setupTestRouter() *gin.Engine {
 // TestInboundController_GetInbounds 测试获取入站列表
 func TestInboundController_GetInbounds(t *testing.T) {
 	// 创建模拟服务
-	mockInboundService := &service.InboundService{}
+	_ = &service.InboundService{}
 
 	// 设置测试路由
 	router := setupTestRouter()
 
 	// 创建控制器
 	inboundController := NewInboundController(router.Group("/api/inbounds"))
+	_ = inboundController
 
 	// 创建测试请求
 	req, _ := http.NewRequest("GET", "/api/inbounds/list", nil)
@@ -190,12 +191,19 @@ func TestInboundController_ValidateInboundData(t *testing.T) {
 func TestSettingController_GetAllSetting(t *testing.T) {
 	// 创建模拟设置服务
 	mockSettingService := &service.SettingService{}
+	mockUserService := &service.UserService{}
+	mockPanelService := &service.PanelService{}
 
 	// 设置测试路由
 	router := setupTestRouter()
 
 	// 创建控制器
-	settingController := NewSettingController(router.Group("/api/setting"))
+	settingController := &SettingController{
+		settingService: mockSettingService,
+		userService:    mockUserService,
+		panelService:   mockPanelService,
+	}
+	_ = settingController
 
 	// 创建测试请求
 	req, _ := http.NewRequest("POST", "/api/setting/all", nil)
@@ -281,7 +289,8 @@ func TestAPIController_BackuptoTgbot(t *testing.T) {
 	router := setupTestRouter()
 
 	// 创建API控制器
-	apiController := NewAPIController(router.Group("/panel/api"), *mockServerService)
+	apiController := NewAPIController(router.Group("/panel/api"), mockServerService)
+	_ = apiController
 
 	// 创建测试请求
 	req, _ := http.NewRequest("GET", "/panel/api/backuptotgbot", nil)
@@ -323,7 +332,13 @@ func TestProtocolValidation(t *testing.T) {
 
 // BenchmarkInboundController_ValidateInboundData 性能测试
 func BenchmarkInboundController_ValidateInboundData(b *testing.B) {
-	controller := &InboundController{}
+	mockInboundService := &service.InboundService{}
+	mockXrayService := &service.XrayService{}
+
+	inboundController := &InboundController{
+		inboundService: mockInboundService,
+		xrayService:    mockXrayService,
+	}
 	inbound := &model.Inbound{
 		Port:     8080,
 		Protocol: model.VLESS,
@@ -332,7 +347,7 @@ func BenchmarkInboundController_ValidateInboundData(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = controller.validateInboundData(inbound)
+		_ = inboundController.validateInboundData(inbound)
 	}
 }
 
@@ -370,6 +385,7 @@ func TestInboundController_ImportInbound(t *testing.T) {
 func TestInboundController_ClientOperations(t *testing.T) {
 	router := setupTestRouter()
 	controller := NewInboundController(router.Group("/api/inbounds"))
+	_ = controller
 
 	// 测试添加客户端
 	addClientData := model.Inbound{

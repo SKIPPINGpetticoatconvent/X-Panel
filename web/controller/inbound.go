@@ -13,12 +13,15 @@ import (
 )
 
 type InboundController struct {
-	inboundService service.InboundService
-	xrayService    service.XrayService
+	inboundService *service.InboundService
+	xrayService    *service.XrayService
 }
 
 func NewInboundController(g *gin.RouterGroup) *InboundController {
-	a := &InboundController{}
+	a := &InboundController{
+		inboundService: &service.InboundService{},
+		xrayService:    &service.XrayService{},
+	}
 	a.initRouter(g)
 	return a
 }
@@ -106,8 +109,7 @@ func (a *InboundController) addInbound(c *gin.Context) {
 		inbound.Tag = fmt.Sprintf("inbound-%v:%v", inbound.Listen, inbound.Port)
 	}
 
-	needRestart := false
-	inbound, needRestart, err = a.inboundService.AddInbound(inbound)
+	inbound, needRestart, err := a.inboundService.AddInbound(inbound)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
@@ -124,8 +126,7 @@ func (a *InboundController) delInbound(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundDeleteSuccess"), err)
 		return
 	}
-	needRestart := true
-	needRestart, err = a.inboundService.DelInbound(id)
+	needRestart, err := a.inboundService.DelInbound(id)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
@@ -150,8 +151,7 @@ func (a *InboundController) updateInbound(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundUpdateSuccess"), err)
 		return
 	}
-	needRestart := true
-	inbound, needRestart, err = a.inboundService.UpdateInbound(inbound)
+	inbound, needRestart, err := a.inboundService.UpdateInbound(inbound)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
@@ -193,7 +193,7 @@ func (a *InboundController) addInboundClient(c *gin.Context) {
 		return
 	}
 
-	needRestart := true
+	var needRestart bool
 
 	needRestart, err = a.inboundService.AddInboundClient(data)
 	if err != nil {
@@ -214,7 +214,7 @@ func (a *InboundController) delInboundClient(c *gin.Context) {
 	}
 	clientId := c.Param("clientId")
 
-	needRestart := true
+	var needRestart bool
 
 	needRestart, err = a.inboundService.DelInboundClient(id, clientId)
 	if err != nil {
@@ -237,7 +237,7 @@ func (a *InboundController) updateInboundClient(c *gin.Context) {
 		return
 	}
 
-	needRestart := true
+	var needRestart bool
 
 	needRestart, err = a.inboundService.UpdateInboundClient(inbound, clientId)
 	if err != nil {

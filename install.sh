@@ -255,7 +255,7 @@ install_x-ui() {
         fi
     else
         last_version=$1
-        url="https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"
+        url="https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz"
         echo ""
         echo -e "--------------------------------------------"
         echo -e "${green}---------------->>>>开始安装 X-Panel $1${plain}"

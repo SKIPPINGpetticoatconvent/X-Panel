@@ -15,7 +15,7 @@ type HashEntry struct {
 }
 
 type HashStorage struct {
-	sync.RWMutex
+	mu         sync.RWMutex
 	Data       map[string]HashEntry
 	Expiration time.Duration
 }
@@ -28,8 +28,8 @@ func NewHashStorage(expiration time.Duration) *HashStorage {
 }
 
 func (h *HashStorage) SaveHash(query string) string {
-	h.Lock()
-	defer h.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	md5Hash := md5.Sum([]byte(query))
 	md5HashString := hex.EncodeToString(md5Hash[:])
@@ -46,8 +46,8 @@ func (h *HashStorage) SaveHash(query string) string {
 }
 
 func (h *HashStorage) GetValue(hash string) (string, bool) {
-	h.RLock()
-	defer h.RUnlock()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	entry, exists := h.Data[hash]
 
@@ -60,8 +60,8 @@ func (h *HashStorage) IsMD5(hash string) bool {
 }
 
 func (h *HashStorage) RemoveExpiredHashes() {
-	h.Lock()
-	defer h.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	now := time.Now()
 
@@ -73,8 +73,8 @@ func (h *HashStorage) RemoveExpiredHashes() {
 }
 
 func (h *HashStorage) Reset() {
-	h.Lock()
-	defer h.Unlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	h.Data = make(map[string]HashEntry)
 }
