@@ -28,7 +28,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron/v3"
+	cron "github.com/robfig/cron/v3"
 )
 
 //go:embed assets/*

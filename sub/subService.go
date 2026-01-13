@@ -15,7 +15,7 @@ import (
 	"x-ui/web/service"
 	"x-ui/xray"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
 )
 
 type SubService struct {
