@@ -83,7 +83,7 @@ func GetAccessLogPath() (string, error) {
 }
 
 func stopProcess(p *Process) {
-	p.Stop()
+	_ = p.Stop()
 }
 
 type Process struct {

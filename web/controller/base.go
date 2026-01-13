@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strings"
 
 	"x-ui/logger"
 	"x-ui/web/locale"
@@ -14,6 +15,14 @@ type BaseController struct{}
 
 func (a *BaseController) checkLogin(c *gin.Context) {
 	if !session.IsLogin(c) {
+		// 【安全增强】: 隐身模式 - 对于 API 请求，未授权直接返回 404 Not Found
+		// 这可以防止外部扫描器探测到面板 API 的存在
+		if strings.Contains(c.Request.RequestURI, "/api/") {
+			pureJsonMsg(c, http.StatusNotFound, false, "404 page not found")
+			c.Abort()
+			return
+		}
+
 		if isAjax(c) {
 			pureJsonMsg(c, http.StatusUnauthorized, false, I18nWeb(c, "pages.login.loginAgain"))
 		} else {

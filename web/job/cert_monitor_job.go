@@ -66,7 +66,7 @@ func (j *CertMonitorJob) Run() {
 	}
 
 	// Check expiration (warn if < 72 hours / 3 days)
-	timeRemaining := cert.NotAfter.Sub(time.Now())
+	timeRemaining := time.Until(cert.NotAfter)
 	if timeRemaining > 72*time.Hour {
 		return
 	}
@@ -81,6 +81,7 @@ func (j *CertMonitorJob) Run() {
 		// If it's just < 24h, we might have just generated it (if we generated it with short life? No we use 10 years).
 		// If we generated 10 years, it won't be < 24h.
 		// So if it is < 24h, it's definitely an old or broken cert.
+		logger.Debugf("[CertMonitor] Self-signed cert detected for %s, expiration check continues...", cert.Subject.CommonName)
 	}
 
 	// 1. Detect IP
@@ -125,7 +126,7 @@ func (j *CertMonitorJob) Run() {
 	))
 
 	// 6. Restart Panel
-	j.panelService.RestartPanel(3 * time.Second)
+	_ = j.panelService.RestartPanel(3 * time.Second)
 }
 
 func (j *CertMonitorJob) cleanupOldCerts(certPath, keyPath string) {
@@ -230,7 +231,7 @@ func (j *CertMonitorJob) generateSelfSignedIPCert(ip string) (string, string, er
 	if err != nil {
 		return "", "", err
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	certOut.Close()
 
 	keyPath := filepath.Join(certDir, "privkey.pem")
@@ -238,7 +239,7 @@ func (j *CertMonitorJob) generateSelfSignedIPCert(ip string) (string, string, er
 	if err != nil {
 		return "", "", err
 	}
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	_ = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
 	keyOut.Close()
 
 	return certPath, keyPath, nil

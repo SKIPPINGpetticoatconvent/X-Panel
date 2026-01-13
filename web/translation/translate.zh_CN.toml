@@ -97,6 +97,7 @@
 "emptyPassword" = "请输入密码"
 "wrongUsernameOrPassword" = "用户名、密码或双重验证码无效。"  
 "successLogin" = "您已成功登录您的账户。"
+"tooManyAttempts" = "尝试次数过多，请稍后再试。"
 
 [pages.index]
 "title" = "系统状态"

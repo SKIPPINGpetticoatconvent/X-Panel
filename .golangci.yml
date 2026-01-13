@@ -1,0 +1,19 @@
+run:
+  tests: false
+  # time out for analysis
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+
+issues:
+  exclude-dirs:
+    - test_scripts
