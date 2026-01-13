@@ -1,0 +1,45 @@
+name: QA Framework
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  qa:
+    name: Run QA Suite
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        go mod download
+        # pip install requests # Uncomment if requests is needed and not standard or verified
+
+    - name: Install GolangCI-Lint
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.0
+
+    - name: Grant Execute Permissions
+      run: |
+        chmod +x QA/run_qa.sh
+        chmod +x QA/static/*
+        chmod +x QA/unit/*.sh
+        chmod +x QA/e2e/*.sh
+
+    - name: Run QA Framework
+      run: ./QA/run_qa.sh
