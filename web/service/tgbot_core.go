@@ -166,7 +166,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	tgBotToken, err := t.settingService.GetTgBotToken()
 	if err != nil || tgBotToken == "" {
 		logger.Warning("Failed to get Telegram bot token:", err)
-		return fmt.Errorf("Telegram bot token is missing or invalid: %v", err)
+		return fmt.Errorf("telegram bot token is missing or invalid: %v", err)
 	}
 
 	// Validate bot token format

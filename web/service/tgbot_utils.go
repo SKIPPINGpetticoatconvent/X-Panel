@@ -550,7 +550,7 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 			_, _ = f.WriteString("⚠️ " + errorMsg + "，将跳过相关参数\n")
 		} else {
 			output.WriteString("✅ nf_conntrack 模块加载成功\n")
-			f.WriteString("✅ nf_conntrack 模块加载成功\n")
+			_, _ = f.WriteString("✅ nf_conntrack 模块加载成功\n")
 			// 检查 /proc/sys/net/netfilter 路径是否存在
 			ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
@@ -563,10 +563,10 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 			if strings.TrimSpace(string(checkOutput)) == "exists" {
 				nfConntrackSupported = true
 				output.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
-				f.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
+				_, _ = f.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
 			} else {
 				output.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
-				f.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
+				_, _ = f.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
 			}
 		}
 	}

@@ -16,7 +16,7 @@ func (s *XraySettingService) SaveXraySetting(newXraySettings string) error {
 	if err := s.CheckXrayConfig(newXraySettings); err != nil {
 		return err
 	}
-	return s.SettingService.saveSetting("xrayTemplateConfig", newXraySettings)
+	return s.saveSetting("xrayTemplateConfig", newXraySettings)
 }
 
 func (s *XraySettingService) CheckXrayConfig(XrayTemplateConfig string) error {

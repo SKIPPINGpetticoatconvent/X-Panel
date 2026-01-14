@@ -495,7 +495,7 @@ func (j *CheckClientIpJob) Run() {
 func (j *CheckClientIpJob) clearAccessLog() {
 	logAccessP, err := os.OpenFile(xray.GetAccessPersistentLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	j.checkError(err)
-	defer logAccessP.Close()
+	defer func() { _ = logAccessP.Close() }()
 
 	accessLogPath, err := xray.GetAccessLogPath()
 	j.checkError(err)
@@ -697,7 +697,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 		logger.Errorf("failed to open IP limit log file: %s", err)
 		return false
 	}
-	defer logIpFile.Close()
+	defer func() { _ = logIpFile.Close() }()
 	log.SetOutput(logIpFile)
 	log.SetFlags(log.LstdFlags)
 

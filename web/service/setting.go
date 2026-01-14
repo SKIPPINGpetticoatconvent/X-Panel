@@ -692,7 +692,7 @@ func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting) error {
 			for _, err := range tgErrors {
 				errorMsgs = append(errorMsgs, err.Error())
 			}
-			return fmt.Errorf("Telegram bot configuration validation failed: %s", strings.Join(errorMsgs, "; "))
+			return fmt.Errorf("telegram bot configuration validation failed: %s", strings.Join(errorMsgs, "; "))
 		}
 
 		logger.Infof("Telegram bot configuration validated successfully")

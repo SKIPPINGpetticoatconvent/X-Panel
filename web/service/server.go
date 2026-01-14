@@ -350,7 +350,7 @@ func (s *ServerService) GetXrayVersions() ([]string, error) {
 		logger.Warning("Failed to fetch Xray versions from GitHub:", err)
 		return nil, fmt.Errorf("无法获取Xray版本信息，请检查网络连接: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
@@ -512,7 +512,7 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("下载Xray失败: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
@@ -590,12 +590,12 @@ func (s *ServerService) UpdateXray(version string) error {
 								}
 								defer func() { _ = zipFile.Close() }()
 								_ = os.MkdirAll(filepath.Dir(fileName), 0o755)
-								os.Remove(fileName)
+								_ = os.Remove(fileName)
 								file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
 								if err != nil {
 									return err
 								}
-								defer file.Close()
+								defer func() { _ = file.Close() }()
 								_, err = io.Copy(file, zipFile)
 								return err
 							}
@@ -693,7 +693,7 @@ func (s *ServerService) GetXrayLogs(
 	if err != nil {
 		return lines
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 
@@ -778,7 +778,7 @@ func (s *ServerService) GetDb() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Read the file contents
 	fileContents, err := io.ReadAll(file)
@@ -929,7 +929,7 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 		if err != nil {
 			return common.NewErrorf("Failed to download Geofile from %s: %v", url, err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// 检查HTTP状态码
 		if resp.StatusCode != http.StatusOK {
@@ -940,7 +940,7 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 		if err != nil {
 			return common.NewErrorf("Failed to create Geofile %s: %v", destPath, err)
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		_, err = io.Copy(file, resp.Body)
 		if err != nil {
@@ -1432,7 +1432,7 @@ func (s *ServerService) queryLocationAPI(apiURL, serverIP string) string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return ""

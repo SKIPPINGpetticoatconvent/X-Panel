@@ -2869,7 +2869,7 @@ func (t *Tgbot) deleteMessageTgBot(chatId int64, messageID int) {
 func (t *Tgbot) SendMessage(msg string) error {
 	if !t.IsRunning() {
 		// 〔中文注释〕: 如果 Bot 未运行，返回错误，防止程序出错。
-		return errors.New("Telegram bot is not running")
+		return errors.New("telegram bot is not running")
 	}
 	// 〔中文注释〕: 调用现有方法将消息发送给所有已配置的管理员。
 	t.SendMsgToTgbotAdmins(msg)
@@ -3520,7 +3520,7 @@ func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client mod
 	uuid := client.ID
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
 	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
 	serverNames := realitySettings["serverNames"].([]interface{})
 	sni := serverNames[0].(string)
@@ -3563,14 +3563,14 @@ func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client mod
 // 【新增辅助函数】: 生成 TLS 链接
 func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 	clients, _ := settings["clients"].([]interface{})
 	client := clients[0].(map[string]interface{})
 	uuid := client["id"].(string)
 	encryption := settings["encryption"].(string)
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
 	tlsSettings := streamSettings["tlsSettings"].(map[string]interface{})
 	sni := tlsSettings["serverName"].(string)
 

@@ -885,7 +885,7 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 			q := url.Query()
 
 			for k, v := range params {
-				if !(newSecurity == "none" && (k == "alpn" || k == "sni" || k == "fp" || k == "allowInsecure")) {
+				if newSecurity != "none" || (k != "alpn" && k != "sni" && k != "fp" && k != "allowInsecure") {
 					q.Add(k, v)
 				}
 			}

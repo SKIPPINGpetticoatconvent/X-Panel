@@ -119,7 +119,7 @@ func (s *WarpService) RegWarp(secretKey string, publicKey string) (string, error
 
 func (s *WarpService) SetWarpLicense(license string) (string, error) {
 	var warpData map[string]string
-	warp, err := s.SettingService.GetWarp()
+	warp, err := s.GetWarp()
 	if err != nil {
 		return "", err
 	}
@@ -165,7 +165,7 @@ func (s *WarpService) SetWarpLicense(license string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_ = s.SettingService.SetWarp(string(newWarpData))
+	_ = s.SetWarp(string(newWarpData))
 
 	return string(newWarpData), nil
 }

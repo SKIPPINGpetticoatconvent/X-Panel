@@ -112,7 +112,7 @@ func updateXUICommandScript() error {
 	if err != nil {
 		return fmt.Errorf("创建临时脚本文件失败: %v", err)
 	}
-	defer os.Remove(tempScript.Name())
+	defer func() { _ = os.Remove(tempScript.Name()) }()
 	defer func() { _ = tempScript.Close() }()
 
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -181,7 +181,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("创建临时文件失败: %v", err)
 	}
-	defer os.Remove(tempFile.Name())
+	defer func() { _ = os.Remove(tempFile.Name()) }()
 
 	// 下载文件
 	client := &http.Client{Timeout: 120 * time.Second}
@@ -205,7 +205,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("写入临时文件失败: %v", err)
 	}
-	tempFile.Close()
+	_ = tempFile.Close()
 
 	// 解压tar.gz并提取x-ui二进制文件
 	file, err := os.Open(tempFile.Name())
@@ -241,7 +241,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 			}
 
 			_, err = io.Copy(tempBin, tarReader)
-			tempBin.Close()
+			_ = tempBin.Close()
 			if err != nil {
 				os.Remove(tempBin.Name())
 				return "", fmt.Errorf("提取二进制文件失败: %v", err)
