@@ -210,7 +210,9 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	engine := gin.Default()
+	engine := gin.New()
+	engine.Use(gin.Logger())
+	engine.Use(middleware.RecoveryMiddleware())
 
 	webDomain, err := s.settingService.GetWebDomain()
 	if err != nil {
@@ -358,7 +360,7 @@ func (s *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
-	s.cron = cron.New(cron.WithLocation(loc), cron.WithSeconds())
+	s.cron = cron.New(cron.WithLocation(loc), cron.WithSeconds(), cron.WithChain(cron.Recover(CronLogger{})))
 	s.cron.Start()
 
 	engine, err := s.initRouter()
