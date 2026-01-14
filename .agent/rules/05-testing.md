@@ -6,6 +6,7 @@ description: X-Panel 测试规范
 # 5. 测试规范
 
 - 核心业务逻辑（Service 层）必须编写对应的 `_test.go` 单元测试。
+- 新建或修改 Go 代码后，必须执行 `golangci-lint` 和 `nilaway` 确保无错误。
 - 提交修改前，必须本地执行 `go build` 并验证基础功能。
 
 ---

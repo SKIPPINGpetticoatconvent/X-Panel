@@ -8,7 +8,7 @@ description: X-Panel 开发规范
 ## 3.1 Go 语言规范
 
 - 提交前必须执行 `gofmt` 或 `goimports` 格式化。
-- 尽量通过 `golangci-lint` 检查，消除不必要的 lint 错误。
+- 必须通过 `golangci-lint` 和 `nilaway` 检查，确保无任何错误。
 - 业务逻辑中禁止直接 panic，必须返回 error。
 - 依赖变更后立即执行 `go mod tidy`。
 
