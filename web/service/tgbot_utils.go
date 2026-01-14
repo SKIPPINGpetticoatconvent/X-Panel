@@ -645,21 +645,21 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 	if err != nil {
 		errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 		output.WriteString("❌ " + errorMsg + "\n")
-		f.WriteString("❌ " + errorMsg + "\n")
+		_, _ = f.WriteString("❌ " + errorMsg + "\n")
 		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg = "✅ 基础内核参数已应用"
 	output.WriteString(successMsg + "\n")
-	f.WriteString(successMsg + "\n")
+	_, _ = f.WriteString(successMsg + "\n")
 
 	// 1.2. 尝试应用 nf_conntrack 参数（仅在支持时）
 	if nfConntrackSupported && nfConntrackConfig != "" {
 		output.WriteString("正在应用 nf_conntrack 参数...\n")
-		f.WriteString("正在应用 nf_conntrack 参数...\n")
+		_, _ = f.WriteString("正在应用 nf_conntrack 参数...\n")
 
 		if err := sys.AtomicWriteFile("/etc/sysctl.d/99-nf-conntrack-optimize.conf", []byte(nfConntrackConfig), 0o644); err != nil {
 			output.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
-			f.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
+			_, _ = f.WriteString("⚠️ 创建 nf_conntrack 配置文件失败，跳过相关参数\n")
 		} else {
 			// 应用 nf_conntrack 参数
 			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
@@ -671,23 +671,23 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 			if err != nil {
 				errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 				output.WriteString("⚠️ " + errorMsg + "，跳过相关参数\n")
-				f.WriteString("⚠️ " + errorMsg + "，跳过相关参数\n")
+				_, _ = f.WriteString("⚠️ " + errorMsg + "，跳过相关参数\n")
 			} else {
 				successMsg = "✅ nf_conntrack 参数已应用"
 				output.WriteString(successMsg + "\n")
-				f.WriteString(successMsg + "\n")
+				_, _ = f.WriteString(successMsg + "\n")
 			}
 		}
 	} else {
 		// nf_conntrack 不支持，跳过相关参数
 		output.WriteString("ℹ️ 跳过 nf_conntrack 参数（模块不支持或路径不存在）\n")
-		f.WriteString("ℹ️ 跳过 nf_conntrack 参数（模块不支持或路径不存在）\n")
+		_, _ = f.WriteString("ℹ️ 跳过 nf_conntrack 参数（模块不支持或路径不存在）\n")
 	}
 
 	// 3. 优化文件描述符限制
 	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
 	output.WriteString(limitsMsg)
-	f.WriteString(limitsMsg)
+	_, _ = f.WriteString(limitsMsg)
 
 	limitsConfig := `* soft nofile 65535
 * hard nofile 65535
@@ -699,30 +699,30 @@ root hard nofile 65535`
 	if err := sys.WriteConfigBlock("/etc/security/limits.conf", "# === 1C1G Machine Optimization ===", "", limitsConfig); err != nil {
 		errorMsg := fmt.Errorf("更新limits.conf失败: %v", err)
 		output.WriteString("❌ " + errorMsg.Error() + "\n")
-		f.WriteString("❌ " + errorMsg.Error() + "\n")
+		_, _ = f.WriteString("❌ " + errorMsg.Error() + "\n")
 		return output.String(), errorMsg
 	}
 	successMsg = "✅ 文件描述符限制已优化"
 	output.WriteString(successMsg + "\n")
-	f.WriteString(successMsg + "\n")
+	_, _ = f.WriteString(successMsg + "\n")
 
 	// 4. 【新增】启用 BBR 拥塞控制算法
 	bbrMsg := "\n=== BBR 拥塞控制算法启用 ===\n"
 	output.WriteString(bbrMsg)
-	f.WriteString(bbrMsg)
+	_, _ = f.WriteString(bbrMsg)
 
 	// 检查内核版本和 BBR 支持
 	kernelVersion, bbrSupported, err := t.checkBBRSupport()
 	if err != nil {
 		output.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
-		f.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
+		_, _ = f.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
 	} else {
 		output.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
-		f.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
+		_, _ = fmt.Fprintf(f, "✅ 内核版本: %s\n", kernelVersion)
 
 		if bbrSupported {
 			output.WriteString("✅ BBR 支持检测: 支持\n")
-			f.WriteString("✅ BBR 支持检测: 支持\n")
+			_, _ = f.WriteString("✅ BBR 支持检测: 支持\n")
 
 			// 启用 BBR
 			bbrConfig := `# ===== BBR 拥塞控制算法配置 =====
@@ -733,13 +733,13 @@ net.ipv4.tcp_congestion_control = bbr
 			// 先备份现有文件（如果存在）
 			if backupErr := sys.BackupFile("/etc/sysctl.d/99-bbr-optimize.conf"); backupErr != nil {
 				output.WriteString("ℹ️ BBR 配置文件备份失败（文件可能不存在）\n")
-				f.WriteString("ℹ️ BBR 配置文件备份失败（文件可能不存在）\n")
+				_, _ = f.WriteString("ℹ️ BBR 配置文件备份失败（文件可能不存在）\n")
 			}
 
 			if err := sys.AtomicWriteFile("/etc/sysctl.d/99-bbr-optimize.conf", []byte(bbrConfig), 0o644); err != nil {
 				errorMsg := fmt.Sprintf("创建 BBR 配置文件失败: %v", err)
 				output.WriteString("❌ " + errorMsg + "\n")
-				f.WriteString("❌ " + errorMsg + "\n")
+				_, _ = f.WriteString("❌ " + errorMsg + "\n")
 			} else {
 				// 应用 BBR 设置
 				ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
@@ -751,11 +751,11 @@ net.ipv4.tcp_congestion_control = bbr
 				if err != nil {
 					errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 					output.WriteString("❌ " + errorMsg + "\n")
-					f.WriteString("❌ " + errorMsg + "\n")
+					_, _ = f.WriteString("❌ " + errorMsg + "\n")
 				} else {
 					successMsg := "✅ BBR 拥塞控制算法已启用"
 					output.WriteString(successMsg + "\n")
-					f.WriteString(successMsg + "\n")
+					_, _ = f.WriteString(successMsg + "\n")
 
 					// 验证 BBR 是否启用
 					ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
@@ -764,13 +764,13 @@ net.ipv4.tcp_congestion_control = bbr
 					cmd = exec.CommandContext(ctx, "sysctl", "net.ipv4.tcp_congestion_control")
 					checkOutput, _ := cmd.Output()
 					output.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
-					f.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
+					_, _ = f.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
 				}
 			}
 		} else {
 			skipMsg := "ℹ️ BBR 不支持（需要 Linux 内核 4.9+），跳过启用"
 			output.WriteString(skipMsg + "\n")
-			f.WriteString(skipMsg + "\n")
+			_, _ = f.WriteString(skipMsg + "\n")
 		}
 	}
 
@@ -781,7 +781,7 @@ net.ipv4.tcp_congestion_control = bbr
 	logMsg += fmt.Sprintf("总耗时: %v\n", duration)
 	logMsg += fmt.Sprintf("详细日志已保存到: %s\n", logFile)
 	output.WriteString(logMsg)
-	f.WriteString(logMsg)
+	_, _ = f.WriteString(logMsg)
 
 	return output.String(), nil
 }
@@ -827,11 +827,11 @@ func (t *Tgbot) executeGenericOptimizationInternal() (string, error) {
 	startTime := time.Now()
 	logMsg := fmt.Sprintf("X-Panel 通用/高配优化开始时间: %s\n", startTime.Format("2006-01-02 15:04:05"))
 	output.WriteString(logMsg)
-	f.WriteString(logMsg)
+	_, _ = f.WriteString(logMsg)
 
 	// 1. 内核参数优化 (更激进的网络参数)
 	output.WriteString("=== 内核参数优化 ===\n")
-	f.WriteString("=== 内核参数优化 ===\n")
+	_, _ = f.WriteString("=== 内核参数优化 ===\n")
 
 	kernelConfig := `# ===== 通用/高配网络优化配置 =====
 net.core.rmem_max = 16777216
@@ -864,15 +864,15 @@ fs.file-max = 1000000
 	if _, err := os.Stat(configFilePath); err == nil {
 		// 文件存在，进行备份
 		output.WriteString("检测到现有内核配置文件，正在备份...\n")
-		f.WriteString("检测到现有内核配置文件，正在备份...\n")
+		_, _ = f.WriteString("检测到现有内核配置文件，正在备份...\n")
 		if err := os.Rename(configFilePath, backupFilePath); err != nil {
 			errorMsg := fmt.Sprintf("备份内核配置文件失败: %v", err)
 			output.WriteString("⚠️ " + errorMsg + "\n")
-			f.WriteString("⚠️ " + errorMsg + "\n")
+			_, _ = f.WriteString("⚠️ " + errorMsg + "\n")
 			// 继续执行，不返回错误
 		} else {
 			output.WriteString("✅ 内核配置文件已备份为 " + backupFilePath + "\n")
-			f.WriteString("✅ 内核配置文件已备份为 " + backupFilePath + "\n")
+			_, _ = f.WriteString("✅ 内核配置文件已备份为 " + backupFilePath + "\n")
 		}
 	}
 
@@ -880,12 +880,12 @@ fs.file-max = 1000000
 	if err := sys.AtomicWriteFile(configFilePath, []byte(kernelConfig), 0o644); err != nil {
 		errorMsg := fmt.Sprintf("创建内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
-		f.WriteString("❌ " + errorMsg + "\n")
+		_, _ = f.WriteString("❌ " + errorMsg + "\n")
 		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg := "✅ 内核参数配置文件已创建"
 	output.WriteString(successMsg + "\n")
-	f.WriteString(successMsg + "\n")
+	_, _ = f.WriteString(successMsg + "\n")
 
 	// 应用内核参数
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -897,17 +897,17 @@ fs.file-max = 1000000
 	if err := cmd.Run(); err != nil {
 		errorMsg := fmt.Sprintf("应用内核参数失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
-		f.WriteString("❌ " + errorMsg + "\n")
+		_, _ = f.WriteString("❌ " + errorMsg + "\n")
 		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg = "✅ 内核参数已应用"
 	output.WriteString(successMsg + "\n")
-	f.WriteString(successMsg + "\n")
+	_, _ = f.WriteString(successMsg + "\n")
 
 	// 2. 文件描述符限制优化
 	limitsMsg := "\n=== 文件描述符限制优化 ===\n"
 	output.WriteString(limitsMsg)
-	f.WriteString(limitsMsg)
+	_, _ = f.WriteString(limitsMsg)
 
 	limitsConfig := `* soft nofile 1000000
 * hard nofile 1000000
@@ -919,35 +919,35 @@ root hard nofile 1000000`
 	if err := sys.WriteConfigBlock("/etc/security/limits.conf", "# === Generic High-Performance Optimization ===", "", limitsConfig); err != nil {
 		errorMsg := fmt.Errorf("更新limits.conf失败: %v", err)
 		output.WriteString("❌ " + errorMsg.Error() + "\n")
-		f.WriteString("❌ " + errorMsg.Error() + "\n")
+		_, _ = f.WriteString("❌ " + errorMsg.Error() + "\n")
 		return output.String(), errorMsg
 	}
 	successMsg = "✅ 文件描述符限制已优化至 100万"
 	output.WriteString(successMsg + "\n")
-	f.WriteString(successMsg + "\n")
+	_, _ = f.WriteString(successMsg + "\n")
 
 	// 4. BBR 启用
 	bbrMsg := "\n=== BBR 拥塞控制算法启用 ===\n"
 	output.WriteString(bbrMsg)
-	f.WriteString(bbrMsg)
+	_, _ = f.WriteString(bbrMsg)
 
 	// 检查内核版本和 BBR 支持
 	kernelVersion, bbrSupported, err := t.checkBBRSupport()
 	if err != nil {
 		output.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
-		f.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
+		_, _ = f.WriteString("⚠️ 检查 BBR 支持失败: " + err.Error() + "\n")
 	} else {
 		output.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
-		f.WriteString(fmt.Sprintf("✅ 内核版本: %s\n", kernelVersion))
+		_, _ = fmt.Fprintf(f, "✅ 内核版本: %s\n", kernelVersion)
 
 		if bbrSupported {
 			output.WriteString("✅ BBR 支持检测: 支持\n")
-			f.WriteString("✅ BBR 支持检测: 支持\n")
+			_, _ = f.WriteString("✅ BBR 支持检测: 支持\n")
 
 			// 启用 BBR (已在内核配置中设置)
 			successMsg := "✅ BBR 拥塞控制算法已在内核参数中启用"
 			output.WriteString(successMsg + "\n")
-			f.WriteString(successMsg + "\n")
+			_, _ = f.WriteString(successMsg + "\n")
 
 			// 验证 BBR 是否启用
 			ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
@@ -956,11 +956,11 @@ root hard nofile 1000000`
 			cmd = exec.CommandContext(ctx, "sysctl", "net.ipv4.tcp_congestion_control")
 			checkOutput, _ := cmd.Output()
 			output.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
-			f.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
+			_, _ = f.WriteString("✅ 当前拥塞控制算法: " + strings.TrimSpace(string(checkOutput)) + "\n")
 		} else {
 			skipMsg := "ℹ️ BBR 不支持（需要 Linux 内核 4.9+），跳过启用"
 			output.WriteString(skipMsg + "\n")
-			f.WriteString(skipMsg + "\n")
+			_, _ = f.WriteString(skipMsg + "\n")
 		}
 	}
 
@@ -971,7 +971,7 @@ root hard nofile 1000000`
 	logMsg += fmt.Sprintf("总耗时: %v\n", duration)
 	logMsg += fmt.Sprintf("详细日志已保存到: %s\n", logFile)
 	output.WriteString(logMsg)
-	f.WriteString(logMsg)
+	_, _ = f.WriteString(logMsg)
 
 	return output.String(), nil
 }

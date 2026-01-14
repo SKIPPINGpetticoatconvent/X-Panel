@@ -395,7 +395,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(tempClient)
-	json.Unmarshal(clientJson, &clientMap)
+	_ = json.Unmarshal(clientJson, &clientMap)
 
 	// 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
 	// 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了"封禁"的效果。
@@ -431,7 +431,7 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(client)
-	json.Unmarshal(clientJson, &clientMap)
+	_ = json.Unmarshal(clientJson, &clientMap)
 
 	// 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现"解封"。
 	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
@@ -528,7 +528,7 @@ func (j *CheckClientIpJob) hasLimitIp() bool {
 		}
 
 		settings := map[string][]model.Client{}
-		json.Unmarshal([]byte(inbound.Settings), &settings)
+		_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 		clients := settings["clients"]
 
 		for _, client := range clients {
@@ -548,7 +548,7 @@ func (j *CheckClientIpJob) processLogFile() bool {
 
 	accessLogPath, _ := xray.GetAccessLogPath()
 	file, _ := os.Open(accessLogPath)
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	inboundClientIps := make(map[string]map[string]struct{}, 100)
 
@@ -687,7 +687,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 	}
 
 	settings := map[string][]model.Client{}
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 	clients := settings["clients"]
 	shouldCleanLog := false
 	j.disAllowedIps = []string{}

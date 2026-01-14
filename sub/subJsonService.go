@@ -213,7 +213,7 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 
 func (s *SubJsonService) streamData(stream string) map[string]any {
 	streamSettings := make(map[string]any)
-	json.Unmarshal([]byte(stream), &streamSettings)
+	_ = json.Unmarshal([]byte(stream), &streamSettings)
 	if streamSettings == nil {
 		streamSettings = make(map[string]any)
 	}
@@ -341,7 +341,7 @@ func (s *SubJsonService) genServer(inbound *model.Inbound, streamSettings json_u
 
 	if inbound.Protocol == model.Shadowsocks {
 		var inboundSettings map[string]any
-		json.Unmarshal([]byte(inbound.Settings), &inboundSettings)
+		_ = json.Unmarshal([]byte(inbound.Settings), &inboundSettings)
 		method, _ := inboundSettings["method"].(string)
 		serverData[0].Method = method
 

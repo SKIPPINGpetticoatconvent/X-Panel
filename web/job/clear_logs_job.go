@@ -26,7 +26,7 @@ func ensureFileExists(path string) error {
 	if err != nil {
 		return err
 	}
-	file.Close()
+	_ = file.Close()
 	return nil
 }
 

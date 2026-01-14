@@ -146,9 +146,9 @@ func (s *SubService) getFallbackMaster(dest string, streamSettings string) (stri
 	}
 
 	stream := make(map[string]any)
-	json.Unmarshal([]byte(streamSettings), &stream)
+	_ = json.Unmarshal([]byte(streamSettings), &stream)
 	masterStream := make(map[string]any)
-	json.Unmarshal([]byte(inbound.StreamSettings), &masterStream)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &masterStream)
 	stream["security"] = masterStream["security"]
 	stream["tlsSettings"] = masterStream["tlsSettings"]
 	stream["externalProxy"] = masterStream["externalProxy"]
@@ -182,7 +182,7 @@ func (s *SubService) genVmessLink(inbound *model.Inbound, email string) string {
 		"type": "none",
 	}
 	var stream map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &stream)
 	network, _ := stream["network"].(string)
 	obj["net"] = network
 	switch network {
@@ -327,7 +327,7 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 	_ = json.Unmarshal([]byte(inbound.Settings), &vlessSettings)
 
 	var stream map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &stream)
 	clients, err := s.inboundService.GetClients(inbound)
 	if err != nil {
 		return ""
@@ -541,7 +541,7 @@ func (s *SubService) genTrojanLink(inbound *model.Inbound, email string) string 
 		return ""
 	}
 	var stream map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &stream)
 	clients, err := s.inboundService.GetClients(inbound)
 	if err != nil {
 		return ""
@@ -749,14 +749,14 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 		return ""
 	}
 	var stream map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &stream)
 	clients, err := s.inboundService.GetClients(inbound)
 	if err != nil {
 		return ""
 	}
 
 	var settings map[string]any
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 	inboundPassword := settings["password"].(string)
 	method := settings["method"].(string)
 	clientIndex := -1
