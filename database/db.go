@@ -219,7 +219,9 @@ func ValidateSQLiteDB(dbPath string) error {
 	if err != nil {
 		return err
 	}
-	defer sqlDB.Close()
+	defer func() {
+		_ = sqlDB.Close()
+	}()
 
 	var res string
 	if err := gdb.Raw("PRAGMA integrity_check;").Scan(&res).Error; err != nil {
