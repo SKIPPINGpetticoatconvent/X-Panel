@@ -5,6 +5,8 @@ version: "2"
 run:
   tests: false
   timeout: 5m
+  skip-dirs:
+    - test_scripts
 
 linters:
   default: none
@@ -25,6 +27,4 @@ linters:
         settings:
           include-pkgs: "x-ui"
 
-issues:
-  exclude-dirs:
-    - test_scripts
+issues: {}
