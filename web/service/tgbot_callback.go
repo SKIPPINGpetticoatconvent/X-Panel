@@ -3664,7 +3664,9 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 	uuid := client.ID
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+		return "", err
+	}
 
 	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
 	serverNames := realitySettings["serverNames"].([]interface{})

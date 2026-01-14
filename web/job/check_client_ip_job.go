@@ -502,7 +502,7 @@ func (j *CheckClientIpJob) clearAccessLog() {
 
 	file, err := os.Open(accessLogPath)
 	j.checkError(err)
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = io.Copy(logAccessP, file)
 	j.checkError(err)

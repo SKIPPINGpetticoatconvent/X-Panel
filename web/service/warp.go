@@ -56,7 +56,7 @@ func (s *WarpService) GetWarpConfig() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	buffer := &bytes.Buffer{}
 	_, err = buffer.ReadFrom(resp.Body)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *WarpService) RegWarp(secretKey string, publicKey string) (string, error
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	buffer := &bytes.Buffer{}
 	_, err = buffer.ReadFrom(resp.Body)
 	if err != nil {
@@ -142,7 +142,7 @@ func (s *WarpService) SetWarpLicense(license string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	buffer := &bytes.Buffer{}
 	_, err = buffer.ReadFrom(resp.Body)
 	if err != nil {

@@ -621,19 +621,19 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 			// 继续执行，不返回错误
 		} else {
 			output.WriteString("✅ 配置文件已备份为 " + backupFilePath + "\n")
-			f.WriteString("✅ 配置文件已备份为 " + backupFilePath + "\n")
+			_, _ = f.WriteString("✅ 配置文件已备份为 " + backupFilePath + "\n")
 		}
 	}
 
 	if err := sys.AtomicWriteFile(configFilePath, []byte(baseKernelConfig), 0o644); err != nil {
 		errorMsg := fmt.Sprintf("创建基础内核配置文件失败: %v", err)
 		output.WriteString("❌ " + errorMsg + "\n")
-		f.WriteString("❌ " + errorMsg + "\n")
+		_, _ = f.WriteString("❌ " + errorMsg + "\n")
 		return output.String(), fmt.Errorf("%s", errorMsg)
 	}
 	successMsg := "✅ 基础内核参数配置文件已创建"
 	output.WriteString(successMsg + "\n")
-	f.WriteString(successMsg + "\n")
+	_, _ = f.WriteString(successMsg + "\n")
 
 	// 应用基础内核参数
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)

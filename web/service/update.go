@@ -513,7 +513,7 @@ func (s *ServerService) UpdateGeoData() error {
 			if err != nil {
 				return fmt.Errorf("下载失败: %v", err)
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// 检查HTTP状态码
 			if resp.StatusCode != http.StatusOK {
@@ -534,7 +534,7 @@ func (s *ServerService) UpdateGeoData() error {
 			if err != nil {
 				return fmt.Errorf("创建文件 %s 失败: %v", destPath, err)
 			}
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 
 			_, err = io.Copy(file, resp.Body)
 			if err != nil {

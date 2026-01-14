@@ -155,7 +155,7 @@ func (j *CertMonitorJob) cleanupOldCerts(certPath, keyPath string) {
 			// We use Remove, not RemoveAll, to be safe. Only delete if empty (which it should be if we deleted both key and cert)
 			// But since we call this twice (once for key, once for cert), the first time dir won't be empty.
 			// The second time it might be.
-			os.Remove(absDir)
+			_ = os.Remove(absDir)
 			// We ignore error here because if it's not empty, we shouldn't delete it.
 		}
 	}

@@ -237,7 +237,7 @@ func (a *ServerController) importDB(c *gin.Context) {
 		jsonMsg(c, I18nWeb(c, "pages.index.readDatabaseError"), err)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	// Always restart Xray before return
 	defer func() { _ = a.serverService.RestartXrayService() }()
 	defer func() {
