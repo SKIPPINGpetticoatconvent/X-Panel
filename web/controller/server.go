@@ -77,7 +77,7 @@ func (a *ServerController) startTask() {
 		return
 	}
 	c := webServer.GetCron()
-	c.AddFunc("@every 2s", func() {
+	_, _ = c.AddFunc("@every 2s", func() {
 		now := time.Now()
 		if now.Sub(a.lastGetStatusTime) > time.Minute*3 {
 			return
@@ -213,7 +213,7 @@ func (a *ServerController) getDb(c *gin.Context) {
 	filename := "x-ui.db"
 
 	if !isValidFilename(filename) {
-		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("invalid filename"))
+		_ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("invalid filename"))
 		return
 	}
 

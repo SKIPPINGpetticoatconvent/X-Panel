@@ -977,7 +977,7 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 	}
 	needRestart := false
 	if len(oldEmail) > 0 {
-		s.xrayApi.Init(p.GetAPIPort())
+		_ = s.xrayApi.Init(p.GetAPIPort())
 		if oldClients[clientIndex].Enable {
 			err1 := s.xrayApi.RemoveUser(oldInbound.Tag, oldEmail)
 			if err1 == nil {
@@ -1346,7 +1346,7 @@ func (s *InboundService) disableInvalidInbounds(tx *gorm.DB) (bool, int64, error
 		if err != nil {
 			return false, 0, err
 		}
-		s.xrayApi.Init(p.GetAPIPort())
+		_ = s.xrayApi.Init(p.GetAPIPort())
 		for _, tag := range tags {
 			err1 := s.xrayApi.DelInbound(tag)
 			if err1 == nil {
@@ -1385,7 +1385,7 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 		if err != nil {
 			return false, 0, err
 		}
-		s.xrayApi.Init(p.GetAPIPort())
+		_ = s.xrayApi.Init(p.GetAPIPort())
 		for _, result := range results {
 			err1 := s.xrayApi.RemoveUser(result.Tag, result.Email)
 			if err1 == nil {

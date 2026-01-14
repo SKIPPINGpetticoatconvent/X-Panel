@@ -3469,13 +3469,13 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 // 【新增辅助函数】: 生成 Reality 链接
 func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 	clients, _ := settings["clients"].([]interface{})
 	client := clients[0].(map[string]interface{})
 	uuid := client["id"].(string)
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
 	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
 	serverNames := realitySettings["serverNames"].([]interface{})
 	sni := serverNames[0].(string)
