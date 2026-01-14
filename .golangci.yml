@@ -1,12 +1,10 @@
 # golangci-lint v2 configuration
-# Reference: https://golangci-lint.run/docs/plugins/module-plugins/
+# Reference: https://golangci-lint.run/docs/configuration/
 version: "2"
 
 run:
   tests: false
   timeout: 5m
-  skip-dirs:
-    - test_scripts
 
 linters:
   default: none
@@ -17,14 +15,9 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-    - nilaway  # NilAway: Uber's nil pointer detector (via custom plugin)
 
-  settings:
-    custom:
-      nilaway:
-        type: "module"
-        description: Static analysis tool to detect potential nil panics in Go code.
-        settings:
-          include-pkgs: "x-ui"
+  exclusions:
+    paths:
+      - test_scripts
 
 issues: {}
