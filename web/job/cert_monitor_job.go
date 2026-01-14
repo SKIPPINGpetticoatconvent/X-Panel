@@ -179,7 +179,7 @@ func (j *CertMonitorJob) detectPublicIP() (string, error) {
 
 	for _, url := range urls {
 		resp, err := client.Get(url)
-		if err != nil {
+		if err != nil || resp == nil {
 			continue
 		}
 		body, err := io.ReadAll(resp.Body)

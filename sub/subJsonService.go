@@ -29,7 +29,7 @@ type SubJsonService struct {
 }
 
 func NewSubJsonService(fragment string, noises string, mux string, rules string, subService *SubService) *SubJsonService {
-	var configJson map[string]any
+	configJson := make(map[string]any)
 	var defaultOutbounds []json_util.RawMessage
 	json.Unmarshal([]byte(defaultJson), &configJson)
 	if outboundSlices, ok := configJson["outbounds"].([]any); ok {
@@ -212,8 +212,11 @@ func (s *SubJsonService) getConfig(inbound *model.Inbound, client model.Client, 
 }
 
 func (s *SubJsonService) streamData(stream string) map[string]any {
-	var streamSettings map[string]any
+	streamSettings := make(map[string]any)
 	json.Unmarshal([]byte(stream), &streamSettings)
+	if streamSettings == nil {
+		streamSettings = make(map[string]any)
+	}
 	security, _ := streamSettings["security"].(string)
 	switch security {
 	case "tls":

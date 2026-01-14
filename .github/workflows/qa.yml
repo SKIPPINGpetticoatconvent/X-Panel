@@ -43,5 +43,9 @@ jobs:
         chmod +x QA/unit/*.sh
         find QA/e2e -name "*.sh" -exec chmod +x {} \;
 
+    - name: Run NilAway (Deep Static Analysis)
+      run: ./QA/static/run_nilaway.sh
+      continue-on-error: true # Prevent failing CI while we fix initial issues
+
     - name: Run QA Framework
       run: ./QA/run_qa.sh

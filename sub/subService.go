@@ -2,6 +2,7 @@ package sub
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -140,10 +141,13 @@ func (s *SubService) getFallbackMaster(dest string, streamSettings string) (stri
 	if err != nil {
 		return "", 0, "", err
 	}
+	if inbound == nil {
+		return "", 0, "", errors.New("inbound not found")
+	}
 
-	var stream map[string]any
+	stream := make(map[string]any)
 	json.Unmarshal([]byte(streamSettings), &stream)
-	var masterStream map[string]any
+	masterStream := make(map[string]any)
 	json.Unmarshal([]byte(inbound.StreamSettings), &masterStream)
 	stream["security"] = masterStream["security"]
 	stream["tlsSettings"] = masterStream["tlsSettings"]
@@ -262,13 +266,19 @@ func (s *SubService) genVmessLink(inbound *model.Inbound, email string) string {
 		}
 	}
 
-	clients, _ := s.inboundService.GetClients(inbound)
+	clients, err := s.inboundService.GetClients(inbound)
+	if err != nil {
+		return ""
+	}
 	clientIndex := -1
 	for i, client := range clients {
 		if client.Email == email {
 			clientIndex = i
 			break
 		}
+	}
+	if clientIndex == -1 {
+		return ""
 	}
 	obj["id"] = clients[clientIndex].ID
 	obj["scy"] = clients[clientIndex].Security
@@ -318,13 +328,19 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 
 	var stream map[string]any
 	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
-	clients, _ := s.inboundService.GetClients(inbound)
+	clients, err := s.inboundService.GetClients(inbound)
+	if err != nil {
+		return ""
+	}
 	clientIndex := -1
 	for i, client := range clients {
 		if client.Email == email {
 			clientIndex = i
 			break
 		}
+	}
+	if clientIndex == -1 {
+		return ""
 	}
 	uuid := clients[clientIndex].ID
 	port := inbound.Port
@@ -476,7 +492,10 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 			} else {
 				params["security"] = security
 			}
-			url, _ := url.Parse(link)
+			url, err := url.Parse(link)
+			if err != nil {
+				continue
+			}
 			q := url.Query()
 
 			for k, v := range params {
@@ -499,7 +518,10 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 	}
 
 	link := fmt.Sprintf("vless://%s@%s:%d", uuid, address, port)
-	url, _ := url.Parse(link)
+	url, err := url.Parse(link)
+	if err != nil {
+		return ""
+	}
 	q := url.Query()
 
 	for k, v := range params {
@@ -520,13 +542,19 @@ func (s *SubService) genTrojanLink(inbound *model.Inbound, email string) string 
 	}
 	var stream map[string]any
 	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
-	clients, _ := s.inboundService.GetClients(inbound)
+	clients, err := s.inboundService.GetClients(inbound)
+	if err != nil {
+		return ""
+	}
 	clientIndex := -1
 	for i, client := range clients {
 		if client.Email == email {
 			clientIndex = i
 			break
 		}
+	}
+	if clientIndex == -1 {
+		return ""
 	}
 	password := clients[clientIndex].Password
 	port := inbound.Port
@@ -671,7 +699,10 @@ func (s *SubService) genTrojanLink(inbound *model.Inbound, email string) string 
 			} else {
 				params["security"] = security
 			}
-			url, _ := url.Parse(link)
+			url, err := url.Parse(link)
+			if err != nil {
+				continue
+			}
 			q := url.Query()
 
 			for k, v := range params {
@@ -695,7 +726,10 @@ func (s *SubService) genTrojanLink(inbound *model.Inbound, email string) string 
 
 	link := fmt.Sprintf("trojan://%s@%s:%d", password, address, port)
 
-	url, _ := url.Parse(link)
+	url, err := url.Parse(link)
+	if err != nil {
+		return ""
+	}
 	q := url.Query()
 
 	for k, v := range params {
@@ -716,7 +750,10 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 	}
 	var stream map[string]any
 	json.Unmarshal([]byte(inbound.StreamSettings), &stream)
-	clients, _ := s.inboundService.GetClients(inbound)
+	clients, err := s.inboundService.GetClients(inbound)
+	if err != nil {
+		return ""
+	}
 
 	var settings map[string]any
 	json.Unmarshal([]byte(inbound.Settings), &settings)
@@ -728,6 +765,9 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 			clientIndex = i
 			break
 		}
+	}
+	if clientIndex == -1 {
+		return ""
 	}
 	streamNetwork := stream["network"].(string)
 	params := make(map[string]string)
@@ -838,7 +878,10 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 			} else {
 				params["security"] = security
 			}
-			url, _ := url.Parse(link)
+			url, err := url.Parse(link)
+			if err != nil {
+				continue
+			}
 			q := url.Query()
 
 			for k, v := range params {
@@ -861,7 +904,10 @@ func (s *SubService) genShadowsocksLink(inbound *model.Inbound, email string) st
 	}
 
 	link := fmt.Sprintf("ss://%s@%s:%d", base64.StdEncoding.EncodeToString([]byte(encPart)), address, inbound.Port)
-	url, _ := url.Parse(link)
+	url, err := url.Parse(link)
+	if err != nil {
+		return ""
+	}
 	q := url.Query()
 
 	for k, v := range params {

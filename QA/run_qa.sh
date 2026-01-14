@@ -13,6 +13,9 @@ echo "--- 1. Static Analysis ---"
 ./QA/static/golangci-lint
 ./QA/static/config
 
+echo "--- 1.1 Static Analysis (Deep: NilAway) ---"
+./QA/static/run_nilaway.sh
+
 echo "--- 2. Unit Tests ---"
 ./QA/unit/run.sh
 

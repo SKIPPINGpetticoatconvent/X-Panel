@@ -53,6 +53,10 @@ func (a *InboundController) initRouter(g *gin.RouterGroup) {
 
 func (a *InboundController) getInbounds(c *gin.Context) {
 	user := session.GetLoginUser(c)
+	if user == nil {
+		jsonMsg(c, I18nWeb(c, "login.loginFailed"), errors.New("user not logged in"))
+		return
+	}
 	inbounds, err := a.inboundService.GetInbounds(user.Id)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
@@ -323,6 +327,10 @@ func (a *InboundController) importInbound(c *gin.Context) {
 	}
 
 	user := session.GetLoginUser(c)
+	if user == nil {
+		jsonMsg(c, I18nWeb(c, "login.loginFailed"), errors.New("user not logged in"))
+		return
+	}
 	inbound.Id = 0
 	inbound.UserId = user.Id
 	if inbound.Listen == "" || inbound.Listen == "0.0.0.0" || inbound.Listen == "::" || inbound.Listen == "::0" {

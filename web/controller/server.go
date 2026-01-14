@@ -73,6 +73,9 @@ func (a *ServerController) refreshStatus() {
 
 func (a *ServerController) startTask() {
 	webServer := global.GetWebServer()
+	if webServer == nil {
+		return
+	}
 	c := webServer.GetCron()
 	c.AddFunc("@every 2s", func() {
 		now := time.Now()

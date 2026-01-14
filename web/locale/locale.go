@@ -57,7 +57,9 @@ func createTemplateData(params []string, seperator ...string) map[string]any {
 	templateData := make(map[string]any)
 	for _, param := range params {
 		parts := strings.SplitN(param, sep, 2)
-		templateData[parts[0]] = parts[1]
+		if len(parts) == 2 {
+			templateData[parts[0]] = parts[1]
+		}
 	}
 
 	return templateData

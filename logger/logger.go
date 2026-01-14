@@ -233,6 +233,9 @@ func GetLogs(c int, level string) []string {
 	defer logBufferMu.RUnlock()
 
 	var output []string
+	if logBuffer == nil {
+		return output
+	}
 	logLevel, _ := logging.LogLevel(level)
 
 	for i := len(logBuffer) - 1; i >= 0 && len(output) < c; i-- {
