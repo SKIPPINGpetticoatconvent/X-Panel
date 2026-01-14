@@ -8,7 +8,8 @@ description: X-Panel 开发规范
 ## 3.1 Go 语言规范
 
 - 提交前必须执行 `gofmt` 或 `goimports` 格式化。
-- 必须通过 `golangci-lint` 和 `nilaway` 检查，确保无任何错误。
+- **验证要求**: 必须遵守测试规范中的 "强制核心验证流程"。
+- **运行方式**: 本地启动服务进行调试或验证运行时行为时，默认使用 `go run main.go [args...]`。
 - 业务逻辑中禁止直接 panic，必须返回 error。
 - 依赖变更后立即执行 `go mod tidy`。
 

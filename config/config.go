@@ -19,11 +19,11 @@ var name string
 type LogLevel string
 
 const (
-	Debug  LogLevel = "debug"
-	Info   LogLevel = "info"
-	Notice LogLevel = "notice"
-	Warn   LogLevel = "warn"
-	Error  LogLevel = "error"
+	Debug   LogLevel = "debug"
+	Info    LogLevel = "info"
+	Notice  LogLevel = "notice"
+	Warning LogLevel = "warning"
+	Error   LogLevel = "error"
 )
 
 func GetVersion() string {
