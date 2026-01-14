@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"net/http"
+
 	"x-ui/web/service"
+	"x-ui/web/session"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,10 +25,20 @@ func NewAPIController(g *gin.RouterGroup, serverService *service.ServerService) 
 	return a
 }
 
+// checkAPIAuth is a middleware that returns 404 for unauthenticated API requests
+// to hide the existence of API endpoints from unauthorized users
+func (a *APIController) checkAPIAuth(c *gin.Context) {
+	if !session.IsLogin(c) {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	c.Next()
+}
+
 func (a *APIController) initRouter(g *gin.RouterGroup) {
 	// Main API group
 	api := g.Group("/panel/api")
-	api.Use(a.checkLogin)
+	api.Use(a.checkAPIAuth)
 
 	// Inbounds API
 	inbounds := api.Group("/inbounds")
