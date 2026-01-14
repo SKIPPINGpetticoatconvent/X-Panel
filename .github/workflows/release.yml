@@ -50,7 +50,7 @@ jobs:
       - name: Run golangci-lint (with NilAway)
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          version: latest
           args: --timeout=10m
         continue-on-error: true  # NilAway 可能有 false positives，暂时不阻塞
 
