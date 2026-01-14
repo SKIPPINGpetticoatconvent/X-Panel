@@ -27,15 +27,14 @@ echo ""
 echo -e "${green}---------->>>>>目前服务器的操作系统为: $release${plain}"
 
 arch() {
-    case "$(uname -m)" in
-        x86_64 | x64 | amd64 ) echo 'amd64' ;;
-        i*86 | x86 ) echo '386' ;;
-        armv8* | armv8 | arm64 | aarch64 ) echo 'arm64' ;;
-        armv7* | armv7 | arm ) echo 'armv7' ;;
-        armv6* | armv6 ) echo 'armv6' ;;
-        armv5* | armv5 ) echo 'armv5' ;;
-        s390x) echo 's390x' ;;
-        *) echo -e "${green}不支持的CPU架构! ${plain}" && rm -f install.sh && exit 1 ;;
+    case $(uname -m) in
+    x86_64) echo 'amd64' ;;
+    aarch64 | arm64 | armv8* ) echo 'arm64' ;;
+    armv7* | arm ) echo 'armv7' ;;
+    armv6* ) echo 'armv6' ;;
+    armv5* ) echo 'armv5' ;;
+    s390x) echo 's390x' ;;
+    *) echo 'unknown' ;;
     esac
 }
 
@@ -172,6 +171,145 @@ gen_random_string() {
 }
 
 # This function will be called when user installed x-ui out of security
+install_acme() {
+    if command -v ~/.acme.sh/acme.sh &>/dev/null; then
+        return 0
+    fi
+    curl -s https://get.acme.sh | sh
+    if [ $? -ne 0 ]; then
+        echo -e "${red}Install acme.sh failed${plain}"
+        return 1
+    fi
+    return 0
+}
+
+setup_ip_certificate() {
+    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
+    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    
+    # 获取服务器IP
+    local server_ip=$(curl -s4m8 https://api.ipify.org -k)
+    if [[ -z "${server_ip}" ]]; then
+        server_ip=$(curl -s4m8 https://ip.sb -k)
+    fi
+     
+    if [[ -z "${server_ip}" ]]; then
+        echo -e "${red}无法获取服务器IPv4地址${plain}"
+        return 1
+    fi
+
+    echo -e "${green}检测到服务器IPv4: ${server_ip}${plain}"
+
+    # 询问 IPv6
+    local ipv6_addr=""
+    read -rp "您是否有 IPv6 地址需要包含？(留空跳过): " ipv6_addr
+    ipv6_addr="${ipv6_addr// /}"
+
+    # 检查 acme.sh
+    if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
+        echo -e "${yellow}未找到 acme.sh，正在安装...${plain}"
+        install_acme
+        if [ $? -ne 0 ]; then
+            echo -e "${red}acme.sh 安装失败${plain}"
+            return 1
+        fi
+    fi
+
+    # 检查 socat
+    if ! command -v socat &>/dev/null; then
+        echo -e "${yellow}未找到 socat，正在安装...${plain}"
+        case "${release}" in 
+        ubuntu | debian | armbian) 
+            apt-get update && apt-get install socat -y 
+            ;; 
+        centos | rhel | almalinux | rocky | ol) 
+            yum -y update && yum -y install socat 
+            ;; 
+        fedora | amzn | virtuozzo) 
+            dnf -y update && dnf -y install socat 
+            ;; 
+        arch | manjaro | parch) 
+            pacman -Sy --noconfirm socat 
+            ;; 
+        apk)
+            apk add socat
+            ;;
+        *) 
+            echo -e "${red}不支持的系统，请手动安装 socat。${plain}" 
+            ;; 
+        esac
+    fi
+
+    local certPath="/root/cert/ip"
+    mkdir -p "$certPath"
+
+    local domain_args="-d ${server_ip}"
+    if [[ -n "$ipv6_addr" ]]; then
+        domain_args="${domain_args} -d ${ipv6_addr}"
+    fi
+
+    local WebPort=80
+    echo -e "${yellow}将使用端口 ${WebPort} 申请证书...${plain}"
+
+    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+    ~/.acme.sh/acme.sh --issue \
+        ${domain_args} \
+        --standalone \
+        --server letsencrypt \
+        --certificate-profile shortlived \
+        --days 6 \
+        --httpport ${WebPort} \
+        --force
+
+    if [ $? -ne 0 ]; then
+        echo -e "${red}证书申请失败，请确保80端口已开放${plain}"
+        return 1
+    fi
+
+    local reloadCmd="systemctl restart x-ui 2>/dev/null || rc-service x-ui restart 2>/dev/null || true"
+
+    ~/.acme.sh/acme.sh --installcert -d ${server_ip} \
+        --key-file "${certPath}/privkey.pem" \
+        --fullchain-file "${certPath}/fullchain.pem" \
+        --reloadcmd "${reloadCmd}" 2>&1 || true
+
+    if [[ ! -f "${certPath}/fullchain.pem" || ! -f "${certPath}/privkey.pem" ]]; then
+        echo -e "${red}安装后未找到证书文件${plain}"
+        return 1
+    fi
+
+    # 启用自动更新
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade >/dev/null 2>&1
+    chmod 600 ${certPath}/privkey.pem 2>/dev/null
+    chmod 644 ${certPath}/fullchain.pem 2>/dev/null
+
+    # 配置面板
+    local webCertFile="${certPath}/fullchain.pem"
+    local webKeyFile="${certPath}/privkey.pem"
+
+    if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
+        /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+        echo -e "${green}面板证书路径已配置${plain}"
+        echo -e "${green}访问地址: https://${server_ip}:${existing_port}${existing_webBasePath}${plain}"
+        systemctl restart x-ui
+    else
+        echo -e "${red}配置面板证书失败${plain}"
+    fi
+}
+
+prompt_and_setup_ssl() {
+    echo -e "${yellow}------------------------------------------------${plain}"
+    echo -e "${green}是否为服务器IP自动申请 SSL 证书? (Let's Encrypt)${plain}"
+    echo -e "${yellow}注意：需要占用80端口进行验证${plain}"
+    read -p "请输入 [y/n] (默认n): " choice
+    if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+        setup_ip_certificate
+    else
+        echo -e "${yellow}已跳过 SSL 证书设置${plain}"
+    fi
+    echo -e "${yellow}------------------------------------------------${plain}"
+}
+
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
@@ -193,6 +331,7 @@ config_after_install() {
         /usr/local/x-ui/x-ui setting -webBasePath ${config_webBasePath}
         echo -e "${yellow}面板登录访问路径设置成功!${plain}"
         echo ""
+        prompt_and_setup_ssl
     else
         echo ""
         sleep 1
@@ -375,8 +514,9 @@ ssh_forwarding
     systemctl start x-ui
     systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
-    ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
-    ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
+    echo -e "${yellow}检测到服务器IPv4: ${ipv4}${plain}"
+    local ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
+    echo -e "${yellow}检测到服务器IPv6: ${ipv6}${plain}"
     systemctl start warp-go >/dev/null 2>&1
     wg-quick up wgcf >/dev/null 2>&1
 
@@ -422,7 +562,7 @@ ssh_forwarding
 sudo timedatectl set-timezone Asia/Shanghai
 
 install_base
-install_x-ui $1
+install_x-ui "$1"
 echo ""
 echo -e "----------------------------------------------"
 sleep 4

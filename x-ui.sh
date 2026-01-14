@@ -113,7 +113,7 @@ iplimit_log_path="${log_folder}/3xipl.log"
 iplimit_banned_log_path="${log_folder}/3xipl-banned.log"
 
 confirm() {
-    if [[ $# > 1 ]]; then
+    if [[ $# -gt 1 ]]; then
         echo && read -p "$1 [Default $2]: " temp
         if [[ "${temp}" == "" ]]; then
             temp=$2
@@ -835,6 +835,7 @@ ssl_cert_issue_main() {
     echo -e "${green}\t3.${plain} 强制更新证书" 
     echo -e "${green}\t4.${plain} 显示现有域名" 
     echo -e "${green}\t5.${plain} 为面板设置证书路径" 
+    echo -e "${green}\t6.${plain} 为服务器IP申请证书 (Let's Encrypt)" 
     echo -e "${green}\t0.${plain} 返回主菜单" 
  
     read -rp "请选择一个选项：" choice 
@@ -928,7 +929,17 @@ ssl_cert_issue_main() {
         fi 
         ssl_cert_issue_main 
         ;; 
- 
+    6)
+        echo -e "${yellow}自动申请服务器IP证书 (Let's Encrypt)${plain}"
+        echo -e "证书有效期约6天，脚本已配置自动续期"
+        echo -e "${yellow}注意: 必须确保80端口开放且未被占用${plain}"
+        read -p "是否继续? [y/n]: " choice
+        if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+            ssl_cert_issue_for_ip
+        fi
+        ssl_cert_issue_main
+        ;;
+
     *) 
         echo -e "${red}无效选项。请选择有效的数字。${plain}\n" 
         ssl_cert_issue_main 
@@ -999,7 +1010,7 @@ ssl_cert_issue() {
      else 
          LOGI "您的域名现在可以签发证书了..." 
      fi 
- 
+
      # 为证书创建一个目录 
      certPath="/root/cert/${domain}" 
      if [ ! -d "$certPath" ]; then 
@@ -1008,7 +1019,7 @@ ssl_cert_issue() {
          rm -rf "$certPath" 
          mkdir -p "$certPath" 
      fi 
- 
+
      # 获取独立服务器的端口号 
      local WebPort=80 
      read -rp "请选择要使用的端口 (默认为 80): " WebPort 
@@ -1017,7 +1028,7 @@ ssl_cert_issue() {
          WebPort=80 
      fi 
      LOGI "将使用端口: ${WebPort} 来签发证书。请确保此端口已开放。" 
- 
+
      # 签发证书 
      ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt 
      ~/.acme.sh/acme.sh --issue -d ${domain} --listen-v6 --standalone --httpport ${WebPort} --force 
@@ -1028,25 +1039,25 @@ ssl_cert_issue() {
      else 
          LOGE "签发证书成功，正在安装证书..." 
      fi 
- 
-     reloadCmd="x-ui restart" 
- 
-     LOGI "ACME 的默认 --reloadcmd 是: ${yellow}x-ui restart" 
+
+     reloadCmd="systemctl restart x-ui" 
+
+     LOGI "ACME 的默认 --reloadcmd 是: ${yellow}systemctl restart x-ui" 
      LOGI "此命令将在每次证书签发和续订时运行。" 
      read -rp "您想修改 ACME 的 --reloadcmd 吗? (y/n): " setReloadcmd 
      if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then 
-         echo -e "\n${green}\t1.${plain} 预设: systemctl reload nginx ; x-ui restart" 
+         echo -e "\n${green}\t1.${plain} 预设: systemctl reload nginx ; systemctl restart x-ui" 
          echo -e "${green}\t2.${plain} 输入您自己的命令" 
          echo -e "${green}\t0.${plain} 保留默认的 reloadcmd" 
          read -rp "请选择一个选项: " choice 
          case "$choice" in 
          1) 
-             LOGI "Reloadcmd 是: systemctl reload nginx ; x-ui restart" 
-             reloadCmd="systemctl reload nginx ; x-ui restart" 
+             LOGI "Reloadcmd 是: systemctl reload nginx ; systemctl restart x-ui" 
+             reloadCmd="systemctl reload nginx ; systemctl restart x-ui" 
              ;; 
          2)  
-             LOGD "建议将 x-ui restart 放在末尾，这样如果其他服务失败，它不会引发错误" 
-             read -rp "请输入您的 reloadcmd (例如: systemctl reload nginx ; x-ui restart): " reloadCmd 
+             LOGD "建议将 systemctl restart x-ui 放在末尾，这样如果其他服务失败，它不会引发错误" 
+             read -rp "请输入您的 reloadcmd (例如: systemctl reload nginx ; systemctl restart x-ui): " reloadCmd 
              LOGI "您的 reloadcmd 是: ${reloadCmd}" 
              ;; 
          *) 
@@ -1068,18 +1079,22 @@ ssl_cert_issue() {
      else 
          LOGI "安装证书成功，正在启用自动续订..." 
      fi 
- 
+
      # 启用自动续订
      ~/.acme.sh/acme.sh --upgrade --auto-upgrade 
      if [ $? -ne 0 ]; then 
          LOGE "自动续订失败，证书详情：" 
          ls -lah cert/* 
-         chmod 755 $certPath/* 
+         # Secure permissions
+         chmod 600 $certPath/privkey.pem 2>/dev/null
+         chmod 644 $certPath/fullchain.pem 2>/dev/null
          exit 1 
      else 
          LOGI "自动续订成功，证书详情：" 
          ls -lah cert/* 
-         chmod 755 $certPath/* 
+         # Secure permissions
+         chmod 600 $certPath/privkey.pem 2>/dev/null
+         chmod 644 $certPath/fullchain.pem 2>/dev/null
      fi 
  
      # 成功安装证书后提示用户设置面板路径
@@ -1256,154 +1271,133 @@ ssl_cert_issue_CF() {
      fi 
  } 
 
-ssl_cert_issue_ip() {
+ssl_cert_issue_for_ip() {
+    LOGI "开始为服务器IP自动申请SSL证书..."
+    LOGI "使用 Let's Encrypt shortlived 配置文件 (有效期约6天，自动续期)"
+
     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
-    
-    # Check for openssl
-    if ! command -v openssl &>/dev/null; then
-        echo -e "${red}Error: openssl is not installed.${plain}"
-        echo -e "${yellow}Installing openssl...${plain}"
-        case "${release}" in
-            ubuntu|debian|armbian)
-                apt-get update && apt-get install -y openssl
-                ;;
-            centos|rhel|almalinux|rocky|ol)
-                yum install -y openssl
-                ;;
-            fedora|amzn|virtuozzo)
-                dnf install -y openssl
-                ;;
-            arch|manjaro|parch)
-                pacman -S --noconfirm openssl
-                ;;
-            alpine)
-                apk add --no-cache openssl
-                ;;
-            opensuse-tumbleweed)
-                zypper install -y openssl
-                ;;
-            *)
-                echo -e "${red}Unsupported OS. Please install openssl manually.${plain}"
-                return 1
-                ;;
+
+    # 获取服务器IP
+    local server_ip=$(curl -s4m8 https://api.ipify.org -k)
+    if [[ -z "${server_ip}" ]]; then
+        server_ip=$(curl -s4m8 https://ip.sb -k)
+    fi
+     
+    if [[ -z "${server_ip}" ]]; then
+        LOGE "无法获取服务器IPv4地址，请检查网络连接"
+        return 1
+    fi
+
+    LOGI "检测到服务器IPv4: ${server_ip}"
+
+    # 询问 IPv6
+    local ipv6_addr=""
+    read -rp "您是否有 IPv6 地址需要包含？(留空跳过): " ipv6_addr
+    ipv6_addr="${ipv6_addr// /}"
+
+    # 检查 acme.sh
+    if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
+        LOGI "未找到 acme.sh，正在安装..."
+        install_acme
+        if [ $? -ne 0 ]; then
+            LOGE "acme.sh 安装失败"
+            return 1
+        fi
+    fi
+
+    # 检查 socat
+    if ! command -v socat &>/dev/null; then
+        LOGI "未找到 socat，正在安装..."
+        case "${release}" in 
+        ubuntu | debian | armbian) 
+            apt update && apt install socat -y 
+            ;; 
+        centos | rhel | almalinux | rocky | ol) 
+            yum -y update && yum -y install socat 
+            ;; 
+        fedora | amzn | virtuozzo) 
+            dnf -y update && dnf -y install socat 
+            ;; 
+        arch | manjaro | parch) 
+            pacman -Sy --noconfirm socat 
+            ;; 
+        apk)
+            apk add socat
+            ;;
+        *) 
+            LOGE "不支持的系统，请手动安装 socat。" 
+            ;; 
         esac
     fi
 
-    echo -e "${green}Generating IP Certificate...${plain}"
+    # 创建证书目录
+    local certPath="/root/cert/ip"
+    mkdir -p "$certPath"
 
-    local ip=""
-    local ipv4_regex="^([0-9]{1,3}\.){3}[0-9]{1,3}$"
-    # Basic robust IPv6 regex or at least strict enough to simple HTML
-    local ipv6_regex="^([0-9a-fA-F]{1,4}:){1,7}:?([0-9a-fA-F]{1,4}:?){0,6}$"
+    # 构建域名参数
+    local domain_args="-d ${server_ip}"
+    if [[ -n "$ipv6_addr" ]]; then
+        domain_args="${domain_args} -d ${ipv6_addr}"
+        LOGI "包含 IPv6 地址: ${ipv6_addr}"
+    fi
 
-    # Function to validate IP
-    validate_ip() {
-        local target=$1
-        if [[ -z "$target" ]]; then return 1; fi
-        
-        if [[ "$target" =~ $ipv4_regex ]]; then
-            return 0
-        fi
-        # Check IPv6
-        if [[ "$target" =~ $ipv6_regex ]]; then
-            return 0
-        fi
+    local WebPort=80
+    LOGI "将使用端口 ${WebPort} 申请证书..."
+    LOGI "请确保端口 ${WebPort} 已开放且未被占用..."
+
+    # 申请证书
+    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+    ~/.acme.sh/acme.sh --issue \
+        ${domain_args} \
+        --standalone \
+        --server letsencrypt \
+        --certificate-profile shortlived \
+        --days 6 \
+        --httpport ${WebPort} \
+        --force
+
+    if [ $? -ne 0 ]; then
+        LOGE "证书申请失败"
+        LOGE "请确保80端口已开放且可从公网访问"
         return 1
-    }
-
-    # Sources
-    local ipv4_sources=(
-        "https://api.ipify.org"
-        "https://ifconfig.me"
-        "https://checkip.amazonaws.com"
-        "https://ip.sb"
-    )
-    
-    local ipv6_sources=(
-        "https://api64.ipify.org"
-        "https://ifconfig.co"
-    )
-
-    # Try IPv4 Sources
-    for source in "${ipv4_sources[@]}"; do
-        local temp_ip=$(curl -s4m5 "$source" -k)
-        # trim whitespace
-        temp_ip=$(echo "$temp_ip" | xargs)
-        if validate_ip "$temp_ip"; then
-            ip="$temp_ip"
-            break
-        fi
-    done
-
-    # If no IPv4, Try IPv6 Sources
-    if [[ -z "$ip" ]]; then
-        for source in "${ipv6_sources[@]}"; do
-            local temp_ip=$(curl -s6m5 "$source" -k)
-            temp_ip=$(echo "$temp_ip" | xargs)
-            if validate_ip "$temp_ip"; then
-                ip="$temp_ip"
-                break
-            fi
-        done
-    fi
-
-    if [[ -z "$ip" ]]; then
-        echo -e "${red}Could not automatically detect a valid public IP.${plain}"
-        echo -e "${yellow}All automatic detection methods failed.${plain}"
-        read -p "Please enter your IP manually: " manual_ip
-        if [[ -z "$manual_ip" ]]; then
-            echo -e "${red}IP cannot be empty.${plain}"
-            return 1
-        fi
-        # Basic validation for manual input
-        if ! validate_ip "$manual_ip"; then
-             echo -e "${red}Invalid IP format entered.${plain}"
-             return 1
-        fi
-        ip="$manual_ip"
-    fi
-
-    echo -e "${green}Detected IP: ${ip}${plain}"
-    
-    read -rp "Is this IP correct? [y/n] " confirm
-    if [[ "$confirm" == "n" || "$confirm" == "N" ]]; then
-        read -rp "Please enter your IP: " manual_ip
-        if [[ -z "$manual_ip" ]]; then
-            echo -e "${red}IP cannot be empty.${plain}"
-            return 1
-        fi
-        if ! validate_ip "$manual_ip"; then
-             echo -e "${red}Invalid IP format entered.${plain}"
-             return 1
-        fi
-        ip="$manual_ip"
-        echo -e "${green}Using IP: ${ip}${plain}"
-    fi
-    
-    local cert_dir="/root/cert/${ip}"
-    mkdir -p "$cert_dir"
-
-    local key_file="${cert_dir}/privkey.pem"
-    local cert_file="${cert_dir}/fullchain.pem"
-
-    # Generate Self-Signed Cert with IP SAN
-    openssl req -x509 -newkey rsa:2048 -keyout "$key_file" -out "$cert_file" -days 3650 -nodes -subj "/CN=${ip}" -addext "subjectAltName=IP:${ip}"
-
-    if [[ $? -eq 0 ]]; then
-        echo -e "${green}Certificate generated successfully at ${cert_dir}${plain}"
-        
-        /usr/local/x-ui/x-ui cert -webCert "$cert_file" -webCertKey "$key_file"
-        
-        echo -e "${green}Certificate applied to x-ui settings.${plain}"
-        echo -e "${green}Login URL: https://${ip}:${existing_port}${existing_webBasePath}${plain}"
-        
-        restart
     else
-        echo -e "${red}Failed to generate certificate.${plain}"
+        LOGI "IP证书申请成功"
     fi
-    
-    show_menu
+
+    local reloadCmd="systemctl restart x-ui 2>/dev/null || rc-service x-ui restart 2>/dev/null || true"
+
+    # 安装证书
+    ~/.acme.sh/acme.sh --installcert -d ${server_ip} \
+        --key-file "${certPath}/privkey.pem" \
+        --fullchain-file "${certPath}/fullchain.pem" \
+        --reloadcmd "${reloadCmd}" 2>&1 || true
+
+    if [[ ! -f "${certPath}/fullchain.pem" || ! -f "${certPath}/privkey.pem" ]]; then
+        LOGE "安装后未找到证书文件"
+        return 1
+    fi
+
+    LOGI "证书文件安装成功"
+
+    # 启用自动更新
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade >/dev/null 2>&1
+    chmod 600 ${certPath}/privkey.pem 2>/dev/null
+    chmod 644 ${certPath}/fullchain.pem 2>/dev/null
+
+    # 配置面板
+    local webCertFile="${certPath}/fullchain.pem"
+    local webKeyFile="${certPath}/privkey.pem"
+
+    if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
+        /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+        LOGI "面板证书路径已配置"
+        echo -e "${green}访问地址: https://${server_ip}:${existing_port}${existing_webBasePath}${plain}"
+        
+        systemctl restart x-ui
+    else
+        LOGE "配置面板证书失败"
+    fi
 }
 
 
@@ -1436,117 +1430,9 @@ warp_cloudflare() {
 
 # --------- 【订阅转换】模块 ---------- 
 subconverter() {
-echo ""
-echo -e "${green}==============================================="
-echo -e "〔订阅转换〕一键部署"
-echo -e "1. 自动安装/部署Nginx"
-echo -e "2. 自动调用面板的证书"
-echo -e "3. 自动部署sublink服务"
-echo -e "4. 自动配置Nginx反向代理"
-echo -e "5. 可直观在前端页面配置订阅"
-echo -e "作者：〔X-Panel面板〕专属定制"
-echo -e "===============================================${plain}"
-echo ""
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
-
-    if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
-    echo -e "${green}面板已安装证书采用SSL保护${plain}"
-    echo ""
-    domain=$(basename "$(dirname "$existing_cert")")
-    echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
-    sleep 3
-    echo ""
-else
-    echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
-    echo ""
-    echo -e "${green}------->>>>且不能安装sublink订阅转换服务<<<<-------${plain}"
-    echo ""
-    sleep 5
-    exit 1
-fi
-
-# --------- 安装/部署sublink服务 ----------
-
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
-
-
-# --------- 安装 Nginx ----------
-if ! command -v nginx &>/dev/null; then
-    echo -e "${yellow}-------------->>>>>>>>未检测到 Nginx，正在安装...${plain}"
-    apt update && apt install -y nginx
-    systemctl enable nginx
-    systemctl start nginx
-else
-    echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
-fi
-
-# --------- 拷贝X-Panel已有证书到 Nginx ----------
-mkdir -p /etc/nginx/ssl
-acme_path="/root/.acme.sh/${domain}_ecc"
-
-cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
-cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
-
-
-# --------- 配置 Nginx 反向代理 ----------
-NGINX_CONF="/etc/nginx/conf.d/sublink.conf"
-cat > $NGINX_CONF <<EOF
-server {
-    listen 15268 ssl http2;
-    server_name ${domain};
-
-    # 证书路径（从 acme.sh 复制到 /etc/nginx/ssl/ 下）
-    ssl_certificate     /etc/nginx/ssl/${domain}.cer;
-    ssl_certificate_key /etc/nginx/ssl/${domain}.key;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    }
-}
-EOF
-
-# 重载 nginx，让新证书生效
-sleep 1
-systemctl reload nginx
-sleep 2
-
-# --------- 使用 sed 替换 ExecStart 行，添加启动参数 ----------
-sudo sed -i "/^ExecStart=/ s|$| run --port 8000|" "/etc/systemd/system/sublink.service"
-# 重新加载 systemd 守护进程
-sudo systemctl daemon-reload
-# 重启 sublink 服务
-sudo systemctl restart sublink
-
-
-# --------- 开放防火墙端口 ----------
-echo ""
-echo -e "${yellow}请务必手动放行${plain}${red} 8000 和 15268 ${yellow}端口！！${plain}"
-echo ""
-
-# --------- 完成提示 ----------
-echo ""
-echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
-echo ""
-echo -e "${green}登录用户名：admin，密码：123456，请进后台自行修改${plain}"
-echo ""
-echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
-echo ""
-echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制以上地址${plain}"
-echo ""
-echo -e "${green}接下来流程会进入〔X-Panel面板〕x-ui 菜单项${plain}"
-sleep 8
-echo ""
-# --------- 返回菜单 ----------
-show_menu
+    echo -e "${red}此功能已移除${plain}"
+    sleep 2
+    show_menu
 }
 
 run_speedtest() {
@@ -1946,8 +1832,8 @@ show_menu() {
   ${green}22.${plain} 启用 BBR 
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
-  ${green}25.${plain} 安装订阅转换 
-  ${green}26.${plain} 申请 IP 证书
+  ${green}25.${plain} 安装订阅转换 (已移除)
+  ${green}26.${plain} 申请 IP 证书 (自签/废弃)
 ——————————————————————
 
 
@@ -2011,7 +1897,9 @@ show_menu() {
         check_install && disable
         ;;
     26)
-        ssl_cert_issue_ip
+        echo -e "${red}此功能已移动至 [18. SSL 证书管理] -> [6. 为服务器IP申请证书]${plain}"
+        read -p "按回车键返回..."
+        show_menu
         ;;
     18)
         ssl_cert_issue_main
@@ -2043,7 +1931,7 @@ show_menu() {
     esac
 }
 
-if [[ $# > 0 ]]; then
+if [[ $# -gt 0 ]]; then
     case $1 in
     "start")
         check_install 0 && start 0

@@ -16,6 +16,9 @@ echo "--- 1. Static Analysis ---"
 echo "--- 1.1 Static Analysis (Deep: NilAway) ---"
 ./QA/static/run_nilaway.sh
 
+echo "--- 1.2 Static Analysis (Shellcheck) ---"
+./QA/static/run_shellcheck.sh
+
 echo "--- 2. Unit Tests ---"
 ./QA/unit/run.sh
 
