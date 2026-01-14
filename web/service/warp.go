@@ -17,7 +17,7 @@ type WarpService struct {
 }
 
 func (s *WarpService) GetWarpData() (string, error) {
-	warp, err := s.SettingService.GetWarp()
+	warp, err := s.GetWarp()
 	if err != nil {
 		return "", err
 	}
@@ -25,7 +25,7 @@ func (s *WarpService) GetWarpData() (string, error) {
 }
 
 func (s *WarpService) DelWarpData() error {
-	err := s.SettingService.SetWarp("")
+	err := s.SetWarp("")
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func (s *WarpService) DelWarpData() error {
 
 func (s *WarpService) GetWarpConfig() (string, error) {
 	var warpData map[string]string
-	warp, err := s.SettingService.GetWarp()
+	warp, err := s.GetWarp()
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +110,7 @@ func (s *WarpService) RegWarp(secretKey string, publicKey string) (string, error
 	warpData := fmt.Sprintf("{\n  \"access_token\": \"%s\",\n  \"device_id\": \"%s\",", token, deviceId)
 	warpData += fmt.Sprintf("\n  \"license_key\": \"%s\",\n  \"private_key\": \"%s\"\n}", license, secretKey)
 
-	s.SettingService.SetWarp(warpData)
+	_ = s.SetWarp(warpData)
 
 	result := fmt.Sprintf("{\n  \"data\": %s,\n  \"config\": %s\n}", warpData, buffer.String())
 

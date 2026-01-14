@@ -58,7 +58,7 @@ type keepAliveListener struct {
 // Accept 方法：拦截连接并设置 Keep-Alive
 func (l keepAliveListener) Accept() (net.Conn, error) {
 	// 1. 接受底层 TCP 连接
-	tc, err := l.TCPListener.AcceptTCP()
+	tc, err := l.AcceptTCP()
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (s *Server) startTask() {
 		logger.Warning("start xray failed:", err)
 	}
 	// Check whether xray is running every second
-	s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob())
+	_, _ = s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob())
 
 	// Check if xray needs to be restarted every 30 seconds
 	_, _ = s.cron.AddFunc("@daily", func() {
@@ -319,7 +319,7 @@ func (s *Server) startTask() {
 	}()
 
 	// check client ips from log file every day
-	s.cron.AddJob("@daily", job.NewClearLogsJob())
+	_, _ = s.cron.AddJob("@daily", job.NewClearLogsJob())
 
 	// Make a traffic condition every day, 8:30
 	var entry cron.EntryID

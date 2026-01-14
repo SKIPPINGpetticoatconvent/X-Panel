@@ -539,7 +539,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 
 	needRestart := false
-	s.xrayApi.Init(p.GetAPIPort())
+	_ = s.xrayApi.Init(p.GetAPIPort())
 	if s.xrayApi.DelInbound(tag) == nil {
 		logger.Debug("Old inbound deleted by api:", tag)
 	}
@@ -703,10 +703,10 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 	}()
 
 	needRestart := false
-	s.xrayApi.Init(p.GetAPIPort())
+	_ = s.xrayApi.Init(p.GetAPIPort())
 	for _, client := range clients {
 		if len(client.Email) > 0 {
-			s.AddClientStat(tx, data.Id, &client)
+			_ = s.AddClientStat(tx, data.Id, &client)
 			if client.Enable {
 				cipher := ""
 				if oldInbound.Protocol == "shadowsocks" {
@@ -816,7 +816,7 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 			return false, err
 		}
 		if needApiDel && notDepleted {
-			s.xrayApi.Init(p.GetAPIPort())
+			_ = s.xrayApi.Init(p.GetAPIPort())
 			err1 := s.xrayApi.RemoveUser(oldInbound.Tag, email)
 			if err1 == nil {
 				logger.Debug("Client deleted by api:", email)
@@ -2267,7 +2267,7 @@ func (s *InboundService) MigrationRequirements() {
 	}
 	for inbound_index := range inbounds {
 		settings := map[string]any{}
-		json.Unmarshal([]byte(inbounds[inbound_index].Settings), &settings)
+		_ = json.Unmarshal([]byte(inbounds[inbound_index].Settings), &settings)
 		clients, ok := settings["clients"].([]any)
 		if ok {
 			// Fix Client configuration problems
@@ -2282,7 +2282,7 @@ func (s *InboundService) MigrationRequirements() {
 
 				// Convert string tgId to int64
 				if _, ok := c["tgId"]; ok {
-					var tgId any = c["tgId"]
+					tgId := c["tgId"]
 					if tgIdStr, ok2 := tgId.(string); ok2 {
 						tgIdInt64, err := strconv.ParseInt(strings.ReplaceAll(tgIdStr, " ", ""), 10, 64)
 						if err == nil {
@@ -2329,7 +2329,7 @@ func (s *InboundService) MigrationRequirements() {
 				var count int64
 				tx.Model(xray.ClientTraffic{}).Where("email = ?", modelClient.Email).Count(&count)
 				if count == 0 {
-					s.AddClientStat(tx, inbounds[inbound_index].Id, &modelClient)
+					_ = s.AddClientStat(tx, inbounds[inbound_index].Id, &modelClient)
 				}
 			}
 		}
@@ -2360,7 +2360,7 @@ func (s *InboundService) MigrationRequirements() {
 	for _, ep := range externalProxy {
 		var reverses any
 		var stream map[string]any
-		json.Unmarshal(ep.StreamSettings, &stream)
+		_ = json.Unmarshal(ep.StreamSettings, &stream)
 		if tlsSettings, ok := stream["tlsSettings"].(map[string]any); ok {
 			if settings, ok := tlsSettings["settings"].(map[string]any); ok {
 				if domains, ok := settings["domains"].([]any); ok {

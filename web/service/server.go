@@ -129,7 +129,7 @@ func getPublicIP(url string) string {
 	if err != nil {
 		return "N/A"
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Don't retry if access is blocked or region-restricted
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusUnavailableForLegalReasons {
@@ -519,12 +519,12 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 		return "", fmt.Errorf("下载失败，GitHub返回状态码: %d", resp.StatusCode)
 	}
 
-	os.Remove(fileName)
+	_ = os.Remove(fileName)
 	file, err := os.Create(fileName)
 	if err != nil {
 		return "", fmt.Errorf("创建文件失败: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
@@ -563,14 +563,14 @@ func (s *ServerService) UpdateXray(version string) error {
 				logger.Error("下载Xray失败:", err)
 				updateErr = fmt.Errorf("下载Xray失败: %v", err)
 			} else {
-				defer os.Remove(zipFileName)
+				defer func() { _ = os.Remove(zipFileName) }()
 
 				zipFile, err := os.Open(zipFileName)
 				if err != nil {
 					logger.Error("打开zip文件失败:", err)
 					updateErr = fmt.Errorf("打开zip文件失败: %v", err)
 				} else {
-					defer zipFile.Close()
+					defer func() { _ = zipFile.Close() }()
 
 					stat, err := zipFile.Stat()
 					if err != nil {
@@ -588,8 +588,8 @@ func (s *ServerService) UpdateXray(version string) error {
 								if err != nil {
 									return err
 								}
-								defer zipFile.Close()
-								os.MkdirAll(filepath.Dir(fileName), 0o755)
+								defer func() { _ = zipFile.Close() }()
+								_ = os.MkdirAll(filepath.Dir(fileName), 0o755)
 								os.Remove(fileName)
 								file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
 								if err != nil {
@@ -846,7 +846,7 @@ func (s *ServerService) ImportDB(file multipart.File) error {
 	}
 
 	// Stop Xray
-	s.StopXrayService()
+	_ = s.StopXrayService()
 
 	// Backup the current database for fallback
 	fallbackPath := fmt.Sprintf("%s.backup", config.GetDBPath())

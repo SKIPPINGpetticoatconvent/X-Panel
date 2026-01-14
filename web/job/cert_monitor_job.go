@@ -232,7 +232,7 @@ func (j *CertMonitorJob) generateSelfSignedIPCert(ip string) (string, string, er
 		return "", "", err
 	}
 	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	certOut.Close()
+	_ = certOut.Close()
 
 	keyPath := filepath.Join(certDir, "privkey.pem")
 	keyOut, err := os.Create(keyPath)
@@ -240,13 +240,13 @@ func (j *CertMonitorJob) generateSelfSignedIPCert(ip string) (string, string, er
 		return "", "", err
 	}
 	_ = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	keyOut.Close()
+	_ = keyOut.Close()
 
 	return certPath, keyPath, nil
 }
 
 func (j *CertMonitorJob) sendAlert(msg string) {
 	if j.telegramService != nil {
-		j.telegramService.SendMessage(msg)
+		_ = j.telegramService.SendMessage(msg)
 	}
 }

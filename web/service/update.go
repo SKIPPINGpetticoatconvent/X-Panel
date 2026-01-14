@@ -113,7 +113,7 @@ func updateXUICommandScript() error {
 		return fmt.Errorf("创建临时脚本文件失败: %v", err)
 	}
 	defer os.Remove(tempScript.Name())
-	defer tempScript.Close()
+	defer func() { _ = tempScript.Close() }()
 
 	client := &http.Client{Timeout: 30 * time.Second}
 	req, err := http.NewRequest("GET", scriptURL, nil)
@@ -158,7 +158,7 @@ func updateXUICommandScript() error {
 	if err != nil {
 		// 如果移动失败，尝试恢复备份
 		if _, err2 := os.Stat(backupPath); err2 == nil {
-			exec.Command("mv", "-f", backupPath, "/usr/bin/x-ui").Run()
+			_ = exec.Command("mv", "-f", backupPath, "/usr/bin/x-ui").Run()
 			logger.Warning("脚本更新失败，已恢复备份")
 		}
 		return fmt.Errorf("更新 x-ui 脚本失败: %v", err)
@@ -218,7 +218,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("创建gzip读取器失败: %v", err)
 	}
-	defer gzipReader.Close()
+	defer func() { _ = gzipReader.Close() }()
 
 	tarReader := tar.NewReader(gzipReader)
 	var fileNames []string
@@ -287,7 +287,7 @@ func replacePanelBinary(newBinPath string) error {
 	if err != nil {
 		// 如果替换失败，尝试恢复备份
 		if _, err2 := os.Stat(bakPath); err2 == nil {
-			os.Rename(bakPath, binPath)
+			_ = os.Rename(bakPath, binPath)
 			logger.Warning("替换失败，已恢复备份文件")
 		}
 		return fmt.Errorf("替换二进制文件失败: %v", err)

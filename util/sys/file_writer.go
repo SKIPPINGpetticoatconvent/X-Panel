@@ -25,13 +25,13 @@ func BackupFile(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("打开源文件失败: %v", err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.Create(backupPath)
 	if err != nil {
 		return fmt.Errorf("创建备份文件失败: %v", err)
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	_, err = io.Copy(dstFile, srcFile)
 	if err != nil {
@@ -51,7 +51,7 @@ func BackupFile(filePath string) error {
 func AtomicWriteFile(filePath string, content []byte, perm os.FileMode) error {
 	// 确保目标目录存在
 	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("创建目录失败: %v", err)
 	}
 
@@ -61,23 +61,23 @@ func AtomicWriteFile(filePath string, content []byte, perm os.FileMode) error {
 		return fmt.Errorf("创建临时文件失败: %v", err)
 	}
 	tempPath := tempFile.Name()
-	defer os.Remove(tempPath) // 无论成功失败都清理临时文件
+	defer func() { _ = os.Remove(tempPath) }() // 无论成功失败都清理临时文件
 
 	// 写入内容
 	if _, err := tempFile.Write(content); err != nil {
-		tempFile.Close()
+		_ = tempFile.Close()
 		return fmt.Errorf("写入临时文件失败: %v", err)
 	}
 
 	// 确保内容写入磁盘
 	if err := tempFile.Sync(); err != nil {
-		tempFile.Close()
+		_ = tempFile.Close()
 		return fmt.Errorf("同步临时文件失败: %v", err)
 	}
 
 	// 设置正确的权限
 	if err := tempFile.Chmod(perm); err != nil {
-		tempFile.Close()
+		_ = tempFile.Close()
 		return fmt.Errorf("设置文件权限失败: %v", err)
 	}
 
@@ -102,7 +102,7 @@ func WriteConfigBlock(filePath, startMarker, endMarker, content string) error {
 	var existingContent string
 	if file, err := os.Open(filePath); err == nil {
 		data, readErr := io.ReadAll(file)
-		file.Close()
+		_ = file.Close()
 		if readErr != nil {
 			return fmt.Errorf("读取现有文件失败: %v", readErr)
 		}
@@ -162,7 +162,7 @@ func WriteConfigBlock(filePath, startMarker, endMarker, content string) error {
 	newContent := strings.Join(newLines, "\n")
 
 	// 获取现有文件的权限，如果不存在则使用默认权限
-	var perm os.FileMode = 0644
+	var perm os.FileMode = 0o644
 	if info, err := os.Stat(filePath); err == nil {
 		perm = info.Mode().Perm()
 	}

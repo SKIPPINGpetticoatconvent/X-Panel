@@ -49,7 +49,7 @@ func InitLocalizer(i18nFS embed.FS, settingService SettingService) error {
 }
 
 func createTemplateData(params []string, seperator ...string) map[string]any {
-	var sep string = "=="
+	sep := "=="
 	if len(seperator) > 0 {
 		sep = seperator[0]
 	}

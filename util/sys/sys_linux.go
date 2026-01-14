@@ -15,7 +15,7 @@ func getLinesNum(filename string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	sum := 0
 	buf := make([]byte, 8192)

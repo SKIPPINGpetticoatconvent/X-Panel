@@ -37,7 +37,7 @@ func (t *Tgbot) SetHostname() {
 
 func (t *Tgbot) Stop() {
 	if botHandler != nil {
-		botHandler.Stop()
+		_ = botHandler.Stop()
 	}
 	logger.Info("Stop Telegram receiver ...")
 	isRunning = false
@@ -104,7 +104,7 @@ func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 	if err := database.AddLinkHistory(history); err != nil {
 		logger.Warningf("保存链接历史到数据库失败: %v", err)
 	}
-	database.Checkpoint()
+	_ = database.Checkpoint()
 }
 
 // 新增一个公共方法 (大写 G) 来包装私有方法
@@ -308,15 +308,16 @@ func (t *Tgbot) copyAllLinks(chatId int64) error {
 			}
 
 			if security, ok := streamSettings["security"].(string); ok {
-				if security == "reality" {
+				switch security {
+				case "reality":
 					if network, ok := streamSettings["network"].(string); ok && network == "xhttp" {
 						link, linkErr = t.generateXhttpRealityLinkWithClient(inbound, client)
 					} else {
 						link, linkErr = t.generateRealityLinkWithClient(inbound, client)
 					}
-				} else if security == "tls" {
+				case "tls":
 					link, linkErr = t.generateTlsLinkWithClient(inbound, client)
-				} else {
+				default:
 					// 对于其他协议，尝试生成通用链接
 					link, linkErr = t.generateGenericLink(inbound, client)
 				}
@@ -485,7 +486,7 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 	if err != nil {
 		return output.String(), fmt.Errorf("创建日志文件失败: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// 记录开始时间
 	startTime := time.Now()
@@ -530,23 +531,23 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 			_, _ = f.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
 		} else {
 			output.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
-			f.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
+			_, _ = f.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
 		}
 	} else {
 		// 模块未加载，尝试加载
 		output.WriteString("ℹ️ nf_conntrack 模块未加载，正在尝试加载...\n")
-		f.WriteString("ℹ️ nf_conntrack 模块未加载，正在尝试加载...\n")
+		_, _ = f.WriteString("ℹ️ nf_conntrack 模块未加载，正在尝试加载...\n")
 
 		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 
 		cmd = exec.CommandContext(ctx, "bash", "-c", "modprobe nf_conntrack")
 		modprobeOutput, err := cmd.CombinedOutput()
-		f.Write(modprobeOutput)
+		_, _ = f.Write(modprobeOutput)
 		if err != nil {
 			errorMsg := fmt.Sprintf("modprobe 命令执行失败: %v, 输出: %s", err, string(modprobeOutput))
 			output.WriteString("⚠️ " + errorMsg + "，将跳过相关参数\n")
-			f.WriteString("⚠️ " + errorMsg + "，将跳过相关参数\n")
+			_, _ = f.WriteString("⚠️ " + errorMsg + "，将跳过相关参数\n")
 		} else {
 			output.WriteString("✅ nf_conntrack 模块加载成功\n")
 			f.WriteString("✅ nf_conntrack 模块加载成功\n")
@@ -640,7 +641,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 
 	cmd = exec.CommandContext(ctx, "sysctl", "-p", configFilePath)
 	sysctlOutput, err := cmd.CombinedOutput()
-	f.Write(sysctlOutput)
+	_, _ = f.Write(sysctlOutput)
 	if err != nil {
 		errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 		output.WriteString("❌ " + errorMsg + "\n")
@@ -666,7 +667,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 
 			cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-nf-conntrack-optimize.conf")
 			sysctlOutput, err := cmd.CombinedOutput()
-			f.Write(sysctlOutput)
+			_, _ = f.Write(sysctlOutput)
 			if err != nil {
 				errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 				output.WriteString("⚠️ " + errorMsg + "，跳过相关参数\n")
@@ -746,7 +747,7 @@ net.ipv4.tcp_congestion_control = bbr
 
 				cmd = exec.CommandContext(ctx, "sysctl", "-p", "/etc/sysctl.d/99-bbr-optimize.conf")
 				sysctlOutput, err := cmd.CombinedOutput()
-				f.Write(sysctlOutput)
+				_, _ = f.Write(sysctlOutput)
 				if err != nil {
 					errorMsg := fmt.Sprintf("sysctl 命令执行失败: %v, 输出: %s", err, string(sysctlOutput))
 					output.WriteString("❌ " + errorMsg + "\n")
@@ -820,7 +821,7 @@ func (t *Tgbot) executeGenericOptimizationInternal() (string, error) {
 	if err != nil {
 		return output.String(), fmt.Errorf("创建日志文件失败: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// 记录开始时间
 	startTime := time.Now()

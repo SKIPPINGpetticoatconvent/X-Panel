@@ -279,7 +279,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	// 确保 LogForwarder 被激活
 	if t.settingService != nil {
 		logForwarder := NewLogForwarder(t.settingService, t)
-		go logForwarder.Start()
+		go func() { _ = logForwarder.Start() }()
 	}
 
 	return nil

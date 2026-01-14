@@ -57,7 +57,6 @@ func (s *UserService) CheckUser(username string, password string, twoFactorCode 
 
 	if twoFactorEnable {
 		twoFactorToken, err := s.settingService.GetTwoFactorToken()
-
 		if err != nil {
 			logger.Warning("check two factor token err:", err)
 			return nil
@@ -74,7 +73,6 @@ func (s *UserService) CheckUser(username string, password string, twoFactorCode 
 func (s *UserService) UpdateUser(id int, username string, password string) error {
 	db := database.GetDB()
 	hashedPassword, err := crypto.HashPasswordAsBcrypt(password)
-
 	if err != nil {
 		return err
 	}
@@ -85,8 +83,8 @@ func (s *UserService) UpdateUser(id int, username string, password string) error
 	}
 
 	if twoFactorEnable {
-		s.settingService.SetTwoFactorEnable(false)
-		s.settingService.SetTwoFactorToken("")
+		_ = s.settingService.SetTwoFactorEnable(false)
+		_ = s.settingService.SetTwoFactorToken("")
 	}
 
 	return db.Model(model.User{}).

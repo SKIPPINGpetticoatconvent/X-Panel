@@ -1,6 +1,6 @@
 # golangci-lint v2 configuration
 # Reference: https://golangci-lint.run/docs/configuration/
-version: "2"
+
 
 run:
   tests: false

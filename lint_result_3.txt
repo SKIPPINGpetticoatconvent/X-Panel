@@ -1,0 +1,33 @@
+web/service/inbound.go:980:17: Error return value of `s.xrayApi.Init` is not checked (errcheck)
+		s.xrayApi.Init(p.GetAPIPort())
+		              ^
+web/service/inbound.go:1349:17: Error return value of `s.xrayApi.Init` is not checked (errcheck)
+		s.xrayApi.Init(p.GetAPIPort())
+		              ^
+web/service/inbound.go:1388:17: Error return value of `s.xrayApi.Init` is not checked (errcheck)
+		s.xrayApi.Init(p.GetAPIPort())
+		              ^
+web/service/tgbot_callback.go:3472:16: Error return value of `json.Unmarshal` is not checked (errcheck)
+	json.Unmarshal([]byte(inbound.Settings), &settings)
+	              ^
+web/service/tgbot_callback.go:3478:16: Error return value of `json.Unmarshal` is not checked (errcheck)
+	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	              ^
+web/service/tgbot_callback.go:3523:16: Error return value of `json.Unmarshal` is not checked (errcheck)
+	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	              ^
+web/service/tgbot_utils.go:553:17: Error return value of `f.WriteString` is not checked (errcheck)
+			f.WriteString("✅ nf_conntrack 模块加载成功\n")
+			             ^
+web/service/tgbot_utils.go:566:18: Error return value of `f.WriteString` is not checked (errcheck)
+				f.WriteString("✅ nf_conntrack 路径存在，支持相关参数\n")
+				             ^
+web/service/tgbot_utils.go:569:18: Error return value of `f.WriteString` is not checked (errcheck)
+				f.WriteString("⚠️ nf_conntrack 路径不存在，将跳过相关参数\n")
+				             ^
+web/controller/server.go:80:11: Error return value of `c.AddFunc` is not checked (errcheck)
+	c.AddFunc("@every 2s", func() {
+	         ^
+web/controller/server.go:216:19: Error return value of `c.AbortWithError` is not checked (errcheck)
+		c.AbortWithError(http.StatusBadRequest, fmt.Errorf("invalid filename"))
+		                ^

@@ -25,56 +25,56 @@ import (
 var xrayTemplateConfig string
 
 var defaultValueMap = map[string]string{
-	"xrayTemplateConfig": xrayTemplateConfig,
-	"webListen":          "",
-	"webDomain":          "",
-	"webPort":            "13688",
-	"webCertFile":        "",
-	"webKeyFile":         "",
-	"secret":             random.Seq(32),
-	"webBasePath":        "/",
-	"sessionMaxAge":      "360",
-	"pageSize":           "50",
-	"expireDiff":         "0",
-	"trafficDiff":        "0",
-	"remarkModel":        "-ieo",
-	"timeLocation":       "Local",
-	"tgBotEnable":        "false",
-	"tgBotToken":         "",
-	"tgBotProxy":         "",
-	"tgBotAPIServer":     "",
-	"tgBotChatId":        "",
-	"tgRunTime":          "@daily",
-	"tgBotBackup":        "false",
-	"tgBotLoginNotify":   "true",
+	"xrayTemplateConfig":  xrayTemplateConfig,
+	"webListen":           "",
+	"webDomain":           "",
+	"webPort":             "13688",
+	"webCertFile":         "",
+	"webKeyFile":          "",
+	"secret":              random.Seq(32),
+	"webBasePath":         "/",
+	"sessionMaxAge":       "360",
+	"pageSize":            "50",
+	"expireDiff":          "0",
+	"trafficDiff":         "0",
+	"remarkModel":         "-ieo",
+	"timeLocation":        "Local",
+	"tgBotEnable":         "false",
+	"tgBotToken":          "",
+	"tgBotProxy":          "",
+	"tgBotAPIServer":      "",
+	"tgBotChatId":         "",
+	"tgRunTime":           "@daily",
+	"tgBotBackup":         "false",
+	"tgBotLoginNotify":    "true",
 	"tgLogForwardEnabled": "true",
-	"tgLogLevel":         "warn",
-	"localLogEnabled": "false",
-	"logStreamerEnabled": "false",
-	"tgCpu":              "80",
-	"tgLang":             "zh-CN",
-	"twoFactorEnable":    "false",
-	"twoFactorToken":     "",
-	"subEnable":          "false",
-	"subTitle":           "",
-	"subListen":          "",
-	"subPort":            "13788",
-	"subPath":            "/sub/",
-	"subDomain":          "",
-	"subCertFile":        "",
-	"subKeyFile":         "",
-	"subUpdates":         "12",
-	"subEncrypt":         "true",
-	"subShowInfo":        "true",
-	"subURI":             "",
-	"subJsonPath":        "/json/",
-	"subJsonURI":         "",
-	"subJsonFragment":    "",
-	"subJsonNoises":      "",
-	"subJsonMux":         "",
-	"subJsonRules":       "",
-	"datepicker":         "gregorian",
-	"warp":               "",
+	"tgLogLevel":          "warn",
+	"localLogEnabled":     "false",
+	"logStreamerEnabled":  "false",
+	"tgCpu":               "80",
+	"tgLang":              "zh-CN",
+	"twoFactorEnable":     "false",
+	"twoFactorToken":      "",
+	"subEnable":           "false",
+	"subTitle":            "",
+	"subListen":           "",
+	"subPort":             "13788",
+	"subPath":             "/sub/",
+	"subDomain":           "",
+	"subCertFile":         "",
+	"subKeyFile":          "",
+	"subUpdates":          "12",
+	"subEncrypt":          "true",
+	"subShowInfo":         "true",
+	"subURI":              "",
+	"subJsonPath":         "/json/",
+	"subJsonURI":          "",
+	"subJsonFragment":     "",
+	"subJsonNoises":       "",
+	"subJsonMux":          "",
+	"subJsonRules":        "",
+	"datepicker":          "gregorian",
+	"warp":                "",
 }
 
 type SettingService struct{}
@@ -264,7 +264,7 @@ func (s *SettingService) GetTgBotToken() (string, error) {
 // ValidateTgBotToken validates Telegram bot token format
 func (s *SettingService) ValidateTgBotToken(token string) error {
 	if token == "" {
-		return fmt.Errorf("Telegram bot token cannot be empty")
+		return fmt.Errorf("telegram bot token cannot be empty")
 	}
 
 	parts := strings.Split(token, ":")
@@ -313,12 +313,12 @@ func (s *SettingService) GetTgBotChatId() (string, error) {
 // ValidateTgBotChatId validates Telegram bot chat ID format
 func (s *SettingService) ValidateTgBotChatId(chatId string) error {
 	if chatId == "" {
-		return fmt.Errorf("Telegram bot chat ID cannot be empty")
+		return fmt.Errorf("telegram bot chat ID cannot be empty")
 	}
 
 	trimmed := strings.TrimSpace(chatId)
 	if trimmed == "" {
-		return fmt.Errorf("Telegram bot chat ID cannot be empty or whitespace")
+		return fmt.Errorf("telegram bot chat ID cannot be empty or whitespace")
 	}
 
 	// Check each chat ID in comma-separated list
@@ -726,20 +726,20 @@ func (s *SettingService) GetDefaultXrayConfig() (any, error) {
 func (s *SettingService) GetDefaultSettings(host string) (any, error) {
 	type settingFunc func() (any, error)
 	settings := map[string]settingFunc{
-		"expireDiff":    func() (any, error) { return s.GetExpireDiff() },
-		"trafficDiff":   func() (any, error) { return s.GetTrafficDiff() },
-		"pageSize":      func() (any, error) { return s.GetPageSize() },
-		"defaultCert":   func() (any, error) { return s.GetCertFile() },
-		"defaultKey":    func() (any, error) { return s.GetKeyFile() },
-		"tgBotEnable":   func() (any, error) { return s.GetTgbotEnabled() },
+		"expireDiff":         func() (any, error) { return s.GetExpireDiff() },
+		"trafficDiff":        func() (any, error) { return s.GetTrafficDiff() },
+		"pageSize":           func() (any, error) { return s.GetPageSize() },
+		"defaultCert":        func() (any, error) { return s.GetCertFile() },
+		"defaultKey":         func() (any, error) { return s.GetKeyFile() },
+		"tgBotEnable":        func() (any, error) { return s.GetTgbotEnabled() },
 		"logStreamerEnabled": func() (any, error) { return s.GetLogStreamerEnabled() },
-		"subEnable":     func() (any, error) { return s.GetSubEnable() },
-		"subTitle":      func() (any, error) { return s.GetSubTitle() },
-		"subURI":        func() (any, error) { return s.GetSubURI() },
-		"subJsonURI":    func() (any, error) { return s.GetSubJsonURI() },
-		"remarkModel":   func() (any, error) { return s.GetRemarkModel() },
-		"datepicker":    func() (any, error) { return s.GetDatepicker() },
-		"ipLimitEnable": func() (any, error) { return s.GetIpLimitEnable() },
+		"subEnable":          func() (any, error) { return s.GetSubEnable() },
+		"subTitle":           func() (any, error) { return s.GetSubTitle() },
+		"subURI":             func() (any, error) { return s.GetSubURI() },
+		"subJsonURI":         func() (any, error) { return s.GetSubJsonURI() },
+		"remarkModel":        func() (any, error) { return s.GetRemarkModel() },
+		"datepicker":         func() (any, error) { return s.GetDatepicker() },
+		"ipLimitEnable":      func() (any, error) { return s.GetIpLimitEnable() },
 	}
 
 	result := make(map[string]any)

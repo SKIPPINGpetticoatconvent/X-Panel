@@ -125,7 +125,7 @@ func (s *Server) Start() (err error) {
 	// This is an anonymous function, no function name
 	defer func() {
 		if err != nil {
-			s.Stop()
+			_ = s.Stop()
 		}
 	}()
 
@@ -194,7 +194,7 @@ func (s *Server) Start() (err error) {
 	}
 
 	go func() {
-		s.httpServer.Serve(listener)
+		_ = s.httpServer.Serve(listener)
 	}()
 
 	return nil

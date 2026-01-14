@@ -363,7 +363,7 @@ func (lf *LogForwarder) UpdateConfig() {
 	}
 
 	// 获取新的级别
-	var newLevel logging.Level = logging.WARNING
+	newLevel := logging.WARNING
 	if levelStr, err := lf.settingService.GetTgLogLevel(); err == nil {
 		switch levelStr {
 		case "error":
@@ -396,7 +396,7 @@ func (lf *LogForwarder) UpdateConfig() {
 			_ = lf.Start()
 		} else {
 			logger.Info("禁用日志转发功能")
-			lf.Stop()
+			_ = lf.Stop()
 		}
 	}
 }

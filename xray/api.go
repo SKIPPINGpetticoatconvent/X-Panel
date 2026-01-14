@@ -57,7 +57,7 @@ func (x *XrayAPI) Init(apiPort int) error {
 
 func (x *XrayAPI) Close() {
 	if x.grpcClient != nil {
-		x.grpcClient.Close()
+		_ = x.grpcClient.Close()
 	}
 	x.HandlerServiceClient = nil
 	x.StatsServiceClient = nil
@@ -157,7 +157,6 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 			},
 		}),
 	})
-
 	// 〔中文注释〕: (修改点) 增加更详细的错误日志，方便排查问题。
 	if err != nil {
 		emailStr, _ := user["email"].(string)

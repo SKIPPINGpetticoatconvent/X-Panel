@@ -2928,16 +2928,17 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	var newInbound *model.Inbound
 	var ufwWarning string // 新增变量来捕获警告信息
 
-	if configType == "reality" {
+	switch configType {
+	case "reality":
 		newInbound, ufwWarning, err = t.buildRealityInbound("")
-	} else if configType == "xhttp_reality" {
+	case "xhttp_reality":
 		newInbound, ufwWarning, err = t.buildXhttpRealityInbound("")
-	} else if configType == "tls" {
+	case "tls":
 		newInbound, ufwWarning, err = t.buildTlsInbound()
-	} else if configType == "switch_vision" { // 【新增】: 处理开发中的选项
+	case "switch_vision": // 【新增】: 处理开发中的选项
 		t.SendMsgToTgbot(chatId, "此协议组合的功能还在开发中 ............暂不可用...")
 		return // 【中文注释】: 直接返回，不执行任何创建操作
-	} else {
+	default:
 		err = errors.New("未知的配置类型")
 	}
 
@@ -3007,7 +3008,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 
 	port := 10000 + common.RandomInt(55535-10000+1)
 
-	var ufwWarning string = "" // NEW
+	ufwWarning := "" // NEW
 
 	// 【新增功能】：调用 firewalld 放行端口
 	if err := t.openPortWithFirewalld(port); err != nil {
@@ -3167,7 +3168,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	allowedPorts := []int{2053, 2083, 2087, 2096, 8443}
 	port := allowedPorts[common.RandomInt(len(allowedPorts))]
 
-	var ufwWarning string = "" // NEW
+	ufwWarning := "" // NEW
 
 	// 【新增功能】：调用 firewalld 放行端口
 	if err := t.openPortWithFirewalld(port); err != nil {
@@ -3382,11 +3383,12 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 	var dbLinkType string // 【新增】: 用于存入数据库的类型标识
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	_ = json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
 
 	// --- 1. 确定链接和协议类型 ---
 	if security, ok := streamSettings["security"].(string); ok {
-		if security == "reality" {
+		switch security {
+		case "reality":
 			if network, ok := streamSettings["network"].(string); ok && network == "xhttp" {
 				link, err = t.generateXhttpRealityLink(inbound)
 				linkType = "VLESS + XHTTP + Reality"
@@ -3396,11 +3398,11 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 				linkType = "VLESS + TCP + Reality"
 				dbLinkType = "vless_reality"
 			}
-		} else if security == "tls" {
+		case "tls":
 			link, err = t.generateTlsLink(inbound)
 			linkType = "Vless Encryption + XHTTP + TLS" // 协议类型
 			dbLinkType = "vless_tls_encryption"
-		} else {
+		default:
 			return fmt.Errorf("未知的入站 security 类型: %s", security)
 		}
 	} else {

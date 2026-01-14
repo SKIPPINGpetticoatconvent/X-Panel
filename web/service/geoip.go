@@ -129,7 +129,7 @@ func (g *GeoIPService) fetchFromMainAPI() (*GeoIPLocation, error) {
 		logger.Errorf("主 GeoIP API 请求失败: %v", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		logger.Errorf("主 GeoIP API 返回非 200 状态码: %d", resp.StatusCode)
@@ -156,7 +156,7 @@ func (g *GeoIPService) fetchFromBackupAPI() (*GeoIPLocation, error) {
 		logger.Errorf("备用 GeoIP API 请求失败: %v", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		logger.Errorf("备用 GeoIP API 返回非 200 状态码: %d", resp.StatusCode)

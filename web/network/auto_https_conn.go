@@ -16,12 +16,12 @@ import (
 type AutoHttpsConn struct {
 	net.Conn
 
-	firstBuf    []byte
-	bufStart    int
-	bufLen      int
-	isHttps     bool
-	initialized bool
-	closed      bool
+	firstBuf []byte
+	bufStart int
+	bufLen   int
+	isHttps  bool
+
+	closed bool
 
 	readRequestOnce sync.Once
 }
@@ -38,8 +38,8 @@ func (c *AutoHttpsConn) detectProtocol() bool {
 	}
 
 	// 设置读取超时，避免阻塞 - 增加超时时间以提高兼容性
-	c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	defer c.Conn.SetReadDeadline(time.Time{})
+	_ = c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	defer func() { _ = c.Conn.SetReadDeadline(time.Time{}) }()
 
 	// 尝试读取少量数据来判断协议
 	c.firstBuf = make([]byte, 512) // 减小缓冲区大小
@@ -119,7 +119,7 @@ func (c *AutoHttpsConn) sendRedirect(request *http.Request) {
 
 	// 延迟关闭连接，给客户端时间接收响应 - 增加延迟时间
 	time.Sleep(500 * time.Millisecond)
-	c.Close()
+	_ = c.Close()
 	logger.Info("HTTP request redirected to HTTPS")
 }
 
@@ -147,9 +147,9 @@ func (c *AutoHttpsConn) Read(buf []byte) (int, error) {
 
 	// 缓冲区数据已全部读取，从底层连接读取
 	// 设置超时避免阻塞 - 与协议检测超时保持一致
-	c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	_ = c.Conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	n, err := c.Conn.Read(buf)
-	c.Conn.SetReadDeadline(time.Time{})
+	_ = c.Conn.SetReadDeadline(time.Time{})
 
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -168,7 +168,7 @@ func (c *AutoHttpsConn) Write(buf []byte) (int, error) {
 	}
 
 	// 设置写超时 - 增加超时时间提高兼容性
-	c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	defer func() { _ = c.Conn.SetWriteDeadline(time.Time{}) }()
 
 	return c.Conn.Write(buf)

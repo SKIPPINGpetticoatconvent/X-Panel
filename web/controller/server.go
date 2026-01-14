@@ -239,7 +239,7 @@ func (a *ServerController) importDB(c *gin.Context) {
 	}
 	defer file.Close()
 	// Always restart Xray before return
-	defer a.serverService.RestartXrayService()
+	defer func() { _ = a.serverService.RestartXrayService() }()
 	defer func() {
 		a.lastGetStatusTime = time.Now()
 	}()
