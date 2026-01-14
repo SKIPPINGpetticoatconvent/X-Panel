@@ -2762,7 +2762,7 @@ func (t *Tgbot) sendBanLogs(chatId int64, dt bool) {
 		} else {
 			logger.Warning("IPLimitBannedPrevLog file is empty, not uploading.")
 		}
-		file.Close()
+		_ = file.Close()
 	} else {
 		logger.Error("Error in opening IPLimitBannedPrevLog file for backup: ", err)
 	}
@@ -2783,7 +2783,7 @@ func (t *Tgbot) sendBanLogs(chatId int64, dt bool) {
 		} else {
 			logger.Warning("IPLimitBannedLog file is empty, not uploading.")
 		}
-		file.Close()
+		_ = file.Close()
 	} else {
 		logger.Error("Error in opening IPLimitBannedLog file for backup: ", err)
 	}
@@ -3589,11 +3589,15 @@ func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.C
 	uuid := client.ID
 
 	var settings map[string]any
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+		return "", err
+	}
 	encryption := settings["encryption"].(string)
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+		return "", err
+	}
 	tlsSettings := streamSettings["tlsSettings"].(map[string]interface{})
 	sni := tlsSettings["serverName"].(string)
 
@@ -3610,13 +3614,17 @@ func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.C
 // 生成 VLESS + XHTTP + Reality 链接的函数
 func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
-	json.Unmarshal([]byte(inbound.Settings), &settings)
+	if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+		return "", err
+	}
 	clients, _ := settings["clients"].([]interface{})
 	client := clients[0].(map[string]interface{})
 	uuid := client["id"].(string)
 
 	var streamSettings map[string]any
-	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+	if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+		return "", err
+	}
 
 	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
 	serverNames := realitySettings["serverNames"].([]interface{})

@@ -47,7 +47,7 @@ func (s *ServerService) GetPanelLatestVersion() (string, error) {
 		logger.Warning("Failed to fetch X-Panel latest version from GitHub:", err)
 		return "", fmt.Errorf("无法获取X-Panel最新版本信息，请检查网络连接: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 检查HTTP状态码
 	if resp.StatusCode != http.StatusOK {
@@ -126,7 +126,7 @@ func updateXUICommandScript() error {
 	if err != nil {
 		return fmt.Errorf("脚本下载失败: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("脚本下载失败，状态码: %d", resp.StatusCode)
@@ -195,7 +195,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("下载失败: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("下载失败，状态码: %d", resp.StatusCode)
@@ -212,7 +212,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("打开临时文件失败: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
@@ -243,14 +243,14 @@ func downloadAndExtractPanel(url string) (string, error) {
 			_, err = io.Copy(tempBin, tarReader)
 			_ = tempBin.Close()
 			if err != nil {
-				os.Remove(tempBin.Name())
+				_ = os.Remove(tempBin.Name())
 				return "", fmt.Errorf("提取二进制文件失败: %v", err)
 			}
 
 			// 设置执行权限
 			err = os.Chmod(tempBin.Name(), 0o755)
 			if err != nil {
-				os.Remove(tempBin.Name())
+				_ = os.Remove(tempBin.Name())
 				return "", fmt.Errorf("设置临时二进制文件执行权限失败: %v", err)
 			}
 
@@ -433,7 +433,7 @@ func (s *ServerService) UpdatePanel(version string) error {
 
 		// 清理临时文件
 		if tempBinPath != "" {
-			os.Remove(tempBinPath)
+			_ = os.Remove(tempBinPath)
 		}
 
 		// 9. 发送结果通知

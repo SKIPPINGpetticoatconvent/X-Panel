@@ -187,7 +187,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 		trimmedID := strings.TrimSpace(tgBotID)
 		if trimmedID == "" {
 			logger.Warning("Telegram bot chat ID is empty after trimming")
-			return fmt.Errorf("Telegram bot chat ID cannot be empty")
+			return fmt.Errorf("telegram bot chat ID cannot be empty")
 		}
 
 		for _, adminID := range strings.Split(trimmedID, ",") {
@@ -218,7 +218,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 		}
 	} else {
 		logger.Warning("Telegram bot chat ID is not configured")
-		return fmt.Errorf("Telegram bot chat ID must be configured")
+		return fmt.Errorf("telegram bot chat ID must be configured")
 	}
 
 	// Get Telegram bot proxy URL

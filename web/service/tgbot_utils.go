@@ -605,7 +605,7 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 
 	// 1.1. 先应用基础内核参数（不包含 nf_conntrack）
 	output.WriteString("正在应用基础内核参数...\n")
-	f.WriteString("正在应用基础内核参数...\n")
+	_, _ = f.WriteString("正在应用基础内核参数...\n")
 
 	// 检查配置文件是否存在，如果存在则备份
 	configFilePath := "/etc/sysctl.d/99-1c1g-optimize-base.conf"
@@ -613,11 +613,11 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30`
 	if _, err := os.Stat(configFilePath); err == nil {
 		// 文件存在，进行备份
 		output.WriteString("检测到现有配置文件，正在备份...\n")
-		f.WriteString("检测到现有配置文件，正在备份...\n")
+		_, _ = f.WriteString("检测到现有配置文件，正在备份...\n")
 		if err := os.Rename(configFilePath, backupFilePath); err != nil {
 			errorMsg := fmt.Sprintf("备份配置文件失败: %v", err)
 			output.WriteString("⚠️ " + errorMsg + "\n")
-			f.WriteString("⚠️ " + errorMsg + "\n")
+			_, _ = f.WriteString("⚠️ " + errorMsg + "\n")
 			// 继续执行，不返回错误
 		} else {
 			output.WriteString("✅ 配置文件已备份为 " + backupFilePath + "\n")
