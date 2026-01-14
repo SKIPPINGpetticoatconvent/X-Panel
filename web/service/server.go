@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -937,6 +938,35 @@ func (s *ServerService) ImportDB(file multipart.File) error {
 	return nil
 }
 
+// IsValidGeofileName validates that the filename is safe for geofile operations.
+// It checks for path traversal attempts and ensures the filename contains only safe characters.
+func (s *ServerService) IsValidGeofileName(filename string) bool {
+	if filename == "" {
+		return false
+	}
+
+	// Check for path traversal attempts
+	if strings.Contains(filename, "..") {
+		return false
+	}
+
+	// Check for path separators (both forward and backward slash)
+	if strings.ContainsAny(filename, `/\`) {
+		return false
+	}
+
+	// Check for absolute path indicators
+	if filepath.IsAbs(filename) {
+		return false
+	}
+
+	// Additional security: only allow alphanumeric, dots, underscores, and hyphens
+	// This is stricter than the general filename regex
+	validGeofilePattern := `^[a-zA-Z0-9._-]+\.dat$`
+	matched, _ := regexp.MatchString(validGeofilePattern, filename)
+	return matched
+}
+
 func (s *ServerService) UpdateGeofile(fileName string) error {
 	files := []struct {
 		URL      string
@@ -999,6 +1029,24 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 			}
 		}
 	} else {
+		// Use the centralized validation function
+		if !s.IsValidGeofileName(fileName) {
+			return common.NewErrorf("Invalid geofile name: contains unsafe path characters: %s", fileName)
+		}
+
+		// Ensure the filename matches exactly one from our allowlist
+		isAllowed := false
+		for _, file := range files {
+			if fileName == file.FileName {
+				isAllowed = true
+				break
+			}
+		}
+
+		if !isAllowed {
+			return common.NewErrorf("Invalid geofile name: %s not in allowlist", fileName)
+		}
+
 		destPath := fmt.Sprintf("%s/%s", config.GetBinFolderPath(), fileName)
 
 		var fileURL string
@@ -1010,11 +1058,12 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 		}
 
 		if fileURL == "" {
+			// This should practically not be reached because of the isAllowed check above
 			errorMessages = append(errorMessages, fmt.Sprintf("File '%s' not found in the list of Geofiles", fileName))
-		}
-
-		if err := downloadFile(fileURL, destPath); err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("Error downloading Geofile '%s': %v", fileName, err))
+		} else {
+			if err := downloadFile(fileURL, destPath); err != nil {
+				errorMessages = append(errorMessages, fmt.Sprintf("Error downloading Geofile '%s': %v", fileName, err))
+			}
 		}
 	}
 
