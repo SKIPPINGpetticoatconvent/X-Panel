@@ -54,7 +54,7 @@ func (t *Tgbot) encodeQuery(query string) string {
 }
 
 func (t *Tgbot) decodeQuery(query string) (string, error) {
-	if !hashStorage.IsMD5(query) {
+	if !hashStorage.IsHash(query) {
 		return query, nil
 	}
 

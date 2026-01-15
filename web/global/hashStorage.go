@@ -1,7 +1,7 @@
 package global
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"regexp"
 	"sync"
@@ -31,18 +31,18 @@ func (h *HashStorage) SaveHash(query string) string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	md5Hash := md5.Sum([]byte(query))
-	md5HashString := hex.EncodeToString(md5Hash[:])
+	hash := sha256.Sum256([]byte(query))
+	hashString := hex.EncodeToString(hash[:])
 
 	entry := HashEntry{
-		Hash:      md5HashString,
+		Hash:      hashString,
 		Value:     query,
 		Timestamp: time.Now(),
 	}
 
-	h.Data[md5HashString] = entry
+	h.Data[hashString] = entry
 
-	return md5HashString
+	return hashString
 }
 
 func (h *HashStorage) GetValue(hash string) (string, bool) {
@@ -54,8 +54,8 @@ func (h *HashStorage) GetValue(hash string) (string, bool) {
 	return entry.Value, exists
 }
 
-func (h *HashStorage) IsMD5(hash string) bool {
-	match, _ := regexp.MatchString("^[a-f0-9]{32}$", hash)
+func (h *HashStorage) IsHash(hash string) bool {
+	match, _ := regexp.MatchString("^[a-f0-9]{64}$", hash)
 	return match
 }
 
