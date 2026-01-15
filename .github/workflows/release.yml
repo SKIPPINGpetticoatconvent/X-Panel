@@ -47,12 +47,17 @@ jobs:
         run: go build ./...
 
       # 官方 golangci-lint-action v7 支持 golangci-lint v2
-      - name: Run golangci-lint (with NilAway)
+      - name: Grant Execute Permissions for NilAway
+        run: chmod +x QA/static/run_nilaway.sh
+
+      - name: Run NilAway (Deep Static Analysis)
+        run: ./QA/static/run_nilaway.sh
+
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           args: --timeout=10m
-        continue-on-error: true  # NilAway 可能有 false positives，暂时不阻塞
 
   # ===============================================================
   # Linux 平台的构建任务
