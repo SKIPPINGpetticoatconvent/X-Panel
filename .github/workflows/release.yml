@@ -47,6 +47,11 @@ jobs:
         run: go build ./...
 
       # 官方 golangci-lint-action v7 支持 golangci-lint v2
+      - name: Install NilAway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+
+      - name: Run NilAway (Deep Static Analysis)
+        run: nilaway -test=false ./...
 
 
       - name: Run golangci-lint
