@@ -47,5 +47,10 @@ jobs:
       run: ./QA/static/run_nilaway.sh
       continue-on-error: true # Prevent failing CI while we fix initial issues
 
+    # ========== 安全增强检查 ==========
+    - name: Run Tests with Race Detector
+      run: go test -race -short ./...
+      continue-on-error: true  # 首次可能有问题，逐步修复
+
     - name: Run QA Framework
       run: ./QA/run_qa.sh
