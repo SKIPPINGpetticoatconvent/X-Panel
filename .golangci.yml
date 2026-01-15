@@ -15,6 +15,7 @@ linters:
     - staticcheck
     - unused
     - gosec
+    - nilaway
 
   exclusions:
     paths:
