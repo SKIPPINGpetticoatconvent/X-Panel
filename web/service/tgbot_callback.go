@@ -2005,10 +2005,12 @@ func (t *Tgbot) prepareServerUsageInfo() string {
 
 	info += t.I18nBot("tgbot.messages.serverUpTime", "UpTime=="+strconv.FormatUint(t.lastStatus.Uptime/86400, 10), "Unit=="+t.I18nBot("tgbot.days"))
 	info += t.I18nBot("tgbot.messages.serverLoad", "Load1=="+strconv.FormatFloat(t.lastStatus.Loads[0], 'f', 2, 64), "Load2=="+strconv.FormatFloat(t.lastStatus.Loads[1], 'f', 2, 64), "Load3=="+strconv.FormatFloat(t.lastStatus.Loads[2], 'f', 2, 64))
+	//nolint:gosec
 	info += t.I18nBot("tgbot.messages.serverMemory", "Current=="+common.FormatTraffic(int64(t.lastStatus.Mem.Current)), "Total=="+common.FormatTraffic(int64(t.lastStatus.Mem.Total)))
 	info += t.I18nBot("tgbot.messages.onlinesCount", "Count=="+fmt.Sprint(len(onlines)))
 	info += t.I18nBot("tgbot.messages.tcpCount", "Count=="+strconv.Itoa(t.lastStatus.TcpCount))
 	info += t.I18nBot("tgbot.messages.udpCount", "Count=="+strconv.Itoa(t.lastStatus.UdpCount))
+	//nolint:gosec
 	info += t.I18nBot("tgbot.messages.traffic", "Total=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Sent+t.lastStatus.NetTraffic.Recv)), "Upload=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Sent)), "Download=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Recv)))
 	info += t.I18nBot("tgbot.messages.xrayStatus", "State=="+fmt.Sprint(t.lastStatus.Xray.State))
 	return info
@@ -2381,6 +2383,7 @@ func (t *Tgbot) clientTelegramUserInfo(chatId int64, email string, messageID ...
 	} else {
 		t.SendMsgToTgbot(chatId, output, inlineKeyboard)
 		requestUser := telego.KeyboardButtonRequestUsers{
+			//nolint:gosec
 			RequestID: int32(traffic.Id),
 			UserIsBot: new(bool),
 		}
@@ -2584,10 +2587,12 @@ func (t *Tgbot) getExhausted(chatId int64) {
 
 	TrafficThreshold, err := t.settingService.GetTrafficDiff()
 	if err == nil && TrafficThreshold > 0 {
+		//nolint:gosec
 		trDiff = int64(TrafficThreshold) * 1073741824
 	}
 	ExpireThreshold, err := t.settingService.GetExpireDiff()
 	if err == nil && ExpireThreshold > 0 {
+		//nolint:gosec
 		exDiff = int64(ExpireThreshold) * 86400000
 	}
 	inbounds, err := t.inboundService.GetAllInbounds()

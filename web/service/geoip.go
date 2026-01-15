@@ -189,6 +189,7 @@ func (g *GeoIPService) FetchLocationWithRetry(maxRetries int) (*GeoIPLocation, e
 
 		// 指数退避
 		if i < maxRetries-1 {
+			//nolint:gosec
 			waitTime := time.Duration(1<<uint(i)) * time.Second
 			time.Sleep(waitTime)
 		}

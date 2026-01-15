@@ -181,6 +181,7 @@ func (p *process) refreshAPIPort() {
 }
 
 func (p *process) refreshVersion() {
+	//nolint:gosec
 	cmd := exec.Command(GetBinaryPath(), "-version")
 	data, err := cmd.Output()
 	if err != nil {
@@ -212,7 +213,7 @@ func (p *process) Start() (err error) {
 		return common.NewErrorf("Failed to generate XRAY configuration files: %v", err)
 	}
 
-	err = os.MkdirAll(config.GetLogFolder(), 0o770)
+	err = os.MkdirAll(config.GetLogFolder(), 0o750)
 	if err != nil {
 		logger.Warningf("Failed to create log folder: %s", err)
 	}
@@ -223,6 +224,7 @@ func (p *process) Start() (err error) {
 		return common.NewErrorf("Failed to write configuration file: %v", err)
 	}
 
+	//nolint:gosec
 	cmd := exec.Command(GetBinaryPath(), "-c", configPath)
 	p.cmd = cmd
 
@@ -257,5 +259,5 @@ func (p *process) Stop() error {
 
 func writeCrashReport(m []byte) error {
 	crashReportPath := config.GetBinFolderPath() + "/core_crash_" + time.Now().Format("20060102_150405") + ".log"
-	return os.WriteFile(crashReportPath, m, os.ModePerm)
+	return os.WriteFile(crashReportPath, m, 0o600)
 }

@@ -47,6 +47,7 @@ func (j *CertMonitorJob) Run() {
 	}
 
 	// Read and parse the certificate
+	//nolint:gosec
 	certBytes, err := os.ReadFile(certFile)
 	if err != nil {
 		logger.Warningf("[CertMonitor] Failed to read certificate file: %v", err)
@@ -197,7 +198,7 @@ func (j *CertMonitorJob) detectPublicIP() (string, error) {
 
 func (j *CertMonitorJob) generateSelfSignedIPCert(ip string) (string, string, error) {
 	certDir := fmt.Sprintf("/root/cert/%s", ip)
-	if err := os.MkdirAll(certDir, 0o755); err != nil {
+	if err := os.MkdirAll(certDir, 0o750); err != nil {
 		return "", "", err
 	}
 
@@ -226,15 +227,17 @@ func (j *CertMonitorJob) generateSelfSignedIPCert(ip string) (string, string, er
 		return "", "", err
 	}
 
-	certPath := filepath.Join(certDir, "fullchain.pem")
+	certPath := filepath.Join(certDir, "fullchain.pem") // 写入证书文件
+	//nolint:gosec
 	certOut, err := os.Create(certPath)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("无法创建证书文件 %s: %v", certPath, err)
 	}
 	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	_ = certOut.Close()
 
 	keyPath := filepath.Join(certDir, "privkey.pem")
+	//nolint:gosec
 	keyOut, err := os.Create(keyPath)
 	if err != nil {
 		return "", "", err

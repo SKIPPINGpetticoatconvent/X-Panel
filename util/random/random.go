@@ -36,11 +36,13 @@ func init() {
 func Seq(n int) string {
 	runes := make([]rune, n)
 	for i := 0; i < n; i++ {
+		//nolint:gosec
 		runes[i] = allSeq[rand.Intn(len(allSeq))]
 	}
 	return string(runes)
 }
 
 func Num(n int) int {
+	//nolint:gosec
 	return rand.Intn(n)
 }

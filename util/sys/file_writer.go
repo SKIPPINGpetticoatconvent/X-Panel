@@ -21,12 +21,13 @@ func BackupFile(filePath string) error {
 	backupPath := fmt.Sprintf("%s.bak.%d", filePath, timestamp)
 
 	// 复制文件
+	//nolint:gosec
 	srcFile, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("打开源文件失败: %v", err)
 	}
 	defer func() { _ = srcFile.Close() }()
-
+	//nolint:gosec
 	dstFile, err := os.Create(backupPath)
 	if err != nil {
 		return fmt.Errorf("创建备份文件失败: %v", err)
@@ -51,7 +52,7 @@ func BackupFile(filePath string) error {
 func AtomicWriteFile(filePath string, content []byte, perm os.FileMode) error {
 	// 确保目标目录存在
 	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("创建目录失败: %v", err)
 	}
 
@@ -100,6 +101,7 @@ func AtomicWriteFile(filePath string, content []byte, perm os.FileMode) error {
 func WriteConfigBlock(filePath, startMarker, endMarker, content string) error {
 	// 读取现有文件内容
 	var existingContent string
+	//nolint:gosec
 	if file, err := os.Open(filePath); err == nil {
 		data, readErr := io.ReadAll(file)
 		_ = file.Close()

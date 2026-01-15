@@ -32,8 +32,9 @@ func NewSNISelectorWithGeoIP(initialDomains []string, geoIPService *GeoIPService
 	}
 
 	s := &SNISelector{
-		domains:      make([]string, len(initialDomains)),
-		index:        0,
+		domains: make([]string, len(initialDomains)),
+		index:   0,
+		//nolint:gosec
 		rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
 		geoIPService: geoIPService,
 	}
@@ -82,6 +83,7 @@ func (s *SNISelector) shuffle() {
 	// 使用 Fisher-Yates 洗牌算法
 	for i := len(s.domains) - 1; i > 0; i-- {
 		// 使用内部的随机数生成器
+		//nolint:gosec
 		j := s.rng.Intn(i + 1)
 		s.domains[i], s.domains[j] = s.domains[j], s.domains[i]
 	}

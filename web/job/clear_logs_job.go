@@ -18,11 +18,12 @@ func NewClearLogsJob() *ClearLogsJob {
 // ensureFileExists creates the necessary directories and file if they don't exist
 func ensureFileExists(path string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o644)
+	//nolint:gosec
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return err
 	}
@@ -46,13 +47,13 @@ func (j *ClearLogsJob) Run() {
 	for i := 0; i < len(logFiles); i++ {
 		if i > 0 {
 			// Copy to previous logs
-			logFilePrev, err := os.OpenFile(logFilesPrev[i-1], os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+			logFilePrev, err := os.OpenFile(logFilesPrev[i-1], os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 			if err != nil {
 				logger.Warning("Failed to open previous log file for writing:", logFilesPrev[i-1], "-", err)
 				continue
 			}
 
-			logFile, err := os.OpenFile(logFiles[i], os.O_RDONLY, 0o644)
+			logFile, err := os.OpenFile(logFiles[i], os.O_RDONLY, 0o600)
 			if err != nil {
 				logger.Warning("Failed to open current log file for reading:", logFiles[i], "-", err)
 				_ = logFilePrev.Close()

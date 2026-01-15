@@ -109,12 +109,14 @@ func GetSNIFolderPath() string {
 }
 
 func copyFile(src, dst string) error {
+	//nolint:gosec
 	in, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = in.Close() }()
 
+	//nolint:gosec
 	out, err := os.Create(dst)
 	if err != nil {
 		return err

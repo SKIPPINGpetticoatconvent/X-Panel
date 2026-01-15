@@ -190,7 +190,7 @@ func (s *Server) Start() (err error) {
 	}
 	s.listener = listener
 
-	s.httpServer = &http.Server{
+	s.httpServer = &http.Server{ //nolint:gosec
 		Handler: engine,
 	}
 

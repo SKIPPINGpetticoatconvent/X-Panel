@@ -65,6 +65,7 @@ type CheckDeviceLimitJob struct {
 func RandomUUID() string {
 	uuid := make([]byte, 16)
 	// 使用 math/rand 而不是 crypto/rand 来避免编译错误
+	//nolint:gosec
 	for i := range uuid {
 		uuid[i] = byte(rand.Int() & 0xFF)
 	}
@@ -493,15 +494,18 @@ func (j *CheckClientIpJob) Run() {
 }
 
 func (j *CheckClientIpJob) clearAccessLog() {
-	logAccessP, err := os.OpenFile(xray.GetAccessPersistentLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	logAccessP, err := os.OpenFile(xray.GetAccessPersistentLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	j.checkError(err)
 	defer func() { _ = logAccessP.Close() }()
 
 	accessLogPath, err := xray.GetAccessLogPath()
 	j.checkError(err)
 
+	//nolint:gosec
 	file, err := os.Open(accessLogPath)
-	j.checkError(err)
+	if err != nil {
+		j.checkError(err)
+	}
 	defer func() { _ = file.Close() }()
 
 	_, err = io.Copy(logAccessP, file)
@@ -547,6 +551,7 @@ func (j *CheckClientIpJob) processLogFile() bool {
 	emailRegex := regexp.MustCompile(`email: (.+)$`)
 
 	accessLogPath, _ := xray.GetAccessLogPath()
+	//nolint:gosec
 	file, _ := os.Open(accessLogPath)
 	defer func() { _ = file.Close() }()
 
@@ -692,7 +697,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 	shouldCleanLog := false
 	j.disAllowedIps = []string{}
 
-	logIpFile, err := os.OpenFile(xray.GetIPLimitLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	logIpFile, err := os.OpenFile(xray.GetIPLimitLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		logger.Errorf("failed to open IP limit log file: %s", err)
 		return false

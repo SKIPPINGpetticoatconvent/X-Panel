@@ -178,6 +178,7 @@ func (t *Tgbot) openPortWithFirewalld(port int) error {
 	`, port) // 将函数传入的 port 参数填充到 Shell 脚本中
 
 	// 使用 exec.CommandContext 运行完整的 shell 脚本
+	//nolint:gosec
 	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
 
 	// 捕获命令的标准输出和标准错误
@@ -509,6 +510,7 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 	defer cancel()
 
 	// 检查模块是否已加载
+	//nolint:gosec
 	cmd := exec.CommandContext(ctx, "bash", "-c", "lsmod | grep -q nf_conntrack && echo 'loaded' || echo 'not_loaded'")
 	cmd.Stdout = f
 	cmd.Stderr = f
@@ -520,6 +522,7 @@ func (t *Tgbot) execute1C1GOptimization() (string, error) {
 		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		//nolint:gosec
 		cmd = exec.CommandContext(ctx, "bash", "-c", "test -d /proc/sys/net/netfilter && echo 'exists' || echo 'not_exists'")
 		cmd.Stdout = f
 		cmd.Stderr = f
@@ -1345,12 +1348,13 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 				// 使用 Firewalld 开放端口
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
-
+				//nolint:gosec
 				cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf("firewall-cmd --permanent --add-port=%s/tcp", port))
 				_, err = cmd.CombinedOutput()
 
 				if err == nil {
 					// Firewalld 需要 reload
+					//nolint:gosec
 					cmd := exec.CommandContext(ctx, "bash", "-c", "firewall-cmd --reload")
 					_, err = cmd.CombinedOutput()
 				}

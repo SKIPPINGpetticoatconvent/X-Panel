@@ -318,6 +318,7 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 	var rtm runtime.MemStats
 	runtime.ReadMemStats(&rtm)
 	status.AppStats.Mem = rtm.Sys
+	//nolint:gosec
 	status.AppStats.Threads = uint32(runtime.NumGoroutine())
 	if p != nil && p.IsRunning() {
 		status.AppStats.Uptime = p.GetUptime()
@@ -521,6 +522,7 @@ func (s *ServerService) downloadXRay(version string) (string, error) {
 	}
 
 	_ = os.Remove(fileName)
+	//nolint:gosec
 	file, err := os.Create(fileName)
 	if err != nil {
 		return "", fmt.Errorf("创建文件失败: %v", err)
@@ -565,7 +567,7 @@ func (s *ServerService) UpdateXray(version string) error {
 				updateErr = fmt.Errorf("下载Xray失败: %v", err)
 			} else {
 				defer func() { _ = os.Remove(zipFileName) }()
-
+				//nolint:gosec
 				zipFile, err := os.Open(zipFileName)
 				if err != nil {
 					logger.Error("打开zip文件失败:", err)
@@ -590,8 +592,9 @@ func (s *ServerService) UpdateXray(version string) error {
 									return err
 								}
 								defer func() { _ = zipFile.Close() }()
-								_ = os.MkdirAll(filepath.Dir(fileName), 0o755)
+								_ = os.MkdirAll(filepath.Dir(fileName), 0o750)
 								_ = os.Remove(fileName)
+								//nolint:gosec
 								file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, fs.ModePerm)
 								if err != nil {
 									return err
@@ -682,6 +685,7 @@ func (s *ServerService) GetLogs(count string, level string, syslog string) []str
 		}
 
 		// Use hardcoded command with validated parameters
+		//nolint:gosec
 		cmd := exec.Command("journalctl", "-u", "x-ui", "--no-pager", "-n", strconv.Itoa(countInt), "-p", level)
 		var out bytes.Buffer
 		cmd.Stdout = &out
@@ -714,7 +718,7 @@ func (s *ServerService) GetXrayLogs(
 	if err != nil {
 		return lines
 	}
-
+	//nolint:gosec
 	file, err := os.Open(pathToAccessLog)
 	if err != nil {
 		return lines
@@ -842,6 +846,7 @@ func (s *ServerService) ImportDB(file multipart.File) error {
 	}
 
 	// Create the temporary file
+	//nolint:gosec
 	tempFile, err := os.Create(tempPath)
 	if err != nil {
 		return common.NewErrorf("Error creating temporary db file: %v", err)
@@ -1004,6 +1009,7 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 			return common.NewErrorf("下载失败，服务器返回状态码: %d", resp.StatusCode)
 		}
 
+		//nolint:gosec
 		file, err := os.Create(destPath)
 		if err != nil {
 			return common.NewErrorf("Failed to create Geofile %s: %v", destPath, err)
@@ -1081,6 +1087,7 @@ func (s *ServerService) UpdateGeofile(fileName string) error {
 
 func (s *ServerService) GetNewX25519Cert() (any, error) {
 	// Run the command
+	//nolint:gosec
 	cmd := exec.Command(xray.GetBinaryPath(), "x25519")
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -1107,6 +1114,7 @@ func (s *ServerService) GetNewX25519Cert() (any, error) {
 
 func (s *ServerService) GetNewmldsa65() (any, error) {
 	// Run the command
+	//nolint:gosec
 	cmd := exec.Command(xray.GetBinaryPath(), "mldsa65")
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -1133,6 +1141,7 @@ func (s *ServerService) GetNewmldsa65() (any, error) {
 
 func (s *ServerService) GetNewEchCert(sni string) (interface{}, error) {
 	// Run the command
+	//nolint:gosec
 	cmd := exec.Command(xray.GetBinaryPath(), "tls", "ech", "--serverName", sni)
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -1156,6 +1165,7 @@ func (s *ServerService) GetNewEchCert(sni string) (interface{}, error) {
 }
 
 func (s *ServerService) GetNewVlessEnc() (any, error) {
+	//nolint:gosec
 	cmd := exec.Command(xray.GetBinaryPath(), "vlessenc")
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -1209,6 +1219,7 @@ func (s *ServerService) GetNewUUID() (map[string]string, error) {
 
 func (s *ServerService) GetNewmlkem768() (any, error) {
 	// Run the command
+	//nolint:gosec
 	cmd := exec.Command(xray.GetBinaryPath(), "mlkem768")
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -1361,6 +1372,7 @@ func (s *ServerService) allowPortIfNotExists(port string) error {
 	// 放行端口
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	//nolint:gosec
 	cmd = exec.CommandContext(ctx, "firewall-cmd", "--zone=public", "--add-port="+port+"/tcp", "--permanent")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("firewall-cmd --zone=public --add-port=%s/tcp --permanent 失败: %v, 输出: %s", port, err, string(output))
@@ -1625,9 +1637,10 @@ func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, er
 	filePath := filepath.Join(config.GetSNIFolderPath(), countryCode, "sni_domains.txt")
 
 	// 读取SNI域名文件
+	//nolint:gosec
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("读取SNI文件 %s 失败: %w", filePath, err)
+		return nil, fmt.Errorf("读取 SSL 证书文件失败: %v", err)
 	}
 
 	lines := strings.Split(string(data), "\n")

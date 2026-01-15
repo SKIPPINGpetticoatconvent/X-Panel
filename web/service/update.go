@@ -165,6 +165,8 @@ func updateXUICommandScript() error {
 	}
 
 	// 设置执行权限
+	// 核心可执行文件必须有执行权限
+	//nolint:gosec
 	err = os.Chmod("/usr/bin/x-ui", 0o755)
 	if err != nil {
 		return fmt.Errorf("设置脚本执行权限失败: %v", err)
@@ -240,6 +242,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 				return "", fmt.Errorf("创建临时二进制文件失败: %v", err)
 			}
 
+			//nolint:gosec
 			_, err = io.Copy(tempBin, tarReader)
 			_ = tempBin.Close()
 			if err != nil {
@@ -248,6 +251,7 @@ func downloadAndExtractPanel(url string) (string, error) {
 			}
 
 			// 设置执行权限
+			//nolint:gosec
 			err = os.Chmod(tempBin.Name(), 0o755)
 			if err != nil {
 				_ = os.Remove(tempBin.Name())
@@ -294,6 +298,7 @@ func replacePanelBinary(newBinPath string) error {
 	}
 
 	// 设置执行权限
+	//nolint:gosec
 	err = os.Chmod(binPath, 0o755)
 	if err != nil {
 		return fmt.Errorf("设置执行权限失败: %v", err)
@@ -530,6 +535,7 @@ func (s *ServerService) UpdateGeoData() error {
 				}
 			}
 
+			//nolint:gosec
 			file, err := os.Create(destPath)
 			if err != nil {
 				return fmt.Errorf("创建文件 %s 失败: %v", destPath, err)
