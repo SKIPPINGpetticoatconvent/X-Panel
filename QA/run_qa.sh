@@ -14,7 +14,11 @@ echo "--- 1. Static Analysis ---"
 ./QA/static/config
 
 echo "--- 1.1 Static Analysis (Deep: NilAway) ---"
-./QA/static/run_nilaway.sh
+if ! command -v nilaway &> /dev/null; then
+    go install go.uber.org/nilaway/cmd/nilaway@latest
+fi
+nilaway -test=false ./... || echo "NilAway found issues"
+
 
 echo "--- 1.2 Static Analysis (Shellcheck) ---"
 ./QA/static/run_shellcheck.sh

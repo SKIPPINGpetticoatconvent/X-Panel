@@ -47,11 +47,11 @@ jobs:
         run: go build ./...
 
       # 官方 golangci-lint-action v7 支持 golangci-lint v2
-      - name: Grant Execute Permissions for NilAway
-        run: chmod +x QA/static/run_nilaway.sh
+      - name: Install NilAway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
 
       - name: Run NilAway (Deep Static Analysis)
-        run: ./QA/static/run_nilaway.sh
+        run: nilaway -test=false ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
