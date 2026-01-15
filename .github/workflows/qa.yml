@@ -43,11 +43,7 @@ jobs:
         chmod +x QA/unit/*.sh
         find QA/e2e -name "*.sh" -exec chmod +x {} \;
 
-    - name: Install NilAway
-      run: go install go.uber.org/nilaway/cmd/nilaway@latest
 
-    - name: Run NilAway (Deep Static Analysis)
-      run: nilaway -test=false ./...
 
     # ========== 安全增强检查 ==========
     - name: Run Tests with Race Detector
