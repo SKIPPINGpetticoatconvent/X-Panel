@@ -600,7 +600,9 @@ func (s *ServerService) UpdateXray(version string) error {
 									return err
 								}
 								defer func() { _ = file.Close() }()
-								_, err = io.Copy(file, zipFile)
+								// Limit decompression size to 100MB to prevent DoS (G110)
+								//nolint:gosec
+								_, err = io.Copy(file, io.LimitReader(zipFile, 100*1024*1024))
 								return err
 							}
 

@@ -13,6 +13,10 @@ func FormatTraffic(trafficBytes int64) string {
 		size /= 1024
 		unitIndex++
 	}
-	//nolint:gosec
+
+	if unitIndex >= len(units) {
+		unitIndex = len(units) - 1
+	}
+
 	return fmt.Sprintf("%.2f%s", size, units[unitIndex])
 }
