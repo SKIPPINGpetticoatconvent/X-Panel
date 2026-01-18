@@ -24,7 +24,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasthttp v1.69.0
 	github.com/xlzd/gotp v0.1.0
-	github.com/xtls/xray-core v1.251208.0
+	github.com/xtls/xray-core v1.260113.0
 	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.47.0
 	golang.org/x/text v0.33.0
@@ -35,6 +35,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/apernet/quic-go v0.57.2-0.20260111184307-eec823306178 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
@@ -94,6 +95,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/arch v0.23.0 // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
