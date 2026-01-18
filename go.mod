@@ -2,7 +2,7 @@ module x-ui
 
 go 1.25.6
 
-replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20250503011706-39ed1f5ac29c
+replace gvisor.dev/gvisor => gvisor.dev/gvisor v0.0.0-20260109181451-4be7c433dae2
 
 replace github.com/sagernet/sing-shadowsocks => github.com/sagernet/sing-shadowsocks v0.2.8
 
