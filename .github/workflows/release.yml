@@ -33,18 +33,32 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Build Rust Library
+        run: |
+          cd rust_parser
+          cargo build --release
 
       - name: Install Dependencies
         run: go mod download
 
       - name: Run Tests
-        run: go test ./...
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/rust_parser/target/release
+          go test ./...
 
       - name: Build Verification
-        run: go build ./...
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/rust_parser/target/release
+          go build ./...
 
       # 官方 golangci-lint-action v7 支持 golangci-lint v2
       - name: Install NilAway
@@ -89,6 +103,11 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
       - name: Build X-Panel for Linux
         run: |
           export CGO_ENABLED=1
@@ -96,13 +115,13 @@ jobs:
           export GOARCH=${{ matrix.platform }}
           # Use Bootlin prebuilt cross-toolchains (musl 1.2.5 in stable series)
           case "${{ matrix.platform }}" in
-            amd64) BOOTLIN_ARCH="x86-64" ;;
-            arm64) BOOTLIN_ARCH="aarch64" ;;
-            armv7) BOOTLIN_ARCH="armv7-eabihf"; export GOARCH=arm GOARM=7 ;;
-            armv6) BOOTLIN_ARCH="armv6-eabihf"; export GOARCH=arm GOARM=6 ;;
-            armv5) BOOTLIN_ARCH="armv5-eabi"; export GOARCH=arm GOARM=5; export CGO_ENABLED=0 ;;
-            386) BOOTLIN_ARCH="x86-i686" ;;
-            s390x) BOOTLIN_ARCH="s390x-z13" ;;
+            amd64) BOOTLIN_ARCH="x86-64"; RUST_TARGET="x86_64-unknown-linux-musl" ;;
+            arm64) BOOTLIN_ARCH="aarch64"; RUST_TARGET="aarch64-unknown-linux-musl" ;;
+            armv7) BOOTLIN_ARCH="armv7-eabihf"; export GOARCH=arm GOARM=7; RUST_TARGET="armv7-unknown-linux-musleabihf" ;;
+            armv6) BOOTLIN_ARCH="armv6-eabihf"; export GOARCH=arm GOARM=6; RUST_TARGET="arm-unknown-linux-musleabihf" ;;
+            armv5) BOOTLIN_ARCH="armv5-eabi"; export GOARCH=arm GOARM=5; export CGO_ENABLED=0; RUST_TARGET="" ;;
+            386) BOOTLIN_ARCH="x86-i686"; RUST_TARGET="i686-unknown-linux-musl" ;;
+            s390x) BOOTLIN_ARCH="s390x-z13"; RUST_TARGET="s390x-unknown-linux-musl" ;;
           esac
           echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }})"
           TARBALL_BASE="https://toolchains.bootlin.com/downloads/releases/toolchains/$BOOTLIN_ARCH/tarballs/"
@@ -116,7 +135,31 @@ jobs:
           export PATH="$(realpath "$TOOLCHAIN_DIR")/bin:$PATH"
           export CC=$(realpath "$(find "$TOOLCHAIN_DIR/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
           [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_DIR/bin" >&2; exit 1; }
-          cd -
+          
+          # Build Rust Library
+          cd $GITHUB_WORKSPACE
+          if [ -n "$RUST_TARGET" ] && [ "$CGO_ENABLED" = "1" ]; then
+             echo "Installing Rust target: $RUST_TARGET"
+             rustup target add $RUST_TARGET
+             
+             echo "Configuring Linker for Rust target $RUST_TARGET"
+             RUST_TARGET_ENV=$(echo $RUST_TARGET | tr '[:lower:]-' '[:upper:]_')
+             # export CARGO_TARGET_<TRIPLE>_LINKER=$CC
+             export CARGO_TARGET_${RUST_TARGET_ENV}_LINKER="$CC"
+             
+             echo "Building Rust Library..."
+             cd rust_parser
+             cargo build --release --target $RUST_TARGET
+             
+             echo "Moving artifact to standard location..."
+             mkdir -p target/release
+             # Find the .so file (usually libxpanel_traffic_parser.so)
+             cp target/$RUST_TARGET/release/libxpanel_traffic_parser.so target/release/
+             cd ..
+          else
+             echo "Skipping Rust build for ${{ matrix.platform }} (CGO disabled or no target)"
+          fi
+
           if [ "${{ matrix.platform }}" = "armv5" ]; then
             go build -ldflags "-w -s" -o xui-release -v main.go
           else

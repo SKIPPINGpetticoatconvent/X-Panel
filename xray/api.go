@@ -189,9 +189,6 @@ func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 		return nil, nil, common.NewError("xray api is not initialized")
 	}
 
-	trafficRegex := regexp.MustCompile(`(inbound|outbound)>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
-	clientTrafficRegex := regexp.MustCompile(`user>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -208,13 +205,36 @@ func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 	tagTrafficMap := make(map[string]*Traffic)
 	emailTrafficMap := make(map[string]*ClientTraffic)
 
-	for _, stat := range resp.GetStat() {
-		if matches := trafficRegex.FindStringSubmatch(stat.Name); len(matches) == 4 {
-			processTraffic(matches, stat.Value, tagTrafficMap)
-		} else if matches := clientTrafficRegex.FindStringSubmatch(stat.Name); len(matches) == 3 {
-			processClientTraffic(matches, stat.Value, emailTrafficMap)
+	// 尝试使用 Rust 解析器
+	if IsRustParserAvailable() {
+		for _, stat := range resp.GetStat() {
+			// 先尝试解析 inbound/outbound 流量
+			trafficResult := ParseTrafficStatRust(stat.Name)
+			if trafficResult.TrafficType != TrafficTypeNone {
+				processTrafficFromRust(trafficResult, stat.Value, tagTrafficMap)
+				continue
+			}
+
+			// 再尝试解析用户流量
+			clientResult := ParseClientTrafficStatRust(stat.Name)
+			if clientResult.Success {
+				processClientTrafficFromRust(clientResult, stat.Value, emailTrafficMap)
+			}
+		}
+	} else {
+		// 降级到 Go 正则表达式
+		trafficRegex := regexp.MustCompile(`(inbound|outbound)>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
+		clientTrafficRegex := regexp.MustCompile(`user>>>([^>]+)>>>traffic>>>(downlink|uplink)`)
+
+		for _, stat := range resp.GetStat() {
+			if matches := trafficRegex.FindStringSubmatch(stat.Name); len(matches) == 4 {
+				processTraffic(matches, stat.Value, tagTrafficMap)
+			} else if matches := clientTrafficRegex.FindStringSubmatch(stat.Name); len(matches) == 3 {
+				processClientTraffic(matches, stat.Value, emailTrafficMap)
+			}
 		}
 	}
+
 	return mapToSlice(tagTrafficMap), mapToSlice(emailTrafficMap), nil
 }
 
@@ -238,6 +258,45 @@ func processTraffic(matches []string, value int64, trafficMap map[string]*Traffi
 	}
 
 	if isDown {
+		traffic.Down = value
+	} else {
+		traffic.Up = value
+	}
+}
+
+// processTrafficFromRust 处理 Rust 解析器返回的流量结果
+func processTrafficFromRust(result TrafficParseResult, value int64, trafficMap map[string]*Traffic) {
+	tag := result.Tag
+	isInbound := result.TrafficType == TrafficTypeInbound
+
+	traffic, ok := trafficMap[tag]
+	if !ok {
+		traffic = &Traffic{
+			IsInbound:  isInbound,
+			IsOutbound: !isInbound,
+			Tag:        tag,
+		}
+		trafficMap[tag] = traffic
+	}
+
+	if result.IsDownlink {
+		traffic.Down = value
+	} else {
+		traffic.Up = value
+	}
+}
+
+// processClientTrafficFromRust 处理 Rust 解析器返回的用户流量结果
+func processClientTrafficFromRust(result ClientTrafficParseResult, value int64, clientTrafficMap map[string]*ClientTraffic) {
+	email := result.Email
+
+	traffic, ok := clientTrafficMap[email]
+	if !ok {
+		traffic = &ClientTraffic{Email: email}
+		clientTrafficMap[email] = traffic
+	}
+
+	if result.IsDownlink {
 		traffic.Down = value
 	} else {
 		traffic.Up = value
