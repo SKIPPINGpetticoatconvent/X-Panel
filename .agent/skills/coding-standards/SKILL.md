@@ -40,6 +40,12 @@ description: X-Panel development, technology stack, version control, and testing
 - 修改 `.toml` 文件后，必须使用 `taplo fmt --check` 进行格式检查。
 - 确保配置文件结构清晰，注释准确。
 
+## 3.5 Rust 语言规范
+
+- 提交前必须执行 `cargo fmt` 格式化。
+- **Lint 检查**: 必须执行 `cargo clippy` 并修复建议的问题。
+- **强制 tmux**: 所有 `cargo` 命令（build, run, test, fmt 等）必须在 `tmux` 会话中执行。严禁在裸 shell 中运行。
+
 ---
 
 # 4. 版本控制规范
