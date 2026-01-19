@@ -131,6 +131,7 @@ class HysteriaStreamSettings extends CommonClass {
   constructor(
     version = 2,
     auth = '',
+    congestion = '',
     up = '0',
     down = '0',
     udphopPort = '',
@@ -146,6 +147,7 @@ class HysteriaStreamSettings extends CommonClass {
     super();
     this.version = version;
     this.auth = auth;
+    this.congestion = congestion;
     this.up = up;
     this.down = down;
     this.udphopPort = udphopPort;
@@ -169,6 +171,7 @@ class HysteriaStreamSettings extends CommonClass {
     return new HysteriaStreamSettings(
       json.version,
       json.auth,
+      json.congestion,
       json.up,
       json.down,
       udphopPort,
@@ -187,6 +190,7 @@ class HysteriaStreamSettings extends CommonClass {
     const result = {
       version: this.version,
       auth: this.auth,
+      congestion: this.congestion,
       up: this.up,
       down: this.down,
       initStreamReceiveWindow: this.initStreamReceiveWindow,
@@ -542,6 +546,30 @@ class SockoptStreamSettings extends CommonClass {
   }
 }
 
+class UdpMask extends CommonClass {
+  constructor(type = 'salamander', password = '') {
+    super();
+    this.type = type;
+    this.password = password;
+  }
+
+  static fromJson(json = {}) {
+    return new UdpMask(
+      json.type,
+      json.settings?.password || ''
+    );
+  }
+
+  toJson() {
+    return {
+      type: this.type,
+      settings: {
+        password: this.password
+      }
+    };
+  }
+}
+
 class StreamSettings extends CommonClass {
   constructor(
     network = "tcp",
@@ -555,6 +583,7 @@ class StreamSettings extends CommonClass {
     httpupgradeSettings = new HttpUpgradeStreamSettings(),
     xhttpSettings = new xHTTPStreamSettings(),
     hysteriaSettings = new HysteriaStreamSettings(),
+    udpmasks = [],
     sockopt = undefined,
   ) {
     super();
@@ -569,7 +598,16 @@ class StreamSettings extends CommonClass {
     this.httpupgrade = httpupgradeSettings;
     this.xhttp = xhttpSettings;
     this.hysteria = hysteriaSettings;
+    this.udpmasks = udpmasks;
     this.sockopt = sockopt;
+  }
+
+  addUdpMask() {
+    this.udpmasks.push(new UdpMask());
+  }
+
+  delUdpMask(index) {
+    this.udpmasks.splice(index, 1);
   }
 
   get isTls() {
@@ -601,6 +639,7 @@ class StreamSettings extends CommonClass {
       HttpUpgradeStreamSettings.fromJson(json.httpupgradeSettings),
       xHTTPStreamSettings.fromJson(json.xhttpSettings),
       HysteriaStreamSettings.fromJson(json.hysteriaSettings),
+      json.udpmasks ? json.udpmasks.map(mask => UdpMask.fromJson(mask)) : [],
       SockoptStreamSettings.fromJson(json.sockopt),
     );
   }
@@ -621,6 +660,7 @@ class StreamSettings extends CommonClass {
         network === "httpupgrade" ? this.httpupgrade.toJson() : undefined,
       xhttpSettings: network === "xhttp" ? this.xhttp.toJson() : undefined,
       hysteriaSettings: network === "hysteria" ? this.hysteria.toJson() : undefined,
+      udpmasks: this.udpmasks.length > 0 ? this.udpmasks.map(mask => mask.toJson()) : undefined,
       sockopt: this.sockopt !== undefined ? this.sockopt.toJson() : undefined,
     };
   }
@@ -981,6 +1021,49 @@ class Outbound extends CommonClass {
     remark =
       remark.length > 0 ? remark.substring(1) : `out-${protocol}-${port}`;
     return new Outbound(remark, protocol, settings, stream);
+  }
+
+  static fromHysteriaLink(link) {
+    const regex = /^hysteria2?:\/\/([^@]+)@([^:?#]+):(\d+)([^#]*)(#.*)?$/;
+    const match = link.match(regex);
+    if (!match) return null;
+    let [, password, address, port, params, hash] = match;
+    port = parseInt(port);
+
+    let urlParams = new URLSearchParams(params);
+    let stream = new StreamSettings('hysteria', 'none');
+    stream.hysteria.auth = password;
+    stream.hysteria.congestion = urlParams.get('congestion') ?? '';
+    stream.hysteria.up = urlParams.get('up') ?? '0';
+    stream.hysteria.down = urlParams.get('down') ?? '0';
+    stream.hysteria.udphopPort = urlParams.get('udphopPort') ?? '';
+    stream.hysteria.udphopInterval = parseInt(urlParams.get('udphopInterval') ?? '30');
+
+    if (urlParams.has('initStreamReceiveWindow')) {
+      stream.hysteria.initStreamReceiveWindow = parseInt(urlParams.get('initStreamReceiveWindow'));
+    }
+    if (urlParams.has('maxStreamReceiveWindow')) {
+       stream.hysteria.maxStreamReceiveWindow = parseInt(urlParams.get('maxStreamReceiveWindow'));
+    }
+    if (urlParams.has('initConnectionReceiveWindow')) {
+       stream.hysteria.initConnectionReceiveWindow = parseInt(urlParams.get('initConnectionReceiveWindow'));
+    }
+    if (urlParams.has('maxConnectionReceiveWindow')) {
+       stream.hysteria.maxConnectionReceiveWindow = parseInt(urlParams.get('maxConnectionReceiveWindow'));
+    }
+    if (urlParams.has('maxIdleTimeout')) {
+       stream.hysteria.maxIdleTimeout = parseInt(urlParams.get('maxIdleTimeout'));
+    }
+    if (urlParams.has('keepAlivePeriod')) {
+       stream.hysteria.keepAlivePeriod = parseInt(urlParams.get('keepAlivePeriod'));
+    }
+    if (urlParams.has('disablePathMTUDiscovery')) {
+      stream.hysteria.disablePathMTUDiscovery = urlParams.get('disablePathMTUDiscovery') === 'true';
+    }
+
+    let settings = new Outbound.HysteriaSettings(address, port, 2);
+    let remark = hash ? decodeURIComponent(hash.substring(1)) : `out-hysteria-${port}`;
+    return new Outbound(remark, Protocols.Hysteria, settings, stream);
   }
 }
 
