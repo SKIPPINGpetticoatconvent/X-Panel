@@ -37,6 +37,21 @@ type IPSBLocation struct {
 	Organization string  `json:"organization"`
 }
 
+// IpapiIsLocation 表示从 api.ipapi.is 返回的地理定位信息
+type IpapiIsLocation struct {
+	IP       string `json:"ip"`
+	Location struct {
+		Country     string  `json:"country"`
+		CountryCode string  `json:"country_code"`
+		City        string  `json:"city"`
+		State       string  `json:"state"`
+		Zip         string  `json:"zip"`
+		Latitude    float64 `json:"latitude"`
+		Longitude   float64 `json:"longitude"`
+		Timezone    string  `json:"timezone"`
+	} `json:"location"`
+}
+
 // GetCountryCode 获取国家代码的便捷方法
 func (g *GeoIPLocation) GetCountryCode() string {
 	return g.Location.CountryCode
@@ -70,6 +85,29 @@ func convertIPSBToGeoIP(ipsb *IPSBLocation) *GeoIPLocation {
 			Latitude:    fmt.Sprintf("%.4f", ipsb.Latitude),
 			Longitude:   fmt.Sprintf("%.4f", ipsb.Longitude),
 			Province:    ipsb.RegionName,
+		},
+	}
+	return geoIP
+}
+
+// convertIpapiIsToGeoIP 将 IpapiIsLocation 转换为 GeoIPLocation
+func convertIpapiIsToGeoIP(loc *IpapiIsLocation) *GeoIPLocation {
+	geoIP := &GeoIPLocation{
+		IP: loc.IP,
+		Location: struct {
+			City        string `json:"city"`
+			CountryCode string `json:"country_code"`
+			CountryName string `json:"country_name"`
+			Latitude    string `json:"latitude"`
+			Longitude   string `json:"longitude"`
+			Province    string `json:"province"`
+		}{
+			City:        loc.Location.City,
+			CountryCode: loc.Location.CountryCode,
+			CountryName: loc.Location.Country,
+			Latitude:    fmt.Sprintf("%.5f", loc.Location.Latitude),
+			Longitude:   fmt.Sprintf("%.5f", loc.Location.Longitude),
+			Province:    loc.Location.State,
 		},
 	}
 	return geoIP
@@ -116,7 +154,13 @@ func (g *GeoIPService) FetchLocation() (*GeoIPLocation, error) {
 		return location, nil
 	}
 
-	// 两个 API 都失败
+	// 两个 API 都失败，尝试第三个 API (ipapi.is)
+	logger.Warning("备用 GeoIP API 失败，尝试 ipapi.is")
+	if location, err := g.fetchFromIpapiIsAPI(); err == nil {
+		return location, nil
+	}
+
+	// 所有 API 都失败
 	return nil, fmt.Errorf("所有 GeoIP API 都失败")
 }
 
@@ -173,6 +217,35 @@ func (g *GeoIPService) fetchFromBackupAPI() (*GeoIPLocation, error) {
 	// 转换为统一格式
 	geoIPLocation := convertIPSBToGeoIP(&ipsbLocation)
 	logger.Infof("备用 GeoIP API 获取成功: %s (%s)", geoIPLocation.GetCountry(), geoIPLocation.GetCountryCode())
+	return geoIPLocation, nil
+}
+
+// fetchFromIpapiIsAPI 从 ipapi.is API 获取位置信息
+func (g *GeoIPService) fetchFromIpapiIsAPI() (*GeoIPLocation, error) {
+	logger.Info("尝试使用 GeoIP API: https://api.ipapi.is")
+
+	resp, err := g.client.Get("https://api.ipapi.is")
+	if err != nil {
+		logger.Errorf("ipapi.is API 请求失败: %v", err)
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Errorf("ipapi.is API 返回非 200 状态码: %d", resp.StatusCode)
+		return nil, fmt.Errorf("ipapi.is API 返回错误状态码: %d", resp.StatusCode)
+	}
+
+	var ipapiLocation IpapiIsLocation
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&ipapiLocation); err != nil {
+		logger.Errorf("ipapi.is API JSON 解析失败: %v", err)
+		return nil, err
+	}
+
+	// 转换为统一格式
+	geoIPLocation := convertIpapiIsToGeoIP(&ipapiLocation)
+	logger.Infof("ipapi.is API 获取成功: %s (%s)", geoIPLocation.GetCountry(), geoIPLocation.GetCountryCode())
 	return geoIPLocation, nil
 }
 
