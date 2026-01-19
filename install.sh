@@ -138,6 +138,23 @@ else
 
 fi
 
+# Port helpers
+is_port_in_use() {
+    local port="$1"
+    if command -v ss >/dev/null 2>&1; then
+        ss -ltn 2>/dev/null | awk -v p=":${port}$" '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | awk -v p=":${port} " '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:${port} -sTCP:LISTEN >/dev/null 2>&1 && return 0
+    fi
+    return 1
+}
+
 install_base() {
     case "${release}" in
     ubuntu | debian | armbian)
@@ -248,7 +265,48 @@ setup_ip_certificate() {
         domain_args="${domain_args} -d ${ipv6_addr}"
     fi
 
-    local WebPort=80
+    local domain_args="-d ${server_ip}"
+    if [[ -n "$ipv6_addr" ]]; then
+        domain_args="${domain_args} -d ${ipv6_addr}"
+    fi
+
+    # Choose port for HTTP-01 listener (default 80, prompt override)
+    local WebPort=""
+    read -rp "请选择用于 ACME HTTP-01 验证的端口 (默认 80): " WebPort
+    WebPort="${WebPort:-80}"
+    if ! [[ "${WebPort}" =~ ^[0-9]+$ ]] || ((WebPort < 1 || WebPort > 65535)); then
+        echo -e "${red}端口无效，将使用默认端口 80。${plain}"
+        WebPort=80
+    fi
+    echo -e "${green}使用端口 ${WebPort} 进行验证。${plain}"
+    if [[ "${WebPort}" -ne 80 ]]; then
+        echo -e "${yellow}提示：Let's Encrypt 仍会连接 80 端口；请确保外部 80 端口转发到了 ${WebPort}。${plain}"
+    fi
+
+    # Ensure chosen port is available
+    while true; do
+        if is_port_in_use "${WebPort}"; then
+            echo -e "${yellow}端口 ${WebPort} 被占用。${plain}"
+
+            local alt_port=""
+            read -rp "请输入其他端口用于 acme.sh 监听 (留空取消): " alt_port
+            alt_port="${alt_port// /}"
+            if [[ -z "${alt_port}" ]]; then
+                echo -e "${red}端口 ${WebPort} 被占用，无法继续。${plain}"
+                return 1
+            fi
+            if ! [[ "${alt_port}" =~ ^[0-9]+$ ]] || ((alt_port < 1 || alt_port > 65535)); then
+                echo -e "${red}无效端口。${plain}"
+                return 1
+            fi
+            WebPort="${alt_port}"
+            continue
+        else
+            echo -e "${green}端口 ${WebPort} 可用，准备验证。${plain}"
+            break
+        fi
+    done
+
     echo -e "${yellow}将使用端口 ${WebPort} 申请证书...${plain}"
 
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
@@ -262,7 +320,7 @@ setup_ip_certificate() {
         --force
 
     if [ $? -ne 0 ]; then
-        echo -e "${red}证书申请失败，请确保80端口已开放${plain}"
+        echo -e "${red}证书申请失败，请确保端口 ${WebPort} (或映射到此端口的外部80端口) 已开放${plain}"
         return 1
     fi
 
