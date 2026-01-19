@@ -6,7 +6,7 @@ blue='\033[0;34m'
 yellow='\033[0;33m'
 plain='\033[0m'
 
-cur_dir=$(pwd)
+
 
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
@@ -183,7 +183,8 @@ install_base() {
 
 gen_random_string() {
     local length="$1"
-    local random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
+    local random_string
+    random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
     echo "$random_string"
 }
 
@@ -201,11 +202,14 @@ install_acme() {
 }
 
 setup_ip_certificate() {
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}')
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}')
     
     # 获取服务器IP
-    local server_ip=$(curl -s4m8 https://api.ipify.org -k)
+    local server_ip
+    server_ip=$(curl -s4m8 https://api.ipify.org -k)
     if [[ -z "${server_ip}" ]]; then
         server_ip=$(curl -s4m8 https://ip.sb -k)
     fi
@@ -371,7 +375,7 @@ prompt_and_setup_ssl() {
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
-    read -rp "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
+    read -rp "$(echo -e "${green}想继续修改吗？${red}选择'n'以保留旧设置${plain} [y/n]? --->>请输入：")" config_confirm
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
         read -rp "请设置您的用户名: " config_account
         echo -e "${yellow}您的用户名将是: ${config_account}${plain}"
@@ -396,9 +400,12 @@ config_after_install() {
         echo -e "${red}--------------->>>>Cancel...--------------->>>>>>>取消修改...${plain}"
         echo ""
         if [[ ! -f "/etc/x-ui/x-ui.db" ]]; then
-            local usernameTemp=$(head -c 10 /dev/urandom | base64)
-            local passwordTemp=$(head -c 10 /dev/urandom | base64)
-            local webBasePathTemp=$(gen_random_string 15)
+            local usernameTemp
+            usernameTemp=$(head -c 10 /dev/urandom | base64)
+            local passwordTemp
+            passwordTemp=$(head -c 10 /dev/urandom | base64)
+            local webBasePathTemp
+            webBasePathTemp=$(gen_random_string 15)
             /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
             echo ""
             echo -e "${yellow}检测到为全新安装，出于安全考虑将生成随机登录信息:${plain}"

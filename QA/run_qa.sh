@@ -5,7 +5,7 @@
 
 
 PROJECT_ROOT=$(dirname "$(dirname "$0")")
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 
 echo "=== Starting QA Process ==="
 
@@ -41,7 +41,7 @@ echo "[E2E] Running Web API Tests..."
 # Check for service port availability first to avoid hang
 if nc -z 127.0.0.1 13688 2>/dev/null; then
     # Run all python tests in 3_api/cases
-    for test_file in $(find QA/e2e/3_api/cases -name "test.py"); do
+    find QA/e2e/3_api/cases -name "test.py" | while read -r test_file; do
         echo "Running $test_file..."
         python3 "$test_file"
     done

@@ -69,7 +69,7 @@ echo "=== Running E2E Tests ==="
 
 # Run API tests if present (skipping for now if empty folder, but structure is there)
 if [ -d "QA/e2e/3_api/cases" ]; then
-    for test_file in $(find QA/e2e/3_api/cases -name "test.py"); do
+    find QA/e2e/3_api/cases -name "test.py" | while read -r test_file; do
         echo "Running $test_file..."
         python3 "$test_file"
     done

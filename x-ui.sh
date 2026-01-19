@@ -186,6 +186,7 @@ update() {
     fi
 }
 
+# shellcheck disable=SC2120
 update_menu() {
     echo -e "${yellow}更新菜单项${plain}"
     confirm "此功能会将所有菜单项更新为最新显示状态" "y"
@@ -264,6 +265,7 @@ uninstall() {
     delete_script
 }
 
+# shellcheck disable=SC2120
 reset_user() {
     confirm "您确定重置面板的用户名和密码吗?" "n"
     if [[ $? != 0 ]]; then
@@ -287,7 +289,8 @@ reset_user() {
 
 gen_random_string() {
     local length="$1"
-    local random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
+    local random_string
+    random_string=$(LC_ALL=C tr -dc 'a-zA-Z0-9' </dev/urandom | fold -w "$length" | head -n 1)
     echo "$random_string"
 }
 
@@ -310,6 +313,7 @@ reset_webbasepath() {
     echo -e "${green}请使用新的路径登录访问面板${plain}"
 }
 
+# shellcheck disable=SC2120
 reset_config() {
     confirm "您确定要重置所有面板设置，帐户数据不会丢失，用户名和密码不会更改" "n"
     if [[ $? != 0 ]]; then
@@ -335,15 +339,20 @@ check_config() {
     # 获取 IPv4 和 IPv6 地址
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}') 
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}') 
+    local existing_cert
+    existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key
+    existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_cert
+    existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
         domain=$(basename "$(dirname "$existing_cert")")
         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
     fi
@@ -849,7 +858,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     2) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到可撤销的证书。" 
         else 
@@ -866,7 +876,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     3) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到可更新的证书。" 
         else 
@@ -883,12 +894,13 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     4) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到证书。" 
         else 
             echo "现有域名及其路径：" 
-            for domain in $domains; do 
+            echo "$domains" | while read -r domain; do 
                 local cert_path="/root/cert/${domain}/fullchain.pem" 
                 local key_path="/root/cert/${domain}/privkey.pem" 
                 if [[ -f "${cert_path}" && -f "${key_path}" ]]; then 
@@ -903,7 +915,8 @@ ssl_cert_issue_main() {
         ssl_cert_issue_main 
         ;; 
     5) 
-        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        local domains
+        domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
         if [ -z "$domains" ]; then 
             echo "未找到证书。" 
         else 
@@ -949,8 +962,10 @@ ssl_cert_issue_main() {
 } 
 
 ssl_cert_issue() { 
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}') 
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}') 
     # 首先检查 acme.sh
     if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
         echo "未找到 acme.sh，将进行安装" 
@@ -993,9 +1008,11 @@ ssl_cert_issue() {
      LOGD "您的域名是: ${domain}, 正在检查..." 
  
      # 检查是否已存在证书 
-     local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
+     local currentCert
+     currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
      if [ "${currentCert}" == "${domain}" ]; then 
-         local certInfo=$(~/.acme.sh/acme.sh --list) 
+         local certInfo
+         certInfo=$(~/.acme.sh/acme.sh --list) 
          LOGE "系统已存在此域名的证书。当前证书详情:" 
          LOGI "$certInfo" 
          read -rp "是否删除现有证书并重新签发? [y/N]: " delete_cert
@@ -1124,8 +1141,10 @@ ssl_cert_issue() {
      fi 
  } 
 ssl_cert_issue_CF() { 
-     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+     local existing_webBasePath
+     existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}') 
+     local existing_port
+     existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}') 
      LOGI "****** 使用说明 ******" 
      LOGI "请按照以下步骤完成操作：" 
      LOGI "1. 准备好在 Cloudflare 注册的电子邮箱。" 
@@ -1276,11 +1295,14 @@ ssl_cert_issue_for_ip() {
     LOGI "开始为服务器IP自动申请SSL证书..."
     LOGI "使用 Let's Encrypt shortlived 配置文件 (有效期约6天，自动续期)"
 
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}')
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}')
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}')
 
     # 获取服务器IP
-    local server_ip=$(curl -s4m8 https://api.ipify.org -k)
+    local server_ip
+    server_ip=$(curl -s4m8 https://api.ipify.org -k)
     if [[ -z "${server_ip}" ]]; then
         server_ip=$(curl -s4m8 https://ip.sb -k)
     fi
