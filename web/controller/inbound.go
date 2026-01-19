@@ -369,6 +369,7 @@ func (a *InboundController) validateInboundData(inbound *model.Inbound) error {
 		model.Shadowsocks: true,
 		model.Socks:       true,
 		model.WireGuard:   true,
+		model.TUN:         true,
 	}
 	if !validProtocols[inbound.Protocol] {
 		return fmt.Errorf("invalid protocol: %s", inbound.Protocol)
