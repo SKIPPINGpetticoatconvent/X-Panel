@@ -143,7 +143,7 @@ fn run_check(c: Check) -> CheckResult {
     match output_res {
         Ok(output) => {
             let mut is_success = output.status.success();
-            let mut stdout_str = String::from_utf8_lossy(&output.stdout).to_string();
+            let stdout_str = String::from_utf8_lossy(&output.stdout).to_string();
             let stderr_str = String::from_utf8_lossy(&output.stderr).to_string();
 
             let mut final_output = stdout_str.clone();
