@@ -158,25 +158,25 @@ is_port_in_use() {
 install_base() {
     case "${release}" in
     ubuntu | debian | armbian)
-        apt-get update && apt-get install -y -q wget curl sudo tar tzdata
+        apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates
         ;;
     centos | rhel | almalinux | rocky | ol)
-        yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata
+        yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata ca-certificates
         ;;
     fedora | amzn | virtuozzo)
-        dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata
+        dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata ca-certificates
         ;;
     arch | manjaro | parch)
-        pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata
+        pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata ca-certificates
         ;;
     alpine)
-        apk update && apk add --no-cache wget curl sudo tar tzdata
+        apk update && apk add --no-cache wget curl sudo tar tzdata ca-certificates
         ;;
     opensuse-tumbleweed)
-        zypper refresh && zypper -q install -y wget curl sudo tar timezone
+        zypper refresh && zypper -q install -y wget curl sudo tar timezone ca-certificates
         ;;
     *)
-        apt-get update && apt-get install -y -q wget curl sudo tar tzdata
+        apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates
         ;;
     esac
 }

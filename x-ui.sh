@@ -545,24 +545,8 @@ enable_bbr() {
     fi
 
     # Check the OS and install necessary packages
-    case "${release}" in
-    ubuntu | debian | armbian)
-        apt-get update && apt-get install -yqq --no-install-recommends ca-certificates
-        ;;
-    centos | almalinux | rocky | oracle)
-        yum -y update && yum -y install ca-certificates
-        ;;
-    fedora)
-        dnf -y update && dnf -y install ca-certificates
-        ;;
-    arch | manjaro)
-        pacman -Sy --noconfirm ca-certificates
-        ;;
-    *)
-        echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包${plain}\n"
-        exit 1
-        ;;
-    esac
+    # (Removed redundant ca-certificates installation, handled in install.sh)
+    echo "Checking system configuration..."
 
     # Enable BBR
     echo "net.core.default_qdisc=fq" | tee -a /etc/sysctl.conf
