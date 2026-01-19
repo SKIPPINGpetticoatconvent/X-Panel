@@ -1,126 +1,113 @@
-# X-Panel 面板
+# X-Panel
 
 [![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
+[![Release](https://img.shields.io/github/v/release/SKIPPINGpetticoatconvent/X-Panel.svg?style=flat-square)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases)
+[![Downloads](https://img.shields.io/github/downloads/SKIPPINGpetticoatconvent/X-Panel/total.svg?style=flat-square)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases)
+[![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?style=flat-square)](LICENSE)
 
-基于 [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
+An optimized version of [3x-ui](https://github.com/MHSanaei/3x-ui), supporting Xray-core and providing a powerful multi-protocol proxy management panel.
 
-## 🚀 快速开始
+[中文文档](README.zh_CN.md) | [English](README.md)
 
-### 系统要求
-- **推荐 OS**: Ubuntu 20.04+, Debian 11+, CentOS 8+
-- **架构**: amd64, arm64, armv7 等 (详见 [支持列表](README.md#支持的架构和设备))
-- **最低配置**: 1核1G内存
+## 🚀 Quick Start
 
-### 一键安装/升级
+### System Requirements
+- **OS**: Ubuntu 20.04+, Debian 11+, CentOS 8+, Fedora 36+, Arch Linux, Manjaro, Armbian.
+- **Architecture**: amd64, arm64, armv7, s390x.
+- **Specs**: Minimum 1 Core CPU, 1GB RAM.
+
+### Installation & Upgrade
+Run the following command to install or upgrade X-Panel:
+
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/main/install.sh)
 ```
 
-- **指定版本**: `VERSION=v25.10.25 bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/$VERSION/install.sh) $VERSION`
-- **Docker 安装**: 详见 [Docker 指南](README.md#通过docker安装)
+To install a specific version:
+```bash
+VERSION=v25.10.25 bash <(curl -Ls https://raw.githubusercontent.com/SKIPPINGpetticoatconvent/X-Panel/$VERSION/install.sh) $VERSION
+```
 
-安装后脚本会显示用户名、密码、端口、路径。**立即记录！**
+### Accessing the Panel
+After installation, the script will display your login details.
+- **Default Port**: `2053` (or randomized)
+- **Default URL**: `http://YOUR_IP:PORT/YOUR_PATH/panel`
+- **Security Recommendation**: It is highly recommended to enable HTTPS (SSL) or use SSH tunneling for access.
 
-### 访问面板
-- **无证书**: SSH 转发 `ssh -L 15208:127.0.0.1:端口 root@IP`，浏览器访问 `http://127.0.0.1:15208/路径/panel`
-- **有证书**: `https://域名:端口/路径/panel` (推荐)
+## ✨ Features
 
-## 🔐 安全警告 ⚠️
-- **必须** 使用 HTTPS 或 SSH 转发，避免 HTTP 明文泄露
-- 修改默认用户名/密码/路径
-- 放行面板端口和入站端口 (脚本选项 22)
-- 推荐安装证书 (脚本选项 18)
+| Feature | Description |
+|---------|-------------|
+| **Multi-Protocol** | Support for VMess, VLESS, Trojan, Shadowsocks, WireGuard, Dokodemo-door, Socks, HTTP. |
+| **XTLS & Reality** | Full support for Vision flow control, Reality, and RPRX-Direct. |
+| **Traffic Management** | Real-time traffic monitoring, **automatic traffic reset**, device limit (anti-sharing), single-port multi-user. |
+| **Speed Limit & Auditing** | Independent speed limits (KB/s) per inbound/account, flexible auditing rules. |
+| **Quick Config & SNI** | Panel/Telegram Bot quick node generation, **Smart SNI Selection** (Geographic awareness). |
+| **Telegram Integration** | Notifications for login/traffic/expiration, Bot commands for management (restart/backup/status). |
+| **Subscription** | Support for Clash, Surge, V2Ray formats with customizable templates. |
+| **Backup & Restore** | Automatic daily backups to Telegram, manual import/export from the panel. |
 
-## ✨ 核心功能
-| 功能 | 描述 |
-|------|------|
-| **多协议支持** | VMess, VLESS, Trojan, Shadowsocks, WireGuard, Dokodemo-door, Socks, Http |
-| **XTLS/REALITY** | 完整支持 Vision 流控, Reality, RPRX-Direct 等最新技术 |
-| **流量与设备管理** | 实时/历史流量统计, **自动重置流量**, **设备并发数限制** (防止账号共享), **单端口多用户** |
-| **限速与审计** | 针对每个入站或账号的独立限速 (KB/s), 灵活的封禁策略 |
-| **一键配置与 SNI** | 面板/TG 机器人快速生成节点连接, **智能 SNI 轮询** (自动选择未被墙的 SNI) |
-| **Telegram 深度集成** | 节点到期/流量预警通知, 机器人指令控制 (重启/备份/查询), 每日流量报表 |
-| **订阅管理** | 支持 Clash, Surge, V2Ray 等多格式订阅转换, 模板自定义 |
-| **备份与恢复** | 支持定时自动备份到 Telegram, 手动导入导出数据库 |
-| **多语言** | 中文, English, Farsi (波斯语), Russian 等多种语言界面 |
+## 💻 CLI Usage (`x-ui`)
 
-## 💻 命令行工具 (x-ui)
-安装后，可在终端直接通过 `x-ui` 命令管理面板：
+Manage the panel via the `x-ui` command:
 
-| 命令 | 说明 |
-|------|------|
-| `x-ui` | 进入交互式管理菜单 (推荐) |
-| `x-ui start` | 启动面板 |
-| `x-ui stop` | 停止面板 |
-| `x-ui restart` | 重启面板 |
-| `x-ui status` | 查看运行状态 |
-| `x-ui settings` | 查看当前配置 (端口/路径/账号) |
-| `x-ui enable` | 设置开机自启 |
-| `x-ui log` | 查看运行日志 (通过 `journalctl`) |
-| `x-ui banlog` | 查看 Fail2Ban 封禁日志 |
-| `x-ui install` | 手动安装面板 |
-| `x-ui update` | 更新面板至最新版 |
-| `x-ui ssl` | 证书 SSL 管理 (申请/续期) |
+| Command | Description |
+|---------|-------------|
+| `x-ui` | Open the interactive management menu |
+| `x-ui start` | Start the panel service |
+| `x-ui stop` | Stop the panel service |
+| `x-ui restart` | Restart the panel |
+| `x-ui status` | Check service status |
+| `x-ui settings` | View current settings (port, path, etc.) |
+| `x-ui enable` | Enable auto-start on boot |
+| `x-ui log` | View logs |
+| `x-ui banlog` | View Fail2Ban logs |
+| `x-ui ssl` | Manage SSL certificates (ACME) |
 
-## 📱 使用指南
+## 🐳 Docker Installation
 
-### 1. 面板设置
-- 进入 `面板设置 > 常规`: 修改端口、路径。
-- `面板设置 > 安全`: 修改后台登录用户名/密码。
-- `面板设置 > Telegram`: 配置机器人 Token 和 Chat ID，开启流量通知和每日报告。
+1. **Install Docker**:
+   ```bash
+   curl -fsSL https://get.docker.com | bash
+   ```
 
-### 2. 添加入站 (Inbound)
-1. 导航至 `入站列表 > 添加入站`。
-2. 选择协议 (推荐 VLESS + Reality + Vision 以获得最佳抗探测效果)。
-3. 配置端口, 流控选择 `xtls-rprx-vision-udp443`。
-4. **客户端设置**:
-   - 添加用户 email 和 uuid。
-   - **限速**: 设置 `0` 为不限速，或填入具体数值 (如 `1024` KB/s)。
-   - **设备限制**: 设置允许同时在线的 IP 数，防止恶意分享。
-5. 点击添加，在列表页点击 `操作 > 二维码/链接` 获取节点。
+2. **Run X-Panel**:
+   ```bash
+   docker run -itd \
+     -e XRAY_VMESS_AEAD_FORCED=false \
+     -v $PWD/db/:/etc/x-ui/ \
+     -v $PWD/cert/:/root/cert/ \
+     --network=host \
+     --restart=unless-stopped \
+     --name x-panel \
+     ghcr.io/xeefei/x-panel:latest
+   ```
 
-### 3. 系统监控
-- 首页仪表盘展示 CPU、内存、硬盘使用率及系统负载。
-- 实时显示 Xray 状态 (运行/停止/版本)。
-- 详细的流量使用趋势图。
+   *Note: HOST networking is recommended for performance and port management.*
 
-## 🛠️ 开发与构建
+## 🛠️ Development
 
-如果您想自己在本地进行开发或修改：
+### Prerequisites
+- Go 1.22+
+- Node.js 18+ (yarn recommended)
 
-### 依赖
-- **Go**: 1.22+
-- **Node.js**: 18+ (推荐使用 yarn)
-
-### 构建步骤
-1. **编译前端**:
+### Build Steps
+1. **Frontend**:
    ```bash
    cd web
-   npm install
-   npm run build
+   npm install && npm run build
    ```
-2. **编译后端**:
+2. **Backend**:
    ```bash
-   # 回到项目根目录
    go mod tidy
    go build -o x-ui main.go
    ```
-3. **运行**:
-   ```bash
-   ./x-ui
-   ```
 
-## 🔍 故障排除
-| 问题 | 解决方案 |
-|------|-----------|
-| 服务启动失败 (exit-code 2) | 检查日志 `x-ui log`, 常见原因：端口占用, 配置文件错误 |
-| 无法访问面板 | 1. 检查防火墙放行端口; 2. 检查 SSH 转发是否正确; 3. 检查是否开启了 HTTPS 但使用了 HTTP 访问 |
-| 节点连不上 | 检查服务器时间是否同步 (`timedatectl`), 检查客户端内核版本 |
+## ⚠️ Safe Use Policy
+This project is for educational and technical research purposes only. Users are responsible for complying with local laws and regulations.
+The authors are not responsible for any misuse of this software.
 
-## 📸 预览
-![概览](media/1.png) ![入站](media/2.png) ![客户端](media/3.png)
-
-## 🙏 致谢
+## 🙏 Credits
 - [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)
-- [EGfrthtu/X-Panel](https://github.com/SKIPPINGpetticoatconvent/X-Panel)
 - [FranzKafkaYu/x-ui](https://github.com/FranzKafkaYu/x-ui)
+- [vaxilu/x-ui](https://github.com/vaxilu/x-ui)
