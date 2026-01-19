@@ -19,6 +19,8 @@ description: Strict rules for using MCP tools in X-Panel.
 
 **必须且只能**使用 "ht-terminal"（ht-mcp）MCP 的工具。
 
+**必须强制使用 tmux**：所有终端会话必须使用 `tmux`。严禁直接运行 `bash`或其他 shell，必须封装在 `tmux` 中。
+
 适用范围：命令执行、Shell 操作、进程管理、交互式终端。
 
 ❌ 严禁使用内置 run_command 或其他终端工具。

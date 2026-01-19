@@ -15,6 +15,8 @@ description: X-Panel development, technology stack, version control, and testing
 
 # 3. 开发规范 (Development Standards)
 
+> **⚠️ 终端环境强制要求**: 所有开发、测试、验证命令（如 `go run`, `verify` 等）必须在 `tmux` 会话中执行。
+
 ## 3.1 Go 语言规范
 
 - 提交前必须执行 `gofmt` 或 `goimports` 格式化。
