@@ -20,7 +20,7 @@ description: X-Panel 开发规范
 
 ## 3.3 Shell 脚本规范
 
-- 修改 `install.sh`、`x-ui.sh` 等脚本后，建议使用 `shellcheck` 检查。
+- 修改 `install.sh`、`x-ui.sh` 等脚本后，建议使用 `shellcheck -S error` 检查（仅检查错误级别）。
 - 确保脚本在 Ubuntu、Debian、CentOS 等主流 Linux 发行版兼容。
 
 ## 3.4 TOML 配置文件规范
