@@ -19,7 +19,7 @@ description: X-Panel MCP 工具使用强制规则
 
 **必须且只能**使用 "ht-terminal"（ht-mcp）MCP 的工具。
 
-**必须强制使用 tmux**：所有终端会话必须使用 `tmux`。严禁直接运行 `bash`或其他 shell，必须封装在 `tmux` 中。
+**必须强制使用 screen**：所有终端会话必须使用 `screen`。严禁直接运行 `bash`或其他 shell，必须封装在 `screen` 中。
 
 适用范围：命令执行、Shell 操作、进程管理、交互式终端。
 
