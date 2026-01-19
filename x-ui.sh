@@ -19,6 +19,23 @@ function LOGI() {
     echo -e "${green}[INF] $* ${plain}"
 }
 
+# Port helpers: detect listener and owning process (best effort)
+is_port_in_use() {
+    local port="$1"
+    if command -v ss >/dev/null 2>&1; then
+        ss -ltn 2>/dev/null | awk -v p=":${port}$" '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | awk -v p=":${port} " '$4 ~ p {exit 0} END {exit 1}'
+        return
+    fi
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:${port} -sTCP:LISTEN >/dev/null 2>&1 && return 0
+    fi
+    return 1
+}
+
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
 
@@ -1342,9 +1359,41 @@ ssl_cert_issue_for_ip() {
         LOGI "包含 IPv6 地址: ${ipv6_addr}"
     fi
 
-    local WebPort=80
-    LOGI "将使用端口 ${WebPort} 申请证书..."
-    LOGI "请确保端口 ${WebPort} 已开放且未被占用..."
+    # Choose port for HTTP-01 listener (default 80, allow override)
+    local WebPort=""
+    read -rp "请选择用于 ACME HTTP-01 验证的端口 (默认 80): " WebPort
+    WebPort="${WebPort:-80}"
+    if ! [[ "${WebPort}" =~ ^[0-9]+$ ]] || ((WebPort < 1 || WebPort > 65535)); then
+        LOGE "端口无效，将使用默认端口 80。"
+        WebPort=80
+    fi
+    LOGI "使用端口 ${WebPort} 为 IP: ${server_ip} 颁发证书"
+    if [[ "${WebPort}" -ne 80 ]]; then
+        LOGI "提示：Let's Encrypt 仍会连接 80 端口；请确保外部 80 端口转发到了 ${WebPort} 进行验证。"
+    fi
+
+    while true; do
+        if is_port_in_use "${WebPort}"; then
+            LOGI "端口 ${WebPort} 被占用。"
+
+            local alt_port=""
+            read -rp "请输入其他端口用于 acme.sh 监听 (留空取消): " alt_port
+            alt_port="${alt_port// /}"
+            if [[ -z "${alt_port}" ]]; then
+                LOGE "端口 ${WebPort} 被占用，无法继续。"
+                return 1
+            fi
+            if ! [[ "${alt_port}" =~ ^[0-9]+$ ]] || ((alt_port < 1 || alt_port > 65535)); then
+                LOGE "无效端口。"
+                return 1
+            fi
+            WebPort="${alt_port}"
+            continue
+        else
+            LOGI "端口 ${WebPort} 可用，准备验证。"
+            break
+        fi
+    done
 
     # 申请证书
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
