@@ -13,7 +13,6 @@ tmp/
 
 # Ignore build and distribution directories
 backup/
-bin/
 dist/
 release/
 node_modules/
