@@ -2,7 +2,7 @@
 
 [![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
 
-基于 [EGfrthtu/X-Panel](https://github.com/SKIPPINGpetticoatconvent/X-Panel) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
+基于 [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui) 的优化版，支持 Xray 核心，提供多协议代理管理面板。
 
 ## 🚀 快速开始
 
