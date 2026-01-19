@@ -9,6 +9,7 @@ const Protocols = {
   Socks: "socks",
   HTTP: "http",
   Wireguard: "wireguard",
+  Hysteria: "hysteria",
 };
 
 const SSMethods = {
@@ -126,6 +127,86 @@ class CommonClass {
   }
 }
 
+class HysteriaStreamSettings extends CommonClass {
+  constructor(
+    version = 2,
+    auth = '',
+    up = '0',
+    down = '0',
+    udphopPort = '',
+    udphopInterval = 30,
+    initStreamReceiveWindow = 8388608,
+    maxStreamReceiveWindow = 8388608,
+    initConnectionReceiveWindow = 20971520,
+    maxConnectionReceiveWindow = 20971520,
+    maxIdleTimeout = 30,
+    keepAlivePeriod = 0,
+    disablePathMTUDiscovery = false
+  ) {
+    super();
+    this.version = version;
+    this.auth = auth;
+    this.up = up;
+    this.down = down;
+    this.udphopPort = udphopPort;
+    this.udphopInterval = udphopInterval;
+    this.initStreamReceiveWindow = initStreamReceiveWindow;
+    this.maxStreamReceiveWindow = maxStreamReceiveWindow;
+    this.initConnectionReceiveWindow = initConnectionReceiveWindow;
+    this.maxConnectionReceiveWindow = maxConnectionReceiveWindow;
+    this.maxIdleTimeout = maxIdleTimeout;
+    this.keepAlivePeriod = keepAlivePeriod;
+    this.disablePathMTUDiscovery = disablePathMTUDiscovery;
+  }
+
+  static fromJson(json = {}) {
+    let udphopPort = '';
+    let udphopInterval = 30;
+    if (json.udphop) {
+      udphopPort = json.udphop.port || '';
+      udphopInterval = json.udphop.interval || 30;
+    }
+    return new HysteriaStreamSettings(
+      json.version,
+      json.auth,
+      json.up,
+      json.down,
+      udphopPort,
+      udphopInterval,
+      json.initStreamReceiveWindow,
+      json.maxStreamReceiveWindow,
+      json.initConnectionReceiveWindow,
+      json.maxConnectionReceiveWindow,
+      json.maxIdleTimeout,
+      json.keepAlivePeriod,
+      json.disablePathMTUDiscovery
+    );
+  }
+
+  toJson() {
+    const result = {
+      version: this.version,
+      auth: this.auth,
+      up: this.up,
+      down: this.down,
+      initStreamReceiveWindow: this.initStreamReceiveWindow,
+      maxStreamReceiveWindow: this.maxStreamReceiveWindow,
+      initConnectionReceiveWindow: this.initConnectionReceiveWindow,
+      maxConnectionReceiveWindow: this.maxConnectionReceiveWindow,
+      maxIdleTimeout: this.maxIdleTimeout,
+      keepAlivePeriod: this.keepAlivePeriod,
+      disablePathMTUDiscovery: this.disablePathMTUDiscovery
+    };
+    if (this.udphopPort) {
+      result.udphop = {
+        port: this.udphopPort,
+        interval: this.udphopInterval
+      };
+    }
+    return result;
+  }
+}
+
 class TcpStreamSettings extends CommonClass {
   constructor(type = "none", host, path) {
     super();
@@ -137,7 +218,7 @@ class TcpStreamSettings extends CommonClass {
   static fromJson(json = {}) {
     let header = json.header;
     if (!header) return new TcpStreamSettings();
-    if (header.type == "http" && header.request) {
+    if (header.type === "http" && header.request) {
       return new TcpStreamSettings(
         header.type,
         header.request.headers.Host.join(","),
@@ -154,15 +235,15 @@ class TcpStreamSettings extends CommonClass {
         request:
           this.type === "http"
             ? {
-                headers: {
-                  Host: ObjectUtil.isEmpty(this.host)
-                    ? []
-                    : this.host.split(","),
-                },
-                path: ObjectUtil.isEmpty(this.path)
-                  ? ["/"]
-                  : this.path.split(","),
-              }
+              headers: {
+                Host: ObjectUtil.isEmpty(this.host)
+                  ? []
+                  : this.host.split(","),
+              },
+              path: ObjectUtil.isEmpty(this.path)
+                ? ["/"]
+                : this.path.split(","),
+            }
             : undefined,
       },
     };
@@ -473,6 +554,7 @@ class StreamSettings extends CommonClass {
     grpcSettings = new GrpcStreamSettings(),
     httpupgradeSettings = new HttpUpgradeStreamSettings(),
     xhttpSettings = new xHTTPStreamSettings(),
+    hysteriaSettings = new HysteriaStreamSettings(),
     sockopt = undefined,
   ) {
     super();
@@ -486,6 +568,7 @@ class StreamSettings extends CommonClass {
     this.grpc = grpcSettings;
     this.httpupgrade = httpupgradeSettings;
     this.xhttp = xhttpSettings;
+    this.hysteria = hysteriaSettings;
     this.sockopt = sockopt;
   }
 
@@ -498,7 +581,7 @@ class StreamSettings extends CommonClass {
   }
 
   get sockoptSwitch() {
-    return this.sockopt != undefined;
+    return this.sockopt !== undefined;
   }
 
   set sockoptSwitch(value) {
@@ -517,6 +600,7 @@ class StreamSettings extends CommonClass {
       GrpcStreamSettings.fromJson(json.grpcSettings),
       HttpUpgradeStreamSettings.fromJson(json.httpupgradeSettings),
       xHTTPStreamSettings.fromJson(json.xhttpSettings),
+      HysteriaStreamSettings.fromJson(json.hysteriaSettings),
       SockoptStreamSettings.fromJson(json.sockopt),
     );
   }
@@ -526,9 +610,9 @@ class StreamSettings extends CommonClass {
     return {
       network: network,
       security: this.security,
-      tlsSettings: this.security == "tls" ? this.tls.toJson() : undefined,
+      tlsSettings: this.security === "tls" ? this.tls.toJson() : undefined,
       realitySettings:
-        this.security == "reality" ? this.reality.toJson() : undefined,
+        this.security === "reality" ? this.reality.toJson() : undefined,
       tcpSettings: network === "tcp" ? this.tcp.toJson() : undefined,
       kcpSettings: network === "kcp" ? this.kcp.toJson() : undefined,
       wsSettings: network === "ws" ? this.ws.toJson() : undefined,
@@ -536,7 +620,8 @@ class StreamSettings extends CommonClass {
       httpupgradeSettings:
         network === "httpupgrade" ? this.httpupgrade.toJson() : undefined,
       xhttpSettings: network === "xhttp" ? this.xhttp.toJson() : undefined,
-      sockopt: this.sockopt != undefined ? this.sockopt.toJson() : undefined,
+      hysteriaSettings: network === "hysteria" ? this.hysteria.toJson() : undefined,
+      sockopt: this.sockopt !== undefined ? this.sockopt.toJson() : undefined,
     };
   }
 }
@@ -621,7 +706,7 @@ class Outbound extends CommonClass {
 
   //this is used for xtls-rprx-vision
   canEnableTlsFlow() {
-    if (this.stream.security != "none" && this.stream.network === "tcp") {
+    if (this.stream.security !== "none" && this.stream.network === "tcp") {
       return this.protocol === Protocols.VLESS;
     }
     return false;
@@ -639,6 +724,7 @@ class Outbound extends CommonClass {
       Protocols.VLESS,
       Protocols.Trojan,
       Protocols.Shadowsocks,
+      Protocols.Hysteria,
     ].includes(this.protocol);
   }
 
@@ -662,6 +748,7 @@ class Outbound extends CommonClass {
       Protocols.Trojan,
       Protocols.Shadowsocks,
       Protocols.HTTP,
+      Protocols.Hysteria,
       Protocols.Socks,
     ].includes(this.protocol);
   }
@@ -715,28 +802,31 @@ class Outbound extends CommonClass {
         stream = { sockopt: this.stream.sockopt.toJson() };
     }
     return {
-      tag: this.tag == "" ? undefined : this.tag,
+      tag: this.tag === "" ? undefined : this.tag,
       protocol: this.protocol,
       settings:
         this.settings instanceof CommonClass
           ? this.settings.toJson()
           : this.settings,
       streamSettings: stream,
-      sendThrough: this.sendThrough != "" ? this.sendThrough : undefined,
+      sendThrough: this.sendThrough !== "" ? this.sendThrough : undefined,
       mux: this.mux?.enabled ? this.mux : undefined,
     };
   }
 
   static fromLink(link) {
     data = link.split("://");
-    if (data.length != 2) return null;
+    if (data.length !== 2) return null;
     switch (data[0].toLowerCase()) {
       case Protocols.VMess:
-        return this.fromVmessLink(JSON.parse(Base64.decode(data[1])));
+        return Outbound.fromVmessLink(JSON.parse(Base64.decode(data[1])));
       case Protocols.VLESS:
       case Protocols.Trojan:
       case "ss":
-        return this.fromParamLink(link);
+        return Outbound.fromParamLink(link);
+      case "hysteria2":
+      case Protocols.Hysteria:
+        return Outbound.fromHysteriaLink(link);
       default:
         return null;
     }
@@ -762,7 +852,7 @@ class Outbound extends CommonClass {
       stream.grpc = new GrpcStreamSettings(
         json.path,
         json.authority,
-        json.type == "multi",
+        json.type === "multi",
       );
     } else if (network === "httpupgrade") {
       stream.httpupgrade = new HttpUpgradeStreamSettings(json.path, json.host);
@@ -770,7 +860,7 @@ class Outbound extends CommonClass {
       stream.xhttp = new xHTTPStreamSettings(json.path, json.host, json.mode);
     }
 
-    if (json.tls && json.tls == "tls") {
+    if (json.tls && json.tls === "tls") {
       stream.tls = new TlsStreamSettings(
         json.sni,
         json.alpn ? json.alpn.split(",") : [],
@@ -798,6 +888,9 @@ class Outbound extends CommonClass {
     let headerType = url.searchParams.get("headerType") ?? undefined;
     let host = url.searchParams.get("host") ?? undefined;
     let path = url.searchParams.get("path") ?? undefined;
+
+
+
     let mode = url.searchParams.get("mode") ?? undefined;
 
     if (type === "tcp" || type === "none") {
@@ -812,7 +905,7 @@ class Outbound extends CommonClass {
       stream.grpc = new GrpcStreamSettings(
         url.searchParams.get("serviceName") ?? "",
         url.searchParams.get("authority") ?? "",
-        url.searchParams.get("mode") == "multi",
+        url.searchParams.get("mode") === "multi",
       );
     } else if (type === "httpupgrade") {
       stream.httpupgrade = new HttpUpgradeStreamSettings(path, host);
@@ -820,7 +913,7 @@ class Outbound extends CommonClass {
       stream.xhttp = new xHTTPStreamSettings(path, host, mode);
     }
 
-    if (security == "tls") {
+    if (security === "tls") {
       let fp = url.searchParams.get("fp") ?? "none";
       let alpn = url.searchParams.get("alpn");
       let allowInsecure = url.searchParams.get("allowInsecure");
@@ -835,7 +928,7 @@ class Outbound extends CommonClass {
       );
     }
 
-    if (security == "reality") {
+    if (security === "reality") {
       let pbk = url.searchParams.get("pbk");
       let fp = url.searchParams.get("fp");
       let sni = url.searchParams.get("sni") ?? "";
@@ -851,7 +944,7 @@ class Outbound extends CommonClass {
     if (!match) return null;
     let [, protocol, userData, address, port] = match;
     port *= 1;
-    if (protocol == "ss") {
+    if (protocol === "ss") {
       protocol = "shadowsocks";
       userData = atob(userData).split(":");
     }
@@ -869,7 +962,7 @@ class Outbound extends CommonClass {
       case Protocols.Trojan:
         settings = new Outbound.TrojanSettings(address, port, userData);
         break;
-      case Protocols.Shadowsocks:
+      case Protocols.Shadowsocks: {
         let method = userData.splice(0, 1)[0];
         settings = new Outbound.ShadowsocksSettings(
           address,
@@ -879,13 +972,14 @@ class Outbound extends CommonClass {
           true,
         );
         break;
+      }
       default:
         return null;
     }
     let remark = decodeURIComponent(url.hash);
     // Remove '#' from url.hash
     remark =
-      remark.length > 0 ? remark.substring(1) : "out-" + protocol + "-" + port;
+      remark.length > 0 ? remark.substring(1) : `out-${protocol}-${port}`;
     return new Outbound(remark, protocol, settings, stream);
   }
 }
@@ -980,8 +1074,8 @@ Outbound.FreedomSettings = class extends CommonClass {
         : undefined,
       json.noises
         ? json.noises.map((noise) =>
-            Outbound.FreedomSettings.Noise.fromJson(noise),
-          )
+          Outbound.FreedomSettings.Noise.fromJson(noise),
+        )
         : undefined,
     );
   }
@@ -1401,6 +1495,32 @@ Outbound.WireguardSettings.Peer = class extends CommonClass {
       allowedIPs: this.allowedIPs ? this.allowedIPs : undefined,
       endpoint: this.endpoint,
       keepAlive: this.keepAlive ?? undefined,
+    };
+  }
+};
+
+Outbound.HysteriaSettings = class extends CommonClass {
+  constructor(address = '', port = 443, version = 2) {
+    super();
+    this.address = address;
+    this.port = port;
+    this.version = version;
+  }
+
+  static fromJson(json = {}) {
+    if (Object.keys(json).length === 0) return new Outbound.HysteriaSettings();
+    return new Outbound.HysteriaSettings(
+      json.address,
+      json.port,
+      json.version
+    );
+  }
+
+  toJson() {
+    return {
+      address: this.address,
+      port: this.port,
+      version: this.version
     };
   }
 };
