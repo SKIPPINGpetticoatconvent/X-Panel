@@ -95,7 +95,7 @@
 "invalidFormData" = "数据格式错误"
 "emptyUsername" = "请输入用户名"
 "emptyPassword" = "请输入密码"
-"wrongUsernameOrPassword" = "用户名、密码或双重验证码无效。"  
+"wrongUsernameOrPassword" = "用户名、密码或双重验证码无效。"
 "successLogin" = "您已成功登录您的账户。"
 "tooManyAttempts" = "尝试次数过多，请稍后再试。"
 
@@ -243,19 +243,19 @@
 "same" = "相同"
 "inboundData" = "入站数据"
 "exportInbound" = "导出入站规则"
-"import"="导入"
+"import" = "导入"
 "importInbound" = "导入入站规则"
-"reviewTitle"="请确认以下配置信息"
-"neverExpire"="永不过期"
-"reviewHint"="如需修改请返回上一步"
-"unlimited"="无限制"
-"deviceLimit"="设备限制"
-"deviceLimitDesc"="请输入具体数量，\r\n0表示不限制（留空也表示不限制）"
-"speedLimit"="独立限速"
-"speedLimitDesc"="设置该用户的最大〔上传/下载速度〕，\r\n单位 KB/s，0 表示不限速"
-"oneClickConfig"="一键配置"
-"is_subConversion"="订阅转换"
-"confirmCreate"="确认提交创建"
+"reviewTitle" = "请确认以下配置信息"
+"neverExpire" = "永不过期"
+"reviewHint" = "如需修改请返回上一步"
+"unlimited" = "无限制"
+"deviceLimit" = "设备限制"
+"deviceLimitDesc" = "请输入具体数量，\r\n0表示不限制（留空也表示不限制）"
+"speedLimit" = "独立限速"
+"speedLimitDesc" = "设置该用户的最大〔上传/下载速度〕，\r\n单位 KB/s，0 表示不限速"
+"oneClickConfig" = "一键配置"
+"is_subConversion" = "订阅转换"
+"confirmCreate" = "确认提交创建"
 
 
 [pages.client]
@@ -590,6 +590,13 @@
 "psk" = "共享密钥"
 "domainStrategy" = "域策略"
 
+[pages.xray.tun]
+"name" = "接口名称"
+"nameDesc" = "TUN 接口名称。默认为 'xray0'"
+"mtuDesc" = "最大传输单元。默认为 1500"
+"userLevel" = "用户等级"
+"userLevelDesc" = "此入站处理的所有连接将携带此用户等级。默认为 0"
+
 [pages.xray.dns]
 "enable" = "启用 DNS"
 "enableDesc" = "启用内置 DNS 服务器"
@@ -624,9 +631,9 @@
 
 [pages.settings.security]
 "admin" = "管理员凭据"
-"twoFactor" = "双重验证"  
-"twoFactorEnable" = "启用2FA"  
-"twoFactorEnableDesc" = "增加额外的验证层以提高安全性。"  
+"twoFactor" = "双重验证"
+"twoFactorEnable" = "启用2FA"
+"twoFactorEnableDesc" = "增加额外的验证层以提高安全性。"
 "twoFactorModalSetTitle" = "启用双重认证"
 "twoFactorModalDeleteTitle" = "停用双重认证"
 "twoFactorModalSteps" = "要设定双重认证，请执行以下步骤："
@@ -746,8 +753,8 @@
 "inbound_client_data_id" = "🔄 **入站配置详情**\r\n\r\n**入站名称：** `{{ .InboundRemark }}`\r\n\r\n**🔑 用户 ID：** `<code>{{ .ClientId }}</code>`\r\n📧 **邮箱：** `<code>{{ .ClientEmail }}</code>`\r\n📊 **流量限制：** `<code>{{ .ClientTraffic }}</code>`\r\n📅 **到期时间：** `<code>{{ .ClientExp }}</code>`\r\n🌐 **IP 限制：** `<code>{{ .IpLimit }}</code>`\r\n💬 **备注：** `<code>{{ .ClientComment }}</code>`"
 "inbound_client_data_pass" = "🔄 **入站配置详情**\r\n\r\n**入站名称：** `{{ .InboundRemark }}`\r\n\r\n**🔐 连接密码：** `<code>{{ .ClientPass }}</code>`\r\n📧 **邮箱：** `<code>{{ .ClientEmail }}</code>`\r\n📊 **流量限制：** `<code>{{ .ClientTraffic }}</code>`\r\n📅 **到期时间：** `<code>{{ .ClientExp }}</code>`\r\n🌐 **IP 限制：** `<code>{{ .IpLimit }}</code>`\r\n💬 **备注：** `<code>{{ .ClientComment }}</code>`"
 "cancel" = "❌ **操作已取消**\r\n\r\n您可以随时使用 `/start` 重新开始 🔄"
-"error_add_client"  = "⚠️ **添加客户端失败**\r\n\r\n错误信息：`{{ .error }}`"
-"using_default_value"  = "✅ **使用默认值**\r\n\r\n将保持系统默认配置 😊"
+"error_add_client" = "⚠️ **添加客户端失败**\r\n\r\n错误信息：`{{ .error }}`"
+"using_default_value" = "✅ **使用默认值**\r\n\r\n将保持系统默认配置 😊"
 "incorrect_input" = "❌ **输入格式错误**\r\n\r\n要求：短语应连续输入，不能包含空格\r\n\r\n✅ **正确示例：** `aaaaaa`\r\n❌ **错误示例：** `aaa aaa`"
 "AreYouSure" = "🤔 **确认操作**\r\n\r\n请确认是否继续执行此操作？"
 "SuccessResetTraffic" = "📧 **用户：** `{{ .ClientEmail }}`\r\n✅ **状态：** 重置成功"
