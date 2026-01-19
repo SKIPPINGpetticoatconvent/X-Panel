@@ -34,13 +34,13 @@ fn main() {
             name: "Go Format",
             cmd: "gofmt",
             args: vec!["-l", "."],
-            enabled: true,
+            enabled: false, // User requested to ignore style
         },
         Check {
             name: "TOML Format",
             cmd: "taplo",
             args: vec!["fmt", "--check"],
-            enabled: true,
+            enabled: false, // User requested to ignore style
         },
         Check {
             name: "Go Build",
@@ -69,7 +69,8 @@ fn main() {
          Check {
             name: "ShellCheck",
             cmd: "sh",
-            args: vec!["-c", "find . -name '*.sh' | xargs shellcheck"],
+            // Only show warnings and errors, ignore style/info
+            args: vec!["-c", "find . -name '*.sh' | xargs shellcheck --severity=warning"],
             enabled: true,
         },
     ];

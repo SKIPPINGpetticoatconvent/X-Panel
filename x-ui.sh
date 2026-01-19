@@ -131,12 +131,12 @@ iplimit_banned_log_path="${log_folder}/3xipl-banned.log"
 
 confirm() {
     if [[ $# -gt 1 ]]; then
-        echo && read -p "$1 [Default $2]: " temp
+        echo && read -rp "$1 [Default $2]: " temp
         if [[ "${temp}" == "" ]]; then
             temp=$2
         fi
     else
-        read -p "$1 [y/n]: " temp
+        read -rp "$1 [y/n]: " temp
     fi
     if [[ "${temp}" == "y" || "${temp}" == "Y" ]]; then
         return 0
@@ -155,7 +155,7 @@ confirm_restart() {
 }
 
 before_show_menu() {
-    echo && echo -n -e "${yellow}按 Enter 键返回主菜单：${plain}" && read temp
+    echo && echo -n -e "${yellow}按 Enter 键返回主菜单：${plain}" && read -r temp
     show_menu
 }
 
@@ -212,7 +212,7 @@ update_menu() {
 
 custom_version() {
     echo "输入面板版本 (例: 2.3.8):"
-    read panel_version
+    read -r panel_version
 
     if [ -z "$panel_version" ]; then
         echo "面板版本不能为空。"
@@ -502,7 +502,7 @@ bbr_menu() {
     echo -e "${green}\t1.${plain} 启用 BBR"
     echo -e "${green}\t2.${plain} 禁用 BBR"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -rp "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -676,7 +676,7 @@ firewall_menu() {
     echo -e "${green}\t3.${plain} 从列表中删除端口"
     echo -e "${green}\t4.${plain} 禁用防火墙"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -rp "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -720,7 +720,7 @@ open_ports() {
     firewall-cmd --zone=public --add-port=13688/tcp --permanent
 
     # Prompt the user to enter a list of ports
-    read -p "输入您要打开的端口（例如 80,443,13688 或端口范围 400-500): " ports
+    read -rp "输入您要打开的端口（例如 80,443,13688 或端口范围 400-500): " ports
 
     # Check if the input is valid
     if ! [[ $ports =~ ^([0-9]+|[0-9]+-[0-9]+)(,([0-9]+|[0-9]+-[0-9]+))*$ ]]; then
@@ -753,7 +753,7 @@ open_ports() {
 
 delete_ports() {
     # Prompt the user to enter the ports they want to delete
-    read -p "输入要删除的端口（例如 80,443,13688 或范围 400-500): " ports
+    read -rp "输入要删除的端口（例如 80,443,13688 或范围 400-500): " ports
 
     # Check if the input is valid
     if ! [[ $ports =~ ^([0-9]+|[0-9]+-[0-9]+)(,([0-9]+|[0-9]+-[0-9]+))*$ ]]; then
@@ -787,7 +787,7 @@ delete_ports() {
 
 update_geo() {
     local defaultBinFolder="/usr/local/x-ui/bin"
-    read -p "请输入 x-ui bin 文件夹路径，默认留空。（默认值：'${defaultBinFolder}')" binFolder
+    read -rp "请输入 x-ui bin 文件夹路径，默认留空。（默认值：'${defaultBinFolder}')" binFolder
     binFolder=${binFolder:-${defaultBinFolder}}
     if [[ ! -d ${binFolder} ]]; then
         LOGE "文件夹 ${binFolder} 不存在！"
@@ -796,7 +796,7 @@ update_geo() {
     fi
 
     systemctl stop x-ui
-    cd ${binFolder}
+    cd "${binFolder}" || exit 1
     rm -f geoip.dat geosite.dat geoip_IR.dat geosite_IR.dat geoip_VN.dat geosite_VN.dat
     wget -N https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
     wget -N https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
@@ -805,7 +805,7 @@ update_geo() {
     wget -O geoip_VN.dat https://github.com/vuong2023/vn-v2ray-rules/releases/latest/download/geoip.dat
     wget -O geosite_VN.dat https://github.com/vuong2023/vn-v2ray-rules/releases/latest/download/geosite.dat
     systemctl start x-ui
-    echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binfolder}' 中已经更新成功 !${plain}"
+    echo -e "${green}Geosite.dat + Geoip.dat + geoip_IR.dat + geosite_IR.dat 在 bin 文件夹: '${binFolder}' 中已经更新成功 !${plain}"
     before_show_menu
 }
 
@@ -857,7 +857,7 @@ ssl_cert_issue_main() {
             echo "$domains" 
             read -rp "请从列表中输入要撤销证书的域名：" domain 
             if echo "$domains" | grep -qw "$domain"; then 
-                ~/.acme.sh/acme.sh --revoke -d ${domain} 
+                ~/.acme.sh/acme.sh --revoke -d "${domain}" 
                 LOGI "已撤销域名的证书：$domain" 
             else 
                 echo "输入的域名无效。" 
@@ -874,7 +874,7 @@ ssl_cert_issue_main() {
             echo "$domains" 
             read -rp "请从列表中输入要强制更新 SSL 证书的域名：" domain 
             if echo "$domains" | grep -qw "$domain"; then 
-                ~/.acme.sh/acme.sh --renew -d ${domain} --force 
+                ~/.acme.sh/acme.sh --renew -d "${domain}" --force 
                 LOGI "已强制更新域名的证书：$domain" 
             else 
                 echo "输入的域名无效。" 
@@ -934,7 +934,7 @@ ssl_cert_issue_main() {
         echo -e "${yellow}自动申请服务器IP证书 (Let's Encrypt)${plain}"
         echo -e "证书有效期约6天，脚本已配置自动续期"
         echo -e "${yellow}注意: 必须确保80端口开放且未被占用${plain}"
-        read -p "是否继续? [y/n]: " choice
+        read -rp "是否继续? [y/n]: " choice
         if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
             ssl_cert_issue_for_ip
         fi
@@ -1000,9 +1000,9 @@ ssl_cert_issue() {
          LOGI "$certInfo" 
          read -rp "是否删除现有证书并重新签发? [y/N]: " delete_cert
          if [[ "$delete_cert" == "y" || "$delete_cert" == "Y" ]]; then
-             ~/.acme.sh/acme.sh --remove -d ${domain}
-             rm -rf ~/.acme.sh/${domain}
-             rm -rf /root/cert/${domain}
+             ~/.acme.sh/acme.sh --remove -d "${domain}"
+             rm -rf ~/.acme.sh/"${domain}"
+             rm -rf /root/cert/"${domain}"
              LOGI "已删除现有证书，准备重新签发..."
          else
              LOGI "已取消重新签发。"
@@ -1032,10 +1032,10 @@ ssl_cert_issue() {
 
      # 签发证书 
      ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt 
-     ~/.acme.sh/acme.sh --issue -d ${domain} --listen-v6 --standalone --httpport ${WebPort} --force 
+     ~/.acme.sh/acme.sh --issue -d "${domain}" --listen-v6 --standalone --httpport "${WebPort}" --force 
      if [ $? -ne 0 ]; then 
          LOGE "签发证书失败，请检查日志。" 
-         rm -rf ~/.acme.sh/${domain} 
+         rm -rf ~/.acme.sh/"${domain}" 
          exit 1 
      else 
          LOGE "签发证书成功，正在安装证书..." 
@@ -1068,14 +1068,14 @@ ssl_cert_issue() {
      fi
      
      # 安装证书
-     ~/.acme.sh/acme.sh --installcert -d ${domain} \
-        --key-file /root/cert/${domain}/privkey.pem \
-        --fullchain-file /root/cert/${domain}/fullchain.pem \
+     ~/.acme.sh/acme.sh --installcert -d "${domain}" \
+        --key-file /root/cert/"${domain}"/privkey.pem \
+        --fullchain-file /root/cert/"${domain}"/fullchain.pem \
         --reloadcmd "${reloadCmd}"
  
      if [ $? -ne 0 ]; then 
          LOGE "安装证书失败，正在退出。" 
-         rm -rf ~/.acme.sh/${domain} 
+         rm -rf ~/.acme.sh/"${domain}" 
          exit 1 
      else 
          LOGI "安装证书成功，正在启用自动续订..." 
@@ -1087,15 +1087,15 @@ ssl_cert_issue() {
          LOGE "自动续订失败，证书详情：" 
          ls -lah cert/* 
          # Secure permissions
-         chmod 600 $certPath/privkey.pem 2>/dev/null
-         chmod 644 $certPath/fullchain.pem 2>/dev/null
+         chmod 600 "$certPath/privkey.pem" 2>/dev/null
+         chmod 644 "$certPath/fullchain.pem" 2>/dev/null
          exit 1 
      else 
          LOGI "自动续订成功，证书详情：" 
          ls -lah cert/* 
          # Secure permissions
-         chmod 600 $certPath/privkey.pem 2>/dev/null
-         chmod 644 $certPath/fullchain.pem 2>/dev/null
+         chmod 600 "$certPath/privkey.pem" 2>/dev/null
+         chmod 644 "$certPath/fullchain.pem" 2>/dev/null
      fi 
  
      # 成功安装证书后提示用户设置面板路径
@@ -1175,7 +1175,7 @@ ssl_cert_issue_CF() {
          export CF_Email="${CF_AccountEmail}" 
  
          # 使用 Cloudflare DNS 颁发证书
-         ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${CF_Domain} -d *.${CF_Domain} --log --force 
+         ~/.acme.sh/acme.sh --issue --dns dns_cf -d "${CF_Domain}" -d *."${CF_Domain}" --log --force 
          if [ $? -ne 0 ]; then 
              LOGE "证书颁发失败，脚本正在退出..." 
              exit 1 
@@ -1186,10 +1186,10 @@ ssl_cert_issue_CF() {
           # 安装证书
          certPath="/root/cert/${CF_Domain}" 
          if [ -d "$certPath" ]; then 
-             rm -rf ${certPath} 
+             rm -rf "${certPath}" 
          fi 
  
-         mkdir -p ${certPath} 
+         mkdir -p "${certPath}" 
          if [ $? -ne 0 ]; then 
              LOGE "创建目录失败: ${certPath}" 
              exit 1 
@@ -1220,9 +1220,9 @@ ssl_cert_issue_CF() {
                  ;; 
              esac 
          fi 
-         ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} \
-            --key-file ${certPath}/privkey.pem \
-            --fullchain-file ${certPath}/fullchain.pem \
+         ~/.acme.sh/acme.sh --installcert -d "${CF_Domain}" -d *."${CF_Domain}" \
+            --key-file "${certPath}/privkey.pem" \
+            --fullchain-file "${certPath}/fullchain.pem" \
             --reloadcmd "${reloadCmd}" 
          
          if [ $? -ne 0 ]; then 
@@ -1239,8 +1239,8 @@ ssl_cert_issue_CF() {
              exit 1 
          else 
              LOGI "证书已安装并开启自动续订。具体信息如下：" 
-             ls -lah ${certPath}/* 
-             chmod 755 ${certPath}/* 
+             ls -lah "${certPath}"/* 
+             chmod 755 "${certPath}"/* 
          fi 
  
          # 成功安装证书后提示用户设置面板路径
@@ -1382,12 +1382,12 @@ ssl_cert_issue_for_ip() {
     # 申请证书
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
     ~/.acme.sh/acme.sh --issue \
-        ${domain_args} \
+        "${domain_args}" \
         --standalone \
         --server letsencrypt \
         --certificate-profile shortlived \
         --days 6 \
-        --httpport ${WebPort} \
+        --httpport "${WebPort}" \
         --force
 
     if [ $? -ne 0 ]; then
@@ -1401,7 +1401,7 @@ ssl_cert_issue_for_ip() {
     local reloadCmd="systemctl restart x-ui 2>/dev/null || rc-service x-ui restart 2>/dev/null || true"
 
     # 安装证书
-    ~/.acme.sh/acme.sh --installcert -d ${server_ip} \
+    ~/.acme.sh/acme.sh --installcert -d "${server_ip}" \
         --key-file "${certPath}/privkey.pem" \
         --fullchain-file "${certPath}/fullchain.pem" \
         --reloadcmd "${reloadCmd}" 2>&1 || true
@@ -1440,7 +1440,7 @@ warp_cloudflare() {
     echo -e "${green}\t3.${plain} 开启 / 关闭 WireProxy"
     echo -e "${green}\t4.${plain} 卸载 WARP"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -rp "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -1512,7 +1512,7 @@ iplimit_main() {
     echo -e "${green}\t6.${plain} 重启 Fail2ban"
     echo -e "${green}\t7.${plain} 卸载 Fail2ban"
     echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
+    read -rp "请输入选项: " choice
     case "$choice" in
     0)
         show_menu
@@ -1528,7 +1528,7 @@ iplimit_main() {
     2)
         read -rp "请输入新的禁令持续时间（以分钟为单位）[默认 30]: " NUM
         if [[ $NUM =~ ^[0-9]+$ ]]; then
-            create_iplimit_jails ${NUM}
+            create_iplimit_jails "${NUM}"
             systemctl restart fail2ban
         else
             echo -e "${red}${NUM} 不是一个数字！ 请再试一次.${plain}"
@@ -1620,12 +1620,12 @@ install_iplimit() {
 
     # Check if log file exists
     if ! test -f "${iplimit_banned_log_path}"; then
-        touch ${iplimit_banned_log_path}
+        touch "${iplimit_banned_log_path}"
     fi
 
     # Check if service log file exists so fail2ban won't return error
     if ! test -f "${iplimit_log_path}"; then
-        touch ${iplimit_log_path}
+        touch "${iplimit_log_path}"
     fi
 
     # Create the iplimit jail files
@@ -1649,7 +1649,7 @@ remove_iplimit() {
     echo -e "${green}\t1.${plain} 仅删除 IP 限制配置"
     echo -e "${green}\t2.${plain} 卸载 Fail2ban 和 IP 限制"
     echo -e "${green}\t0.${plain} 终止"
-    read -p "请输入选项: " num
+    read -rp "请输入选项: " num
     case "$num" in
     1)
         rm -f /etc/fail2ban/filter.d/3x-ipl.conf
@@ -1798,8 +1798,8 @@ iplimit_remove_conflicts() {
 
     for file in "${jail_files[@]}"; do
         # Check for [3x-ipl] config in jail file then remove it
-        if test -f "${file}" && grep -qw '3x-ipl' ${file}; then
-            sed -i "/\[3x-ipl\]/,/^$/d" ${file}
+        if test -f "${file}" && grep -qw '3x-ipl' "${file}"; then
+            sed -i "/\[3x-ipl\]/,/^$/d" "${file}"
             echo -e "${yellow}消除系统环境中 [3x-ipl] 的冲突 (${file})!${plain}\n"
         fi
     done
@@ -1872,7 +1872,7 @@ show_menu() {
 
 "
     show_status
-    echo && read -p "请输入选项 [0-26]: " num
+    echo && read -rp "请输入选项 [0-26]: " num
 
     case "${num}" in
     0)
@@ -1931,7 +1931,7 @@ show_menu() {
         ;;
     26)
         echo -e "${red}此功能已移动至 [18. SSL 证书管理] -> [6. 为服务器IP申请证书]${plain}"
-        read -p "按回车键返回..."
+        read -rp "按回车键返回..."
         show_menu
         ;;
     18)

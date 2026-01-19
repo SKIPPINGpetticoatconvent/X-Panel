@@ -359,7 +359,7 @@ prompt_and_setup_ssl() {
     echo -e "${yellow}------------------------------------------------${plain}"
     echo -e "${green}是否为服务器IP自动申请 SSL 证书? (Let's Encrypt)${plain}"
     echo -e "${yellow}注意：需要占用80端口进行验证${plain}"
-    read -p "请输入 [y/n] (默认n): " choice
+    read -rp "请输入 [y/n] (默认n): " choice
     if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
         setup_ip_certificate
     else
@@ -371,15 +371,15 @@ prompt_and_setup_ssl() {
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
-    read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
+    read -rp "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
-        read -p "请设置您的用户名: " config_account
+        read -rp "请设置您的用户名: " config_account
         echo -e "${yellow}您的用户名将是: ${config_account}${plain}"
-        read -p "请设置您的密码: " config_password
+        read -rp "请设置您的密码: " config_password
         echo -e "${yellow}您的密码将是: ${config_password}${plain}"
-        read -p "请设置面板端口: " config_port
+        read -rp "请设置面板端口: " config_port
         echo -e "${yellow}您的面板端口号为: ${config_port}${plain}"
-        read -p "请设置面板登录访问路径: " config_webBasePath
+        read -rp "请设置面板登录访问路径: " config_webBasePath
         echo -e "${yellow}您的面板访问路径为: ${config_webBasePath}${plain}"
         echo -e "${yellow}正在初始化，请稍候...${plain}"
         /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password}
@@ -424,7 +424,7 @@ config_after_install() {
 
 echo ""
 install_x-ui() {
-    cd /usr/local/
+    cd /usr/local/ || exit 1
 
     # Download resources
     if [ $# == 0 ]; then
@@ -445,7 +445,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz
+        wget -N --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"
         if [[ $? -ne 0 ]]; then
             echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
             exit 1
@@ -465,7 +465,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz ${url}
+        wget -N --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "${url}"
         if [[ $? -ne 0 ]]; then
             echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
             exit 1
@@ -482,19 +482,19 @@ install_x-ui() {
     sleep 3
     echo -e "${green}------->>>>>>>>>>>检查并保存安装目录${plain}"
     echo ""
-    tar zxvf x-ui-linux-$(arch).tar.gz
-    rm x-ui-linux-$(arch).tar.gz -f
+    tar zxvf "x-ui-linux-$(arch).tar.gz"
+    rm "x-ui-linux-$(arch).tar.gz" -f
     
-    cd x-ui
+    cd x-ui || exit 1
     chmod +x x-ui
     chmod +x x-ui.sh
 
     # Check the system's architecture and rename the file accordingly
-    if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
-        mv bin/xray-linux-$(arch) bin/xray-linux-arm
+    if [[ "$(arch)" == "armv5" || "$(arch)" == "armv6" || "$(arch)" == "armv7" ]]; then
+        mv "bin/xray-linux-$(arch)" bin/xray-linux-arm
         chmod +x bin/xray-linux-arm
     fi
-    chmod +x x-ui bin/xray-linux-$(arch)
+    chmod +x x-ui "bin/xray-linux-$(arch)"
 
     # Update x-ui cli and se set permission
     mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
@@ -509,15 +509,20 @@ ssh_forwarding() {
     # 获取 IPv4 和 IPv6 地址
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+    local existing_webBasePath
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    local existing_port
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    local existing_cert
+    existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key
+    existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        local existing_cert
+        existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
         domain=$(basename "$(dirname "$existing_cert")")
         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
     fi
@@ -572,8 +577,9 @@ ssh_forwarding
     systemctl start x-ui
     systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
-    echo -e "${yellow}检测到服务器IPv4: ${ipv4}${plain}"
-    local ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
+    echo -e "${yellow}检测到服务器IPv4: ${v4}${plain}"
+    local ipv6
+    ipv6=$(curl -s6m8 ip.p3terx.com -k | sed -n 1p)
     echo -e "${yellow}检测到服务器IPv6: ${ipv6}${plain}"
     systemctl start warp-go >/dev/null 2>&1
     wg-quick up wgcf >/dev/null 2>&1
