@@ -9,6 +9,7 @@ description: X-Panel 技术栈与环境
 - **Frontend**: Go Templates + Vue.js (Ant Design Vue)
 - **Database**: SQLite
 - **Scripts**: Bash
+- **Configuration**: TOML (Taplo)
 
 ---
 

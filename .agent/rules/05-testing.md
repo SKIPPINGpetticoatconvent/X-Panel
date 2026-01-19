@@ -12,6 +12,7 @@ description: X-Panel 测试规范
   3. `nilaway -test=false ./...` (空指针检查)
   4. `go test ./...` (单元测试)
 - 提交修改前，必须确保以上四个步骤均无报错（0 issues）。
+- **TOML 文件验证**: 修改 `.toml` 文件后，必须执行 `taplo fmt --check` 并确保无报错。
 
 ---
 

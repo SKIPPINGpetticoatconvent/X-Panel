@@ -23,6 +23,11 @@ description: X-Panel 开发规范
 - 修改 `install.sh`、`x-ui.sh` 等脚本后，建议使用 `shellcheck` 检查。
 - 确保脚本在 Ubuntu、Debian、CentOS 等主流 Linux 发行版兼容。
 
+## 3.4 TOML 配置文件规范
+
+- 修改 `.toml` 文件后，必须使用 `taplo fmt --check` 进行格式检查。
+- 确保配置文件结构清晰，注释准确。
+
 ---
 
 **导航**: [← 技术栈与环境](./02-tech-stack.md) | [返回索引](./main.md) | [下一节: 版本控制规范 →](./04-version-control.md)
