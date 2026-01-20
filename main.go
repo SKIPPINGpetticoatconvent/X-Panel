@@ -239,6 +239,37 @@ func runWebServer() {
 				logger.Debug("Error stopping sub server:", err)
 			}
 
+			// 重新检查并初始化 TG Bot 服务
+			tgEnable, err := settingService.GetTgbotEnabled()
+			if err != nil {
+				logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
+			}
+
+			if tgEnable {
+				// 如果启用，确保服务实例已创建
+				if tgBotService == nil {
+					// 必须使用 NewTgBot 创建完整实例，包含所有依赖
+					tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
+					tgBotService = tgBot
+
+					// 重要：必须重新注入到其他服务中，否则它们持有的仍是 nil
+					serverService.SetTelegramService(tgBotService)
+					inboundService.SetTelegramService(tgBotService)
+				}
+
+				// 重新创建日志转发器 (如果之前没有)
+				if logForwarder == nil {
+					logForwarder = service.NewLogForwarder(&settingService, tgBotService)
+				}
+			} else {
+				// 如果已禁用，清理实例
+				tgBotService = nil
+				logForwarder = nil
+				// 同时清理其他服务中的引用 (可选，但为了安全起见)
+				serverService.SetTelegramService(nil)
+				inboundService.SetTelegramService(nil)
+			}
+
 			server = web.NewServer(&serverService, &xrayService, &inboundService, &outboundService)
 			// 重新注入 tgBotService
 			if tgBotService != nil {
