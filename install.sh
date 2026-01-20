@@ -434,7 +434,7 @@ install_x-ui() {
     cd /usr/local/ || exit 1
 
     # Download resources
-    if [ $# == 0 ]; then
+    if [[ -z "$1" ]]; then
         last_version=$(curl -Ls "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         if [[ ! -n "$last_version" ]]; then
             echo -e "${red}获取 X-Panel 版本失败，可能是 Github API 限制，请稍后再试${plain}"
@@ -452,7 +452,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"
+        wget --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"
         if [[ $? -ne 0 ]]; then
             echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
             exit 1
@@ -472,7 +472,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "${url}"
+        wget --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "${url}"
         if [[ $? -ne 0 ]]; then
             echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
             exit 1
