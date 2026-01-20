@@ -254,6 +254,18 @@ uninstall() {
     systemctl reset-failed
     rm /etc/x-ui/ -rf
     rm /usr/local/x-ui/ -rf
+    rm /usr/bin/x-ui -f
+    rm /usr/bin/x-ui-temp -f
+
+    # 清理 acme.sh 和证书
+    if [[ -d ~/.acme.sh ]]; then
+        ~/.acme.sh/acme.sh --uninstall >/dev/null 2>&1
+        rm -rf ~/.acme.sh
+    fi
+    
+    if [[ -d /root/cert ]]; then
+        rm -rf /root/cert
+    fi
 
     echo ""
     echo -e "卸载成功\n"
