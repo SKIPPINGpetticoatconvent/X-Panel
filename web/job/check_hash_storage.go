@@ -15,5 +15,7 @@ func NewCheckHashStorageJob() *CheckHashStorageJob {
 // Here Run is an interface method of the Job interface
 func (j *CheckHashStorageJob) Run() {
 	// Remove expired hashes from storage
-	j.tgbotService.GetHashStorage().RemoveExpiredHashes()
+	if storage := j.tgbotService.GetHashStorage(); storage != nil {
+		storage.RemoveExpiredHashes()
+	}
 }
