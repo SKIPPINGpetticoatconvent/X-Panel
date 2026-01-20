@@ -2294,9 +2294,35 @@ func (s *InboundService) MigrationRequirements() {
 					}
 				}
 
-				// Remove "flow": "xtls-rprx-direct"
-				if _, ok := c["flow"]; ok {
-					if c["flow"] == "xtls-rprx-direct" {
+				// Update VLESS flow to xtls-rprx-vision if deprecated or empty
+				isVLESS := inbounds[inbound_index].Protocol == model.VLESS
+				isTCP := false
+				isTLSOrReality := false
+
+				if isVLESS && len(inbounds[inbound_index].StreamSettings) > 0 {
+					var stream map[string]any
+					if err := json.Unmarshal([]byte(inbounds[inbound_index].StreamSettings), &stream); err == nil {
+						if net, ok := stream["network"].(string); ok && net == "tcp" {
+							isTCP = true
+						}
+						if sec, ok := stream["security"].(string); ok {
+							if sec == "tls" || sec == "reality" {
+								isTLSOrReality = true
+							}
+						}
+					}
+				}
+
+				// Remove "flow": "xtls-rprx-direct" logic updated to:
+				if isVLESS && isTCP && isTLSOrReality {
+					flow, _ := c["flow"].(string)
+					// If flow is empty or one of the deprecated values
+					if flow == "" || flow == "xtls-rprx-direct" || flow == "xtls-rprx-origin" {
+						c["flow"] = "xtls-rprx-vision"
+					}
+				} else if _, ok := c["flow"]; ok {
+					// For other protocols/transports, clear deprecated flow if present
+					if c["flow"] == "xtls-rprx-direct" || c["flow"] == "xtls-rprx-origin" {
 						c["flow"] = ""
 					}
 				}
