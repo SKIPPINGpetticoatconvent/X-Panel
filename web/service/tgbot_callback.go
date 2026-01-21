@@ -3314,8 +3314,8 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	settings, _ := json.Marshal(map[string]any{
 		"clients": []map[string]any{{
 			"id": uuid,
-			// 注意：XHTTP 传输需要 flow 字段，避免 VLESS without flow is deprecated 警告
-			"flow":     "xtls-rprx-vision",
+			// 注意：XHTTP 传输不支持 xtls-rprx-vision，需留空。Xray 可能会输出 flow deprecated 警告，属已知现象。
+			"flow":     "",
 			"email":    remark,
 			"level":    0,
 			"password": "", // JS 中 password: ""
