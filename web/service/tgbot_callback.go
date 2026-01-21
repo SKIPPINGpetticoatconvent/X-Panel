@@ -3314,7 +3314,8 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	settings, _ := json.Marshal(map[string]any{
 		"clients": []map[string]any{{
 			"id": uuid,
-			// 注意：XHTTP 传输不需要 flow 字段，完全省略以避免 Xray 警告
+			// 注意：XHTTP 传输需要 flow 字段，避免 VLESS without flow is deprecated 警告
+			"flow":     "xtls-rprx-vision",
 			"email":    remark,
 			"level":    0,
 			"password": "", // JS 中 password: ""
@@ -3638,7 +3639,7 @@ func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.C
 		path, _ = xhttpSettings["path"].(string)
 	}
 
-	// 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式不需要 flow 参数
+	// 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式flow 参数根据官方要求可能需要，暂保持现状，仅处理 link
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=%s&path=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s#%s-%s",
 		uuid, domain, inbound.Port, encryption, url.QueryEscape(path), sni, client.Email, inbound.Remark), nil
 }
@@ -3687,7 +3688,7 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 	escapedRemark := url.QueryEscape(inbound.Remark)
 
 	// 【中文注释】: 严格按照最新格式构建链接
-	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
@@ -3729,7 +3730,7 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 	escapedRemark := url.QueryEscape(inbound.Remark)
 
 	// 【中文注释】: 严格按照最新格式构建链接
-	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
