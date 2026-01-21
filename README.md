@@ -1,6 +1,6 @@
 # X-Panel
 
-[![Star Chart](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
+[![Stargazers over time](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel.svg?variant=adaptive)](https://starchart.cc/SKIPPINGpetticoatconvent/X-Panel)
 [![Release](https://img.shields.io/github/v/release/SKIPPINGpetticoatconvent/X-Panel.svg?style=flat-square)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases)
 [![Downloads](https://img.shields.io/github/downloads/SKIPPINGpetticoatconvent/X-Panel/total.svg?style=flat-square)](https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?style=flat-square)](LICENSE)
