@@ -190,6 +190,9 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 			return fmt.Errorf("telegram bot chat ID cannot be empty")
 		}
 
+		// Reset adminIds to avoid duplicates when Start is called multiple times
+		adminIds = []int64{}
+
 		for _, adminID := range strings.Split(trimmedID, ",") {
 			cleanedID := strings.TrimSpace(adminID)
 			if cleanedID == "" {
