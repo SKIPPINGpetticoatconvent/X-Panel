@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1360,106 +1359,6 @@ func (s *ServerService) OpenPort(port string) error {
 		return fmt.Errorf("执行 firewalld 端口放行脚本时发生错误: %v, Shell 输出: %s", err, logOutput)
 	}
 
-	return nil
-}
-
-// checkAndInstallFirewalld 检查 firewalld 是否存在，如果不存在则安装
-func (s *ServerService) checkAndInstallFirewalld() error {
-	// 检查 firewalld 是否存在
-	cmd := exec.Command("which", "firewall-cmd")
-	if err := cmd.Run(); err == nil {
-		return nil // firewalld 已存在
-	}
-
-	logger.Info("firewalld 未安装，正在安装...")
-
-	// 使用新的防火墙安装命令
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	// 执行更新命令
-	cmd = exec.CommandContext(ctx, "sudo", "apt", "update")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("sudo apt update 失败: %v, 输出: %s", err, string(output))
-	}
-
-	// 执行安装命令
-	cmd = exec.CommandContext(ctx, "sudo", "apt", "install", "-y", "firewalld")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("sudo apt install firewalld 失败: %v, 输出: %s", err, string(output))
-	}
-
-	// 启用防火墙服务
-	cmd = exec.CommandContext(ctx, "sudo", "systemctl", "enable", "firewalld", "--now")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("sudo systemctl enable firewalld --now 失败: %v, 输出: %s", err, string(output))
-	}
-
-	return nil
-}
-
-// allowPortIfNotExists 检查端口是否已放行，如果未放行则添加规则
-func (s *ServerService) allowPortIfNotExists(port string) error {
-	// 获取当前 firewalld 状态
-	cmd := exec.Command("firewall-cmd", "--list-ports")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("获取 firewalld 状态失败: %v", err)
-	}
-
-	// 检查端口是否已放行
-	statusStr := string(output)
-	if strings.Contains(statusStr, port+"/tcp") || strings.Contains(statusStr, port) {
-		logger.Infof("端口 %s 已放行，跳过", port)
-		return nil
-	}
-
-	// 放行端口
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	//nolint:gosec
-	cmd = exec.CommandContext(ctx, "firewall-cmd", "--zone=public", "--add-port="+port+"/tcp", "--permanent")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("firewall-cmd --zone=public --add-port=%s/tcp --permanent 失败: %v, 输出: %s", port, err, string(output))
-	}
-
-	// 重新加载规则
-	cmd = exec.CommandContext(ctx, "firewall-cmd", "--reload")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("firewall-cmd --reload 失败: %v, 输出: %s", err, string(output))
-	}
-
-	logger.Infof("端口 %s 放行成功", port)
-	return nil
-}
-
-// ensureFirewalldActive 确保 firewalld 防火墙已激活
-func (s *ServerService) ensureFirewalldActive() error {
-	// 检查 firewalld 状态
-	cmd := exec.Command("systemctl", "is-active", "firewalld")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("获取 firewalld 状态失败: %v", err)
-	}
-
-	if strings.TrimSpace(string(output)) == "active" {
-		return nil // 已激活
-	}
-
-	// 激活防火墙
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	cmd = exec.CommandContext(ctx, "systemctl", "enable", "firewalld")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("systemctl enable firewalld 失败: %v, 输出: %s", err, string(output))
-	}
-
-	cmd = exec.CommandContext(ctx, "systemctl", "start", "firewalld")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("systemctl start firewalld 失败: %v, 输出: %s", err, string(output))
-	}
-
-	logger.Info("firewalld 防火墙已激活")
 	return nil
 }
 
