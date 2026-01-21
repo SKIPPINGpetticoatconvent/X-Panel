@@ -3,7 +3,7 @@
     "access": "./access.log",
     "dnsLog": true,
     "error": "./error.log",
-    "loglevel": "debug",
+    "loglevel": "warning",
     "maskAddress": ""
   },
   "api": {
