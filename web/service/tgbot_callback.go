@@ -2954,7 +2954,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 
 	// 〔中文注释〕: 创建一个 InboundService 实例，并将当前的 Tgbot 实例 (t) 作为 tgService 注入进去。
 	inboundService := InboundService{}
-	inboundService.SetTelegramService(t) // 将当前的 bot 实例注入
+	// inboundService.SetTelegramService(t) // 【修复】：移除注入，防止 AddInbound 内部重复发送通知
 
 	createdInbound, _, err := inboundService.AddInbound(newInbound)
 	if err != nil {
