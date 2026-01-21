@@ -3191,8 +3191,8 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	// Settings: clients + decryption + encryption + selectedAuth
 	settings, _ := json.Marshal(map[string]any{
 		"clients": []map[string]any{{
-			"id":       uuid,
-			"flow":     "", // JS 中 flow: ""
+			"id": uuid,
+			// 注意：XHTTP 传输不需要 flow 字段，完全省略以避免 Xray 警告
 			"email":    remark,
 			"level":    0,
 			"password": "", // JS 中 password: ""
@@ -3313,8 +3313,8 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 
 	settings, _ := json.Marshal(map[string]any{
 		"clients": []map[string]any{{
-			"id":       uuid,
-			"flow":     "", // 在 XHTTP 中 flow: ""
+			"id": uuid,
+			// 注意：XHTTP 传输不需要 flow 字段，完全省略以避免 Xray 警告
 			"email":    remark,
 			"level":    0,
 			"password": "", // JS 中 password: ""
@@ -3382,6 +3382,21 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 
 // 【修改后函数】: 发送【一键配置】的专属消息，增加链接类型判断
 func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, targetChatId int64) error {
+	// 【修复】: 当 targetChatId 为 0 时（来自面板的一键配置），向所有管理员发送消息
+	if targetChatId == 0 {
+		if len(adminIds) == 0 {
+			return fmt.Errorf("无法发送 TG 通知: 未配置管理员 Chat ID")
+		}
+		// 向所有管理员发送消息
+		var lastErr error
+		for _, adminId := range adminIds {
+			if err := t.SendOneClickConfig(inbound, inFromPanel, adminId); err != nil {
+				lastErr = err
+			}
+		}
+		return lastErr
+	}
+
 	var link string
 	var err error
 	var linkType string
