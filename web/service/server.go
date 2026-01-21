@@ -1271,53 +1271,96 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 	return database.GetLinkHistory()
 }
 
-// 【新增方法实现】: 后台前端开放指定端口
+// 【重写】: 与 TG 端 openPortWithFirewalld 采用完全相同的 Shell 脚本执行逻辑。
 // OpenPort 供前端调用，自动检查/安装 firewalld 并放行指定的端口。
-// 〔中文注释〕: 整个函数逻辑被放入一个 go func() 协程中，实现异步后台执行。
-// 〔中文注释〕: 函数签名不再返回 error，因为它会立即返回，无法得知后台任务的最终结果。
-func (s *ServerService) OpenPort(port string) {
-	// 〔中文注释〕: 启动一个新的协程来处理耗时任务，这样 HTTP 请求可以立刻返回。
-	go func() {
-		// 1. 验证端口号：必须是数字，且在有效范围内 (1-65535)
-		portInt, err := strconv.Atoi(port)
-		if err != nil || portInt < 1 || portInt > 65535 {
-			logger.Errorf("端口号无效，必须是 1-65535 之间的数字: %s", port)
-			return
-		}
+// 〔中文注释〕: 改为同步执行，使用完整的 Shell 脚本（与 TG 端一致），确保端口放行操作的可靠性。
+func (s *ServerService) OpenPort(port string) error {
+	// 1. 验证端口号：必须是数字，且在有效范围内 (1-65535)
+	portInt, err := strconv.Atoi(port)
+	if err != nil || portInt < 1 || portInt > 65535 {
+		return fmt.Errorf("端口号无效，必须是 1-65535 之间的数字: %s", port)
+	}
 
-		// 2. 定义默认端口列表
-		defaultPorts := []string{"22", "80", "443", "13688"}
+	// 【中文注释】: 将所有 Shell 逻辑整合为一个命令，与 TG 端 openPortWithFirewalld 完全一致。
+	// 新增了对默认端口列表 (22, 80, 443, 13688, 8443) 的放行逻辑。
+	shellCommand := fmt.Sprintf(`
+	# 定义需要放行的指定端口和一系列默认端口
+	PORT_TO_OPEN=%d
+	DEFAULT_PORTS="22 80 443 13688 8443"
 
-		logger.Infof("开始为端口 %s 配置防火墙规则", port)
+	echo "脚本开始：准备配置 firewalld 防火墙..."
 
-		// 3. 检查/安装 firewalld
-		if err := s.checkAndInstallFirewalld(); err != nil {
-			logger.Errorf("firewalld 检查/安装失败: %v", err)
-			return
-		}
+	# 1. 检查/安装 firewalld
+	if ! command -v firewall-cmd &> /dev/null; then
+		echo "firewalld 防火墙未安装，正在自动安装..."
+		# 使用新的防火墙安装命令
+		sudo apt update
+		sudo apt install -y firewalld
+		sudo systemctl enable firewalld --now
+	fi
 
-		// 4. 放行默认端口
-		for _, p := range defaultPorts {
-			if err := s.allowPortIfNotExists(p); err != nil {
-				logger.Errorf("放行默认端口 %s 失败: %v", p, err)
-				// 继续处理其他端口
-			}
-		}
+	# 2. 【新增】循环放行所有默认端口
+	echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
+	for p in $DEFAULT_PORTS; do
+		# 使用静默模式检查规则是否存在，如果不存在则添加
+		if ! firewall-cmd --list-ports | grep -qw "$p/tcp"; then
+			echo "端口 $p/tcp 未放行，正在执行 firewall-cmd --zone=public --add-port=$p/tcp --permanent..."
+			firewall-cmd --zone=public --add-port=$p/tcp --permanent >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ firewalld 端口 $p 放行失败。"; exit 1; fi
+		else
+			echo "端口 $p/tcp 规则已存在，跳过。"
+		fi
+	done
+	echo "✅ 基础服务端口检查/放行完毕。"
 
-		// 5. 放行指定的端口
-		if err := s.allowPortIfNotExists(port); err != nil {
-			logger.Errorf("放行指定端口 %s 失败: %v", port, err)
-			return
-		}
+	# 3. 放行指定的端口
+	echo "正在为当前【入站配置】放行指定端口 $PORT_TO_OPEN..."
+	if ! firewall-cmd --list-ports | grep -qw "$PORT_TO_OPEN/tcp"; then
+		firewall-cmd --zone=public --add-port=$PORT_TO_OPEN/tcp --permanent >/dev/null
+		if [ $? -ne 0 ]; then echo "❌ firewalld 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
+		echo "✅ 端口 $PORT_TO_OPEN 已成功放行。"
+	else
+		echo "端口 $PORT_TO_OPEN 规则已存在，跳过。"
+	fi
+	
 
-		// 6. 确保防火墙激活
-		if err := s.ensureFirewalldActive(); err != nil {
-			logger.Errorf("激活防火墙失败: %v", err)
-			return
-		}
+	# 4. 检查/激活防火墙
+	if ! systemctl is-active --quiet firewalld; then
+		echo "firewalld 状态：未激活。正在启动..."
+		systemctl start firewalld
+		systemctl enable firewalld
+		if [ $? -ne 0 ]; then echo "❌ firewalld 激活失败。"; exit 1; fi
+		echo "✅ firewalld 已成功激活。"
+	else
+		echo "firewalld 状态已经是激活状态。"
+	fi
 
-		logger.Infof("端口 %s 及所有基础端口已成功放行/检查", port)
-	}()
+	# 重新加载规则
+	firewall-cmd --reload
+	if [ $? -ne 0 ]; then echo "❌ firewalld 重新加载失败。"; exit 1; fi
+	echo "✅ firewalld 规则已重新加载。"
+
+	echo "🎉 所有防火墙配置已完成。"
+
+	`, portInt) // 将函数传入的 port 参数填充到 Shell 脚本中
+
+	// 使用 exec.CommandContext 运行完整的 shell 脚本
+	//nolint:gosec
+	cmd := exec.Command("/bin/bash", "-c", shellCommand)
+
+	// 捕获命令的标准输出和标准错误
+	output, err := cmd.CombinedOutput()
+
+	// 无论成功与否，都记录完整的 Shell 执行日志，便于调试
+	logOutput := string(output)
+	logger.Infof("执行 firewalld 端口放行脚本（目标端口 %d）的完整输出：\n%s", portInt, logOutput)
+
+	if err != nil {
+		// 如果脚本执行出错 (例如 exit 1)，则返回包含详细输出的错误信息
+		return fmt.Errorf("执行 firewalld 端口放行脚本时发生错误: %v, Shell 输出: %s", err, logOutput)
+	}
+
+	return nil
 }
 
 // checkAndInstallFirewalld 检查 firewalld 是否存在，如果不存在则安装

@@ -351,7 +351,7 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 	jsonObj(c, history, nil)
 }
 
-// 【新增接口实现】: 前端放行端口
+// 【重写】: 前端放行端口（同步执行，返回真实结果）
 func (a *ServerController) openPort(c *gin.Context) {
 	// 直接使用 c.PostForm("port") 获取表单数据
 	port := c.PostForm("port")
@@ -362,12 +362,16 @@ func (a *ServerController) openPort(c *gin.Context) {
 		return
 	}
 
-	// 【中文注释】: 2. 调用服务层方法，该方法会立即返回，并在后台启动一个协程执行任务。
-	a.serverService.OpenPort(port)
+	// 【中文注释】: 2. 调用服务层方法，同步执行并等待结果。
+	err := a.serverService.OpenPort(port)
+	if err != nil {
+		// 【中文注释】: 如果端口放行失败，返回错误给前端
+		jsonMsg(c, "端口放行失败", err)
+		return
+	}
 
-	// 【中文注释】: 3. 因为服务层方法是异步的，不再检查它的 error 返回值。
-	//    直接向前端返回一个成功的消息，告知用户指令已发送。
-	jsonMsg(c, "端口放行指令已成功发送，正在后台执行...", nil)
+	// 【中文注释】: 3. 端口放行成功，返回成功消息
+	jsonMsg(c, "端口放行成功", nil)
 }
 
 // getNewSNI 获取一个新的 SNI 域名
