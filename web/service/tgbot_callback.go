@@ -3584,9 +3584,15 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 		return "", err
 	}
 
-	// 链接格式简化，根据您的前端代码，xhttp 未在链接中体现 path
-	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s&flow=xtls-rprx-vision#%s-%s",
-		uuid, domain, inbound.Port, encryption, sni, inbound.Remark, inbound.Remark), nil
+	xhttpSettings, _ := streamSettings["xhttpSettings"].(map[string]interface{})
+	path := ""
+	if xhttpSettings != nil {
+		path, _ = xhttpSettings["path"].(string)
+	}
+
+	// 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式不需要 flow 参数
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=%s&path=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s#%s-%s",
+		uuid, domain, inbound.Port, encryption, url.QueryEscape(path), sni, inbound.Remark, inbound.Remark), nil
 }
 
 // 【新增辅助函数】: 生成 TLS 链接（支持指定客户端）
@@ -3611,9 +3617,15 @@ func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.C
 		return "", err
 	}
 
-	// 链接格式简化，根据您的前端代码，xhttp 未在链接中体现 path
-	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s&flow=xtls-rprx-vision#%s-%s",
-		uuid, domain, inbound.Port, encryption, sni, inbound.Remark, inbound.Remark), nil
+	xhttpSettings, _ := streamSettings["xhttpSettings"].(map[string]interface{})
+	path := ""
+	if xhttpSettings != nil {
+		path, _ = xhttpSettings["path"].(string)
+	}
+
+	// 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式不需要 flow 参数
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=%s&path=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s#%s-%s",
+		uuid, domain, inbound.Port, encryption, url.QueryEscape(path), sni, client.Email, inbound.Remark), nil
 }
 
 // 生成 VLESS + XHTTP + Reality 链接的函数

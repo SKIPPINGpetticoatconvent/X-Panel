@@ -1566,8 +1566,8 @@ async openPort(port) {
                     const msg = await HttpUtil.post('/panel/api/inbounds/add', data);
 
                     if (msg.success) {
-                        // 【重要】: 分享链接格式，添加 encryption 和 flow
-                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=tcp&encryption=${encryption}&security=tls&fp=chrome&alpn=http%2F1.1&sni=${serverName}&flow=xtls-rprx-vision#${remark}-${remark}`;
+                        // 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式不需要 flow 参数
+                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=xhttp&encryption=${encryption}&path=${encodeURIComponent(path)}&security=tls&fp=chrome&alpn=http%2F1.1&sni=${serverName}#${remark}-${remark}`;
                         this.inboundLink = link;
 
 						// 〔中文注释〕: 在这里调用新增的二维码生成方法，把链接传进去
