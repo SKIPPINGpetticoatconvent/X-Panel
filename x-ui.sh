@@ -1416,7 +1416,7 @@ ssl_cert_issue_for_ip() {
     # 申请证书
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
     ~/.acme.sh/acme.sh --issue \
-        "${domain_args}" \
+        ${domain_args} \
         --standalone \
         --server letsencrypt \
         --certificate-profile shortlived \
