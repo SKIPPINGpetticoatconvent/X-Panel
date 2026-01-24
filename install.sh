@@ -158,25 +158,32 @@ is_port_in_use() {
 install_base() {
     case "${release}" in
     ubuntu | debian | armbian)
-        apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates
+        apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates chrony
+        systemctl enable chrony && systemctl start chrony
         ;;
     centos | rhel | almalinux | rocky | ol)
-        yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata ca-certificates
+        yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata ca-certificates chrony
+        systemctl enable chronyd && systemctl start chronyd
         ;;
     fedora | amzn | virtuozzo)
-        dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata ca-certificates
+        dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata ca-certificates chrony
+        systemctl enable chronyd && systemctl start chronyd
         ;;
     arch | manjaro | parch)
-        pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata ca-certificates
+        pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata ca-certificates chrony
+        systemctl enable chronyd && systemctl start chronyd
         ;;
     alpine)
-        apk update && apk add --no-cache wget curl sudo tar tzdata ca-certificates
+        apk update && apk add --no-cache wget curl sudo tar tzdata ca-certificates chrony
+        rc-update add chronyd default && rc-service chronyd start
         ;;
     opensuse-tumbleweed)
-        zypper refresh && zypper -q install -y wget curl sudo tar timezone ca-certificates
+        zypper refresh && zypper -q install -y wget curl sudo tar timezone ca-certificates chrony
+        systemctl enable chronyd && systemctl start chronyd
         ;;
     *)
-        apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates
+        apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates chrony
+        systemctl enable chrony && systemctl start chrony
         ;;
     esac
 }
