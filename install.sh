@@ -150,7 +150,7 @@ is_port_in_use() {
         return
     fi
     if command -v lsof >/dev/null 2>&1; then
-        lsof -nP -iTCP:${port} -sTCP:LISTEN >/dev/null 2>&1 && return 0
+        lsof -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1 && return 0
     fi
     return 1
 }
@@ -200,8 +200,7 @@ install_acme() {
     if command -v ~/.acme.sh/acme.sh &>/dev/null; then
         return 0
     fi
-    curl -s https://get.acme.sh | sh
-    if [ $? -ne 0 ]; then
+    if ! curl -s https://get.acme.sh | sh; then
         echo -e "${red}Install acme.sh failed${plain}"
         return 1
     fi
@@ -236,8 +235,7 @@ setup_ip_certificate() {
     # 检查 acme.sh
     if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
         echo -e "${yellow}未找到 acme.sh，正在安装...${plain}"
-        install_acme
-        if [ $? -ne 0 ]; then
+        if ! install_acme; then
             echo -e "${red}acme.sh 安装失败${plain}"
             return 1
         fi
@@ -271,14 +269,9 @@ setup_ip_certificate() {
     local certPath="/root/cert/ip"
     mkdir -p "$certPath"
 
-    local domain_args="-d ${server_ip}"
+    local domain_args=("-d" "${server_ip}")
     if [[ -n "$ipv6_addr" ]]; then
-        domain_args="${domain_args} -d ${ipv6_addr}"
-    fi
-
-    local domain_args="-d ${server_ip}"
-    if [[ -n "$ipv6_addr" ]]; then
-        domain_args="${domain_args} -d ${ipv6_addr}"
+        domain_args+=("-d" "${ipv6_addr}")
     fi
 
     # Choose port for HTTP-01 listener (default 80, prompt override)
@@ -321,23 +314,21 @@ setup_ip_certificate() {
     echo -e "${yellow}将使用端口 ${WebPort} 申请证书...${plain}"
 
     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-    ~/.acme.sh/acme.sh --issue \
-        ${domain_args} \
+    if ! ~/.acme.sh/acme.sh --issue \
+        "${domain_args[@]}" \
         --standalone \
         --server letsencrypt \
         --certificate-profile shortlived \
         --days 6 \
-        --httpport ${WebPort} \
-        --force
-
-    if [ $? -ne 0 ]; then
+        --httpport "${WebPort}" \
+        --force; then
         echo -e "${red}证书申请失败，请确保端口 ${WebPort} (或映射到此端口的外部80端口) 已开放${plain}"
         return 1
     fi
 
     local reloadCmd="systemctl restart x-ui 2>/dev/null || rc-service x-ui restart 2>/dev/null || true"
 
-    ~/.acme.sh/acme.sh --installcert -d ${server_ip} \
+    ~/.acme.sh/acme.sh --installcert -d "${server_ip}" \
         --key-file "${certPath}/privkey.pem" \
         --fullchain-file "${certPath}/fullchain.pem" \
         --reloadcmd "${reloadCmd}" 2>&1 || true
@@ -393,11 +384,11 @@ config_after_install() {
         read -rp "请设置面板登录访问路径: " config_webBasePath
         echo -e "${yellow}您的面板访问路径为: ${config_webBasePath}${plain}"
         echo -e "${yellow}正在初始化，请稍候...${plain}"
-        /usr/local/x-ui/x-ui setting -username ${config_account} -password ${config_password}
+        /usr/local/x-ui/x-ui setting -username "${config_account}" -password "${config_password}"
         echo -e "${yellow}用户名和密码设置成功!${plain}"
-        /usr/local/x-ui/x-ui setting -port ${config_port}
+        /usr/local/x-ui/x-ui setting -port "${config_port}"
         echo -e "${yellow}面板端口号设置成功!${plain}"
-        /usr/local/x-ui/x-ui setting -webBasePath ${config_webBasePath}
+        /usr/local/x-ui/x-ui setting -webBasePath "${config_webBasePath}"
         echo -e "${yellow}面板登录访问路径设置成功!${plain}"
         echo ""
         prompt_and_setup_ssl
@@ -413,7 +404,7 @@ config_after_install() {
             passwordTemp=$(head -c 10 /dev/urandom | base64)
             local webBasePathTemp
             webBasePathTemp=$(gen_random_string 15)
-            /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
+            /usr/local/x-ui/x-ui setting -username "${usernameTemp}" -password "${passwordTemp}" -webBasePath "${webBasePathTemp}"
             echo ""
             echo -e "${yellow}检测到为全新安装，出于安全考虑将生成随机登录信息:${plain}"
             echo -e "###############################################"
@@ -443,7 +434,7 @@ install_x-ui() {
     # Download resources
     if [[ -z "$1" ]]; then
         last_version=$(curl -Ls "https://api.github.com/repos/SKIPPINGpetticoatconvent/X-Panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        if [[ ! -n "$last_version" ]]; then
+        if [[ -z "$last_version" ]]; then
             echo -e "${red}获取 X-Panel 版本失败，可能是 Github API 限制，请稍后再试${plain}"
             exit 1
         fi
@@ -459,8 +450,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"
-        if [[ $? -ne 0 ]]; then
+        if ! wget --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "https://github.com/SKIPPINGpetticoatconvent/X-Panel/releases/latest/download/x-ui-linux-$(arch).tar.gz"; then
             echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
             exit 1
         fi
@@ -479,8 +469,7 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "${url}"
-        if [[ $? -ne 0 ]]; then
+        if ! wget --no-check-certificate -O "/usr/local/x-ui-linux-$(arch).tar.gz" "${url}"; then
             echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
             exit 1
         fi
@@ -507,8 +496,10 @@ install_x-ui() {
     if [[ "$(arch)" == "armv5" || "$(arch)" == "armv6" || "$(arch)" == "armv7" ]]; then
         mv "bin/xray-linux-$(arch)" bin/xray-linux-arm
         chmod +x bin/xray-linux-arm
+    else
+        chmod +x "bin/xray-linux-$(arch)"
     fi
-    chmod +x x-ui "bin/xray-linux-$(arch)"
+    chmod +x x-ui
 
     # Update x-ui cli and se set permission
     mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
@@ -524,9 +515,9 @@ ssh_forwarding() {
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
     local existing_webBasePath
-    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}') 
     local existing_port
-    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
+    existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}') 
     local existing_cert
     existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
     local existing_key
