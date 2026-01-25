@@ -2001,6 +2001,9 @@ if [[ $# -gt 0 ]]; then
     "subconverter")
         check_install 0 && subconverter 0
         ;;    
+    "setting")
+        check_install 0 && /usr/local/x-ui/x-ui "$@"
+        ;;
     *) show_usage ;;
     esac
 else
