@@ -3,7 +3,6 @@
 
 # set -e removed to allow full demo run
 
-
 PROJECT_ROOT=$(dirname "$(dirname "$0")")
 cd "$PROJECT_ROOT" || exit 1
 
@@ -14,11 +13,10 @@ echo "--- 1. Static Analysis ---"
 ./QA/static/config
 
 echo "--- 1.1 Static Analysis (Deep: NilAway) ---"
-if ! command -v nilaway &> /dev/null; then
-    go install go.uber.org/nilaway/cmd/nilaway@latest
+if ! command -v nilaway &>/dev/null; then
+  go install go.uber.org/nilaway/cmd/nilaway@latest
 fi
 nilaway -test=false ./... || echo "NilAway found issues"
-
 
 echo "--- 1.2 Static Analysis (Shellcheck) ---"
 ./QA/static/run_shellcheck.sh
@@ -40,12 +38,11 @@ echo "[E2E] Checking Service Status..."
 echo "[E2E] Running Web API Tests..."
 # Check for service port availability first to avoid hang
 if nc -z 127.0.0.1 13688 2>/dev/null; then
-    # Run all python tests in 3_api/cases
-    find QA/e2e/3_api/cases -name "test.py" | while read -r test_file; do
-        echo "Running $test_file..."
-        python3 "$test_file"
-    done
+  # Run all python tests in 3_api/cases
+  find QA/e2e/3_api/cases -name "test.py" | while read -r test_file; do
+    echo "Running $test_file..."
+    python3 "$test_file"
+  done
 else
-    echo "Port 13688 not open. Skipping Python API tests."
+  echo "Port 13688 not open. Skipping Python API tests."
 fi
-

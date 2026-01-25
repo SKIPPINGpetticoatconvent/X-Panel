@@ -23,38 +23,38 @@ echo "domain_args 值: ${domain_args}"
 
 # 测试正确的参数展开方式 (无引号)
 echo -e "\n[3/4] 使用不带引号的 \${domain_args} 调用 acme.sh..."
-echo "命令: ~/.acme.sh/acme.sh --issue \${domain_args} --standalone --test --force"
+echo '命令: ~/.acme.sh/acme.sh --issue ${domain_args} --standalone --test --force'
 
 # 使用 --test 模式 (Let's Encrypt staging), 预期会失败但应该能正确解析参数
 ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt >/dev/null 2>&1
 
 # 执行测试命令 - 使用 --test 标志
 output=$(~/.acme.sh/acme.sh --issue \
-    ${domain_args} \
-    --standalone \
-    --server letsencrypt \
-    --test \
-    --httpport 8888 \
-    --force 2>&1) || true
+  ${domain_args} \
+  --standalone \
+  --server letsencrypt \
+  --test \
+  --httpport 8888 \
+  --force 2>&1) || true
 
 # 分析输出
 echo -e "\n[4/4] 分析结果..."
 if echo "$output" | grep -q "Domains not changed"; then
-    echo "✓ 参数解析成功: acme.sh 正确识别了域名参数"
-    echo "  - 识别到 IP: ${server_ip}"
-    echo "  - 识别到 IPv6: ${ipv6_addr}"
+  echo "✓ 参数解析成功: acme.sh 正确识别了域名参数"
+  echo "  - 识别到 IP: ${server_ip}"
+  echo "  - 识别到 IPv6: ${ipv6_addr}"
 elif echo "$output" | grep -q "\"${server_ip}\""; then
-    echo "✓ 参数解析成功: acme.sh 正确处理了 IP 地址"
+  echo "✓ 参数解析成功: acme.sh 正确处理了 IP 地址"
 elif echo "$output" | grep -qE "(standalone|listen|Binding)"; then
-    echo "✓ 参数解析成功: acme.sh 进入了 standalone 模式"
-    echo "  (预期会因无法绑定端口而失败，但参数解析正确)"
+  echo "✓ 参数解析成功: acme.sh 进入了 standalone 模式"
+  echo "  (预期会因无法绑定端口而失败，但参数解析正确)"
 elif echo "$output" | grep -q "invalid"; then
-    echo "✗ 参数解析失败: acme.sh 报告参数无效"
-    echo "  输出: $output"
-    exit 1
+  echo "✗ 参数解析失败: acme.sh 报告参数无效"
+  echo "  输出: $output"
+  exit 1
 else
-    echo "○ 命令执行结果 (预期因网络原因失败):"
-    echo "$output" | head -15
+  echo "○ 命令执行结果 (预期因网络原因失败):"
+  echo "$output" | head -15
 fi
 
 echo -e "\n=========================================="
