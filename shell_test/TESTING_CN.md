@@ -65,4 +65,5 @@ shell_test/test_installer.py::test_e2e_full_flow PASSED     [100%]
 ## 常见问题
 
 - **Docker 权限错误**: 如果提示 `permission denied`，请尝试将用户加入 docker 组 (`sudo usermod -aG docker $USER`) 或使用 `sudo` 运行 (不推荐)。
-- **网络问题**: 安装脚本需要从 GitHub 下载资源。如果测试容器网络受限，测试可能会失败。
+- **Docker 权限错误**: 如果提示 `permission denied`，请尝试将用户加入 docker 组 (`sudo usermod -aG docker $USER`) 或使用 `sudo` 运行 (不推荐)。
+- **Mocked Download**: 测试脚本会注入一个 Mock 的 `wget` 函数到 `install.sh` 中，用于拦截 GitHub 下载请求并重定向到本地生成的测试文件。这确保了测试不需要外部网络连接 GitHub，并且测试的二进制文件是可控的。

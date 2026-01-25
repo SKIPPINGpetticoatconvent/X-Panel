@@ -99,18 +99,95 @@ def dt(docker_container):
 def test_e2e_full_flow(dt):
     """Run the full E2E flow in a single test to avoid fixture scope issues."""
     print("\n[Step 1] Installation Setup")
-    # 1. Run install.sh (it might complain about wget failure, but let's see)
-    # res = dt.run("bash /root/install.sh")
+    # Generate a dummy tarball to simulate GitHub release
+    # Structure: x-ui/x-ui (binary), x-ui/x-ui.sh (script), x-ui/bin/xray-linux-amd64 (binary), x-ui/x-ui.service (systemd)
 
-    # 2. Manually setup the x-ui environment
-    dt.run("mkdir -p /usr/local/x-ui")
-    dt.run("cp /root/x-ui.sh /usr/local/x-ui/x-ui.sh")
-    dt.run("chmod +x /usr/local/x-ui/x-ui.sh")
-    dt.run("mkdir -p /etc/systemd/system/")
-    dt.run("touch /etc/systemd/system/x-ui.service")
-    dt.run("touch /usr/local/x-ui/x-ui")
-    dt.run("chmod +x /usr/local/x-ui/x-ui")
-    dt.run("ln -sf /usr/local/x-ui/x-ui.sh /usr/bin/x-ui")
+    # 1. Prepare dummy files for tarball
+    dt.run("mkdir -p /root/dummy_build/x-ui/bin")
+
+    # Mock x-ui binary
+    mock_binary_script = """#!/bin/bash
+if [[ "$1" == "setting" && "$2" == "-show" ]]; then
+    echo "port: 54321"
+    echo "webBasePath: /"
+    exit 0
+fi
+if [[ "$1" == "setting" && "$2" == "-getCert" ]]; then
+    exit 0
+fi
+if [[ "$1" == "-v" ]]; then
+    echo "7.4.2"
+    exit 0
+fi
+echo "Mock x-ui binary"
+"""
+    dt.run(f"echo '{mock_binary_script}' > /root/dummy_build/x-ui/x-ui")
+    dt.run("chmod +x /root/dummy_build/x-ui/x-ui")
+
+    # Mock x-ui.sh (simulated update logic if needed, but install.sh downloads a temp one)
+    # We should copy our local x-ui.sh into the tarball so install.sh extracts it
+    dt.run("cp /root/x-ui.sh /root/dummy_build/x-ui/x-ui.sh")
+    dt.run("chmod +x /root/dummy_build/x-ui/x-ui.sh")
+
+    # Mock xray binary
+    dt.run("touch /root/dummy_build/x-ui/bin/xray-linux-amd64")
+    dt.run("chmod +x /root/dummy_build/x-ui/bin/xray-linux-amd64")
+
+    # Mock service file
+    dt.run("touch /root/dummy_build/x-ui/x-ui.service")
+
+    # Create the tarball
+    dt.run("tar -czf /root/x-ui-linux-amd64.tar.gz -C /root/dummy_build x-ui")
+
+    # Inject a mock wget function into install.sh to handle local file copying
+    # This avoids brittle sed replacements of complex wget commands
+    mock_wget_func = r"""
+function wget() {
+    local outfile=""
+    local args=("$@")
+    for ((i=0; i<${#args[@]}; i++)); do
+        if [[ "${args[i]}" == "-O" ]]; then
+           outfile="${args[i+1]}"
+        fi
+    done
+    if [[ "$outfile" == *"tar.gz" ]]; then
+        echo "Mock wget: Copying tarball to $outfile"
+        cp /root/x-ui-linux-amd64.tar.gz "$outfile"
+    elif [[ "$outfile" == *"x-ui-temp" ]]; then
+        echo "Mock wget: Copying x-ui.sh to $outfile"
+        cp /root/x-ui.sh "$outfile"
+    else
+        # Fallback to system wget for other calls (if any)
+        /usr/bin/wget "$@"
+    fi
+}
+export -f wget
+"""
+    # Append the function to the beginning of the script (after shebang)
+    # We write it to a temp file then cat it
+    dt.run(f"echo '{mock_wget_func}' > /root/mock_wget.sh")
+    dt.run("sed -i '2r /root/mock_wget.sh' /root/install.sh")
+
+    # Run install.sh
+    res = dt.run("bash /root/install.sh")
+    print(res.stdout)
+    assert res.returncode == 0, f"install.sh failed: {res.stderr}"
+
+    # Verify installation
+    assert dt.file_exists("/usr/local/x-ui/x-ui")
+    assert dt.file_exists("/usr/local/x-ui/x-ui.sh")
+    assert dt.file_exists("/usr/bin/x-ui")
+    assert dt.file_exists("/etc/systemd/system/x-ui.service")
+
+    # The previous manual setup steps are now redundant if install.sh works
+    # dt.run("mkdir -p /usr/local/x-ui") ...
+
+    print("DEBUG: Checking files before status...")
+    ls_res = dt.run("ls -laR /usr/local/x-ui/")
+    print(f"DEBUG LS /usr/local/x-ui/: {ls_res.stdout}")
+
+    # Re-mock the binary for status check if needed?
+    # install.sh installs the binary we put in the tarball, which is correct.
 
     assert dt.file_exists("/usr/bin/x-ui")
     assert dt.file_exists("/usr/local/x-ui/x-ui.sh")
