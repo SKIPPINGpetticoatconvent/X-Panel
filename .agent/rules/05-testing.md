@@ -10,6 +10,7 @@ description: X-Panel 测试规范
   `go build ./... && go test ./... && nilaway -test=false ./...`
 - 提交修改前，必须确保上述检查全部通过。
 - **TOML 文件验证**: 修改 `.toml` 文件后，必须执行 `taplo fmt --check` 并确保无报错。
+- **Shell 脚本验证**: 修改 `.sh` 文件后，必须执行 `shfmt -i 2 -w -s .` 格式化，并通过 `shellcheck` 检查。
 
 ---
 
