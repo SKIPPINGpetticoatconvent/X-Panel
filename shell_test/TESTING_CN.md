@@ -36,14 +36,23 @@ uv sync
 
 ```bash
 # 运行所有测试
-uv run pytest
+uv run python -m pytest -v
 
 # 运行所有测试并显示详细输出 (stdout/stderr)
-uv run pytest -s
-
-# 运行特定测试文件
-uv run pytest test_installer.py
+uv run python -m pytest -v -s
 ```
+
+### 3. 预期输出
+
+测试成功时，您将看到类似以下的输出：
+
+```text
+shell_test/test_installer.py::test_e2e_full_flow PASSED     [100%]
+
+============================== 1 passed in 48.24s ==============================
+```
+
+> **注意**: 由于测试目前合并为单个全流程测试 (`test_e2e_full_flow`)，因此只会显示一个 PASSED 条目。
 
 ## 测试原理
 

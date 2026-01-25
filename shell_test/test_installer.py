@@ -135,12 +135,14 @@ def test_e2e_full_flow(dt):
 
     print("\n[Step 4] Lifecycle Restart")
     dt.run("echo > /tmp/systemctl.log")
-    dt.run("x-ui restart")
+    res = dt.run("x-ui restart")
+    assert res.returncode == 0, f"Restart command failed: {res.stderr}"
     assert dt.file_contains("/tmp/systemctl.log", "restart x-ui")
 
     print("\n[Step 5] Lifecycle Stop")
     dt.run("echo > /tmp/systemctl.log")
-    dt.run("x-ui stop")
+    res = dt.run("x-ui stop")
+    assert res.returncode == 0, f"Stop command failed: {res.stderr}"
     assert dt.file_contains("/tmp/systemctl.log", "stop x-ui")
 
     print("\n[Step 6] Settings Port")
@@ -158,11 +160,13 @@ fi
 
     res = dt.run("x-ui setting -port 9999")
     print(res.stdout)
+    assert res.returncode == 0, f"Settings port command failed: {res.stderr}"
     assert "Mock x-ui binary called with: setting -port 9999" in res.stdout
 
     print("\n[Step 7] Settings Credentials")
     res = dt.run("x-ui setting -username testuser -password testpass")
     print(res.stdout)
+    assert res.returncode == 0, f"Settings credentials command failed: {res.stderr}"
     assert "setting -username testuser -password testpass" in res.stdout
 
     print("\n[Step 8] Uninstall")
