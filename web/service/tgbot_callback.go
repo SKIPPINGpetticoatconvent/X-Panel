@@ -1818,50 +1818,49 @@ func checkAdmin(tgId int64) bool {
 
 func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 	numericKeyboard := tu.InlineKeyboard(
+		// ━━━━━━━━━━ 📊 服务器监控 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.serverUsage")).WithCallbackData(t.encodeQuery("get_usage")),
+			tu.InlineKeyboardButton("📈 系统状态").WithCallbackData(t.encodeQuery("get_usage")),
 			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.SortedTrafficUsageReport")).WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.ResetAllTraffics")).WithCallbackData(t.encodeQuery("reset_all_traffics")),
+			tu.InlineKeyboardButton("📊 流量报告").WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
+			tu.InlineKeyboardButton("🔄 重置流量").WithCallbackData(t.encodeQuery("reset_all_traffics")),
+		),
+		// ━━━━━━━━━━ 📡 入站管理 ━━━━━━━━━━
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📋 入站列表").WithCallbackData(t.encodeQuery("inbounds")),
+			tu.InlineKeyboardButton("⚠️ 即将到期").WithCallbackData(t.encodeQuery("deplete_soon")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.dbBackup")).WithCallbackData(t.encodeQuery("get_backup")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.getBanLogs")).WithCallbackData(t.encodeQuery("get_banlogs")),
+			tu.InlineKeyboardButton("📥 备份数据").WithCallbackData(t.encodeQuery("get_backup")),
+			tu.InlineKeyboardButton("📝 封禁日志").WithCallbackData(t.encodeQuery("get_banlogs")),
+		),
+		// ━━━━━━━━━━ 👤 客户端管理 ━━━━━━━━━━
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("👥 所有客户").WithCallbackData(t.encodeQuery("get_inbounds")),
+			tu.InlineKeyboardButton("➕ 添加客户").WithCallbackData(t.encodeQuery("add_client")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.getInbounds")).WithCallbackData(t.encodeQuery("inbounds")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.depleteSoon")).WithCallbackData(t.encodeQuery("deplete_soon")),
+			tu.InlineKeyboardButton("📋 批量复制").WithCallbackData(t.encodeQuery("copy_all_links")),
+			tu.InlineKeyboardButton("📶 在线用户").WithCallbackData(t.encodeQuery("onlines")),
 		),
+		// ━━━━━━━━━━ ⚙️ 系统工具 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.commands")).WithCallbackData(t.encodeQuery("commands")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.onlines")).WithCallbackData(t.encodeQuery("onlines")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.allClients")).WithCallbackData(t.encodeQuery("get_inbounds")),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
-		),
-
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🆕 Xray 版本管理").WithCallbackData(t.encodeQuery("xrayversion")),
+			tu.InlineKeyboardButton("🆕 Xray版本").WithCallbackData(t.encodeQuery("xrayversion")),
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
-			tu.InlineKeyboardButton("⚡ 机器优化一键方案").WithCallbackData(t.encodeQuery("machine_optimization")),
+			tu.InlineKeyboardButton("⚡ 机器优化").WithCallbackData(t.encodeQuery("machine_optimization")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
+			tu.InlineKeyboardButton("🌍 更新Geo").WithCallbackData(t.encodeQuery("update_geodata_ask")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🌍 更新 Geo 数据").WithCallbackData(t.encodeQuery("update_geodata_ask")),
+			tu.InlineKeyboardButton("❓ 命令帮助").WithCallbackData(t.encodeQuery("commands")),
 		),
-		// VPS推荐按钮已移除
-		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
 	numericKeyboardClient := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -2417,24 +2416,22 @@ func (t *Tgbot) searchClient(chatId int64, email string, messageID ...int) {
 
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.refresh")).WithCallbackData(t.encodeQuery("client_refresh "+email)),
+			tu.InlineKeyboardButton("🔄 刷新").WithCallbackData(t.encodeQuery("client_refresh "+email)),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.resetTraffic")).WithCallbackData(t.encodeQuery("reset_traffic "+email)),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.limitTraffic")).WithCallbackData(t.encodeQuery("limit_traffic "+email)),
+			tu.InlineKeyboardButton("📊 重置流量").WithCallbackData(t.encodeQuery("reset_traffic "+email)),
+			tu.InlineKeyboardButton("📶 流量限制").WithCallbackData(t.encodeQuery("limit_traffic "+email)),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.resetExpire")).WithCallbackData(t.encodeQuery("reset_exp "+email)),
+			tu.InlineKeyboardButton("📅 重置到期").WithCallbackData(t.encodeQuery("reset_exp "+email)),
+			tu.InlineKeyboardButton("🔢 IP限制").WithCallbackData(t.encodeQuery("ip_limit "+email)),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.ipLog")).WithCallbackData(t.encodeQuery("ip_log "+email)),
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.ipLimit")).WithCallbackData(t.encodeQuery("ip_limit "+email)),
+			tu.InlineKeyboardButton("📍 IP日志").WithCallbackData(t.encodeQuery("ip_log "+email)),
+			tu.InlineKeyboardButton("👤 TG绑定").WithCallbackData(t.encodeQuery("tg_user "+email)),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.setTGUser")).WithCallbackData(t.encodeQuery("tg_user "+email)),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.toggle")).WithCallbackData(t.encodeQuery("toggle_enable "+email)),
+			tu.InlineKeyboardButton("🔘 启用/禁用").WithCallbackData(t.encodeQuery("toggle_enable "+email)),
 		),
 	)
 	if len(messageID) > 0 {

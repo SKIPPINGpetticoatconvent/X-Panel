@@ -1027,33 +1027,35 @@ func (t *Tgbot) getSystemStatusAfterOptimization() string {
 // 【新增函数】: 显示防火墙管理主菜单
 func (t *Tgbot) sendFirewallMenu(chatId int64) {
 	firewallKeyboard := tu.InlineKeyboard(
+		// ━━━━━━━━━━ 🔍 状态检测 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🔍 检查防火墙状态").WithCallbackData(t.encodeQuery("firewall_check_status")),
+			tu.InlineKeyboardButton("🔍 检查状态").WithCallbackData(t.encodeQuery("firewall_check_status")),
 		),
+		// ━━━━━━━━━━ 📦 安装工具 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📦 安装防火墙").WithCallbackData(t.encodeQuery("firewall_install_firewalld")),
+			tu.InlineKeyboardButton("🛡️ 安装Fail2Ban").WithCallbackData(t.encodeQuery("firewall_install_fail2ban")),
 		),
+		// ━━━━━━━━━━ ⚡ 服务控制 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📦 安装 Fail2Ban").WithCallbackData(t.encodeQuery("firewall_install_fail2ban")),
+			tu.InlineKeyboardButton("✅ 启用").WithCallbackData(t.encodeQuery("firewall_enable")),
+			tu.InlineKeyboardButton("❌ 禁用").WithCallbackData(t.encodeQuery("firewall_disable")),
 		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("✅ 启用防火墙").WithCallbackData(t.encodeQuery("firewall_enable")),
-			tu.InlineKeyboardButton("❌ 禁用防火墙").WithCallbackData(t.encodeQuery("firewall_disable")),
-		),
+		// ━━━━━━━━━━ 🔧 端口管理 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🔓 开放端口").WithCallbackData(t.encodeQuery("firewall_open_port")),
 			tu.InlineKeyboardButton("🔒 关闭端口").WithCallbackData(t.encodeQuery("firewall_close_port")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📋 查看规则").WithCallbackData(t.encodeQuery("firewall_list_rules")),
-			tu.InlineKeyboardButton("🚀 开放X-Panel端口").WithCallbackData(t.encodeQuery("firewall_open_xpanel_ports")),
+			tu.InlineKeyboardButton("🚀 开放X-Panel").WithCallbackData(t.encodeQuery("firewall_open_xpanel_ports")),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("get_inbounds")),
 		),
 	)
 
-	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择您要执行的操作：\n\n• 🔍 **检查状态**: 检测当前防火墙状态\n• 📦 **安装工具**: 安装 Firewalld 防火墙\n• 📦 **安装 Fail2Ban**: 安装入侵检测和预防系统\n• ✅❌ **启禁用**: 控制防火墙服务状态\n• 🔓🔒 **端口管理**: 开放或关闭特定端口\n• 📋 **查看规则**: 显示当前所有防火墙规则\n• 🚀 **一键开放**: 自动开放 X-Panel 所需端口", firewallKeyboard)
+	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择操作：", firewallKeyboard)
 }
 
 // 【新增函数】: 检查当前防火墙状态
