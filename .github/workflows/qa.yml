@@ -2,9 +2,9 @@ name: QA Framework
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
 
 jobs:
   qa:
@@ -12,51 +12,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Install Dependencies
-      run: |
-        go mod download
-        pip install requests
+      - name: Install Dependencies
+        run: |
+          go mod download
+          pip install requests
 
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v7
-      with:
-        version: latest
-        args: --timeout=10m
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          args: --timeout=10m
 
-    - name: Grant Execute Permissions
-      run: |
-        chmod +x QA/run_qa.sh
-        chmod +x QA/static/*
-        chmod +x QA/unit/*.sh
-        find QA/e2e -name "*.sh" -exec chmod +x {} \;
+      - name: Grant Execute Permissions
+        run: |
+          chmod +x QA/run_qa.sh
+          chmod +x QA/static/*
+          chmod +x QA/unit/*.sh
+          find QA/e2e -name "*.sh" -exec chmod +x {} \;
 
-    - name: Install NilAway
-      run: go install go.uber.org/nilaway/cmd/nilaway@latest
+      - name: Install NilAway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
 
-    - name: Run NilAway (Deep Static Analysis)
-      run: nilaway -test=false ./...
+      - name: Run NilAway (Deep Static Analysis)
+        run: nilaway -test=false ./...
 
+      # ========== 安全增强检查 ==========
+      - name: Run Tests with Race Detector
+        run: go test -race -short ./...
 
-
-    # ========== 安全增强检查 ==========
-    - name: Run Tests with Race Detector
-      run: go test -race -short ./...
-
-    - name: Run QA Framework
-      run: ./QA/run_qa.sh
-
-    - name: Run X-Panel E2E Tests (Local Mode)
-      run: make e2e
+      - name: Run QA Framework
+        run: ./QA/run_qa.sh

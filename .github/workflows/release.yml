@@ -53,19 +53,21 @@ jobs:
       - name: Run NilAway (Deep Static Analysis)
         run: nilaway -test=false ./...
 
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           args: --timeout=10m
 
+      - name: Run X-Panel E2E Tests (Local Mode)
+        run: make e2e
+
   # ===============================================================
   # Linux 平台的构建任务
   # ===============================================================
   build-linux:
     name: Build for Linux
-    needs: qa  # ← 依赖 QA 检查通过
+    needs: qa # ← 依赖 QA 检查通过
     permissions:
       contents: write
     strategy:
@@ -199,7 +201,7 @@ jobs:
   # ===============================================================
   build-windows:
     name: Build for Windows
-    needs: qa  # ← 依赖 QA 检查通过
+    needs: qa # ← 依赖 QA 检查通过
     permissions:
       contents: write
     strategy:
