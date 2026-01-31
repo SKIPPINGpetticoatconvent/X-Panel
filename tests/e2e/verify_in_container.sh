@@ -67,13 +67,35 @@ echo ">>> [Container] Verifying Installation..."
 # Check Service Status
 if systemctl is-active --quiet x-ui; then
     echo "✅ Systemd service 'x-ui' is active."
-    echo ">>> [Container] Recent Service Logs (Success):"
-    journalctl -u x-ui --no-pager -n 100
+    echo "✅ Systemd service 'x-ui' is active."
 else
     echo "❌ Systemd service 'x-ui' failed to start!"
     echo ">>> [Container] Dumping ALL systemd logs:"
     journalctl -u x-ui --no-pager
     systemctl status x-ui --no-pager
+    exit 1
+fi
+
+
+
+# Check Processes
+echo ">>> [Container] Checking Processes..."
+if ps aux | grep -v grep | grep "x-ui" > /dev/null; then
+    echo "✅ Process 'x-ui' is running."
+else
+    echo "❌ Process 'x-ui' not found!"
+    ps aux
+    echo ">>> [Container] Dumping ALL systemd logs:"
+    journalctl -u x-ui --no-pager
+    exit 1
+fi
+
+if ps aux | grep -v grep | grep "xray-linux-amd64" > /dev/null; then
+    echo "✅ Process 'xray-linux-amd64' is running."
+else
+    echo "❌ Process 'xray-linux-amd64' not found! (Checking logs...)"
+    echo ">>> [Container] Dumping ALL systemd logs:"
+    journalctl -u x-ui --no-pager
     exit 1
 fi
 
@@ -104,6 +126,8 @@ if [[ "$HTTP_CODE" =~ 200|404|302 ]]; then
     echo "✅ Port $PORT is reachable (HTTP $HTTP_CODE)."
 else
     echo "❌ Port $PORT check failed with HTTP $HTTP_CODE"
+    echo ">>> [Container] Dumping ALL systemd logs:"
+    journalctl -u x-ui --no-pager
     exit 1
 fi
 
@@ -112,4 +136,6 @@ if [ "${MODE}" == "local" ]; then
     kill ${SERVER_PID} || true
 fi
 
+echo ">>> [Container] Recent Service Logs (Success):"
+journalctl -u x-ui --no-pager -n 100
 echo ">>> [Container] E2E Verification PASSED!"
