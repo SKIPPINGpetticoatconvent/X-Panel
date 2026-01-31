@@ -11,9 +11,11 @@ plain='\033[0m'
 
 # Check OS and set release variable
 if [[ -f /etc/os-release ]]; then
+  # shellcheck disable=SC1091
   source /etc/os-release
   release=$ID
 elif [[ -f /usr/lib/os-release ]]; then
+  # shellcheck disable=SC1091
   source /usr/lib/os-release
   release=$ID
 else
@@ -156,31 +158,31 @@ is_port_in_use() {
 install_base() {
   case "${release}" in
   ubuntu | debian | armbian)
-    apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates chrony
+    apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates chrony socat
     systemctl enable chrony && systemctl start chrony
     ;;
   centos | rhel | almalinux | rocky | ol)
-    yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata ca-certificates chrony
+    yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata ca-certificates chrony socat
     systemctl enable chronyd && systemctl start chronyd
     ;;
   fedora | amzn | virtuozzo)
-    dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata ca-certificates chrony
+    dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata ca-certificates chrony socat
     systemctl enable chronyd && systemctl start chronyd
     ;;
   arch | manjaro | parch)
-    pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata ca-certificates chrony
+    pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata ca-certificates chrony socat
     systemctl enable chronyd && systemctl start chronyd
     ;;
   alpine)
-    apk update && apk add --no-cache wget curl sudo tar tzdata ca-certificates chrony
+    apk update && apk add --no-cache wget curl sudo tar tzdata ca-certificates chrony socat
     rc-update add chronyd default && rc-service chronyd start
     ;;
   opensuse-tumbleweed)
-    zypper refresh && zypper -q install -y wget curl sudo tar timezone ca-certificates chrony
+    zypper refresh && zypper -q install -y wget curl sudo tar timezone ca-certificates chrony socat
     systemctl enable chronyd && systemctl start chronyd
     ;;
   *)
-    apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates chrony
+    apt-get update && apt-get install -y -q wget curl sudo tar tzdata ca-certificates chrony socat
     systemctl enable chrony && systemctl start chrony
     ;;
   esac

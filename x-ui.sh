@@ -41,9 +41,11 @@ is_port_in_use() {
 
 # Check OS and set release variable
 if [[ -f /etc/os-release ]]; then
+  # shellcheck disable=SC1091
   source /etc/os-release
   release=$ID
 elif [[ -f /usr/lib/os-release ]]; then
+  # shellcheck disable=SC1091
   source /usr/lib/os-release
   release=$ID
 else
@@ -1941,13 +1943,13 @@ show_menu() {
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
   ${green}25.${plain} WARP 管理
-  ${green}26.${plain} 申请 IP 证书 (自签/废弃)
+
 ——————————————————————
 
 
 "
   show_status
-  echo && read -rp "请输入选项 [0-26]: " num
+  echo && read -rp "请输入选项 [0-25]: " num
 
   case "${num}" in
   0)
@@ -2004,11 +2006,7 @@ show_menu() {
   17)
     check_install && disable
     ;;
-  26)
-    echo -e "${red}此功能已移动至 [18. SSL 证书管理] -> [6. 为服务器IP申请证书]${plain}"
-    read -rp "按回车键返回..."
-    show_menu
-    ;;
+
   18)
     ssl_cert_issue_main
     ;;
@@ -2034,7 +2032,7 @@ show_menu() {
     warp_cloudflare
     ;;
   *)
-    LOGE "请输入正确的数字选项 [0-26]"
+    LOGE "请输入正确的数字选项 [0-25]"
     ;;
   esac
 }
