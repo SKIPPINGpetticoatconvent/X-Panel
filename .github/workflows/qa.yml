@@ -9,10 +9,60 @@ on:
     branches: ["main", "master"]
 
 jobs:
-  qa:
-    name: Run QA Suite
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          args: --timeout=10m
+
+  nilaway:
+    name: NilAway
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install NilAway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+
+      - name: Run NilAway (Deep Static Analysis)
+        run: nilaway -test=false ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run Tests with Race Detector
+        run: go test -race -short ./...
+
+  qa-suite:
+    name: QA Suite
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,28 +82,12 @@ jobs:
           go mod download
           pip install requests
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: latest
-          args: --timeout=10m
-
       - name: Grant Execute Permissions
         run: |
           chmod +x QA/run_qa.sh
           chmod +x QA/static/*
           chmod +x QA/unit/*.sh
           find QA/e2e -name "*.sh" -exec chmod +x {} \;
-
-      - name: Install NilAway
-        run: go install go.uber.org/nilaway/cmd/nilaway@latest
-
-      - name: Run NilAway (Deep Static Analysis)
-        run: nilaway -test=false ./...
-
-      # ========== 安全增强检查 ==========
-      - name: Run Tests with Race Detector
-        run: go test -race -short ./...
 
       - name: Run QA Framework
         run: ./QA/run_qa.sh
