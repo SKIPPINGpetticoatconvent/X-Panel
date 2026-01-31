@@ -1455,13 +1455,6 @@ warp_cloudflare() {
   esac
 }
 
-# --------- 【订阅转换】模块 ----------
-subconverter() {
-  echo -e "${red}此功能已移除${plain}"
-  sleep 2
-  show_menu
-}
-
 run_speedtest() {
   # Check if Speedtest is already installed
   if ! command -v speedtest &>/dev/null; then
@@ -1856,7 +1849,7 @@ show_menu() {
   ${green}22.${plain} 启用 BBR 
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
-  ${green}25.${plain} 安装订阅转换 (已移除)
+  ${green}25.${plain} (已空置)
   ${green}26.${plain} 申请 IP 证书 (自签/废弃)
 ——————————————————————
 
@@ -1947,7 +1940,7 @@ show_menu() {
     run_speedtest
     ;;
   25)
-    subconverter
+    echo -e "${yellow}此选项已空置${plain}"
     ;;
   *)
     LOGE "请输入正确的数字选项 [0-26]"
@@ -1996,9 +1989,7 @@ if [[ $# -gt 0 ]]; then
   "uninstall")
     check_install 0 && uninstall 0
     ;;
-  "subconverter")
-    check_install 0 && subconverter 0
-    ;;
+
   "setting")
     check_install 0 && /usr/local/x-ui/x-ui "$@"
     ;;

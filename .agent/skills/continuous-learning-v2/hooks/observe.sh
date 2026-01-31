@@ -57,7 +57,8 @@ if [ -z "$INPUT_JSON" ]; then
 fi
 
 # Parse using python (more reliable than jq for complex JSON)
-PARSED=$(python3 << EOF
+PARSED=$(
+  python3 <<EOF
 import json
 import sys
 
@@ -104,7 +105,7 @@ PARSED_OK=$(echo "$PARSED" | python3 -c "import json,sys; print(json.load(sys.st
 if [ "$PARSED_OK" != "True" ]; then
   # Fallback: log raw input for debugging
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  echo "{\"timestamp\":\"$timestamp\",\"event\":\"parse_error\",\"raw\":$(echo "$INPUT_JSON" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()[:1000]))')}" >> "$OBSERVATIONS_FILE"
+  echo "{\"timestamp\":\"$timestamp\",\"event\":\"parse_error\",\"raw\":$(echo "$INPUT_JSON" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()[:1000]))')}" >>"$OBSERVATIONS_FILE"
   exit 0
 fi
 
@@ -121,7 +122,7 @@ fi
 # Build and write observation
 timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-python3 << EOF
+python3 <<EOF
 import json
 
 parsed = json.loads('''$PARSED''')
