@@ -29,6 +29,11 @@ description: X-Panel 开发规范
 - 修改 `.toml` 文件后，必须使用 `taplo fmt --check` 进行格式检查。
 - 确保配置文件结构清晰，注释准确。
 
+## 3.5 Makefile 规范
+
+- 修改 `Makefile` 后，必须使用 `checkmake Makefile` 进行验证。
+- 确保所有目标（Targets）都具有清晰的结构和必要的 `.PHONY` 声明。
+
 ---
 
 **导航**: [← 技术栈与环境](./02-tech-stack.md) | [返回索引](./main.md) | [下一节: 版本控制规范 →](./04-version-control.md)

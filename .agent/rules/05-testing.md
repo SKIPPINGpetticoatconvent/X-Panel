@@ -11,6 +11,7 @@ description: X-Panel 测试规范
 - 提交修改前，必须确保上述检查全部通过。
 - **TOML 文件验证**: 修改 `.toml` 文件后，必须执行 `taplo fmt --check` 并确保无报错。
 - **Shell 脚本验证**: 修改或新建 `.sh` 文件后，必须执行 `shfmt -i 2 -w -s .` 格式化，并通过 `shellcheck` 检查。
+- **Makefile 验证**: 修改或新建 `Makefile` 后，必须执行 `checkmake Makefile` 并确保无报错。
 - **强制 E2E 验证**: 发布新版本或修改安装脚本前，必须执行 `make e2e` 并通过 Docker 容器内的端到端安装测试。
 
 ---
