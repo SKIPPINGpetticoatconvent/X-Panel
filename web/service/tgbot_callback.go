@@ -1000,6 +1000,24 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "commands":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.buttons.commands"))
 		t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.commands.helpAdminCommands"))
+
+	// ━━━━━━━━━━ 两级菜单回调处理 ━━━━━━━━━━
+	case "menu_main":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🏠 主菜单")
+		t.SendAnswer(chatId, "🏠 <b>主菜单</b>\n\n请选择功能分类：", true)
+	case "menu_monitor":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📊 系统监控")
+		t.showMenuMonitor(chatId, callbackQuery.Message.GetMessageID())
+	case "menu_users":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "👥 用户管理")
+		t.showMenuUsers(chatId, callbackQuery.Message.GetMessageID())
+	case "menu_maintenance":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛠 系统维护")
+		t.showMenuMaintenance(chatId, callbackQuery.Message.GetMessageID())
+	case "menu_advanced":
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚙️ 高级设置")
+		t.showMenuAdvanced(chatId, callbackQuery.Message.GetMessageID())
+
 	case "add_client":
 		// assign default values to clients variables
 		client_Id = uuid.New().String()
@@ -1818,60 +1836,21 @@ func checkAdmin(tgId int64) bool {
 
 func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 	numericKeyboard := tu.InlineKeyboard(
-		// ━━━━━━━━━━ 📊 系统监控 ━━━━━━━━━━
+		// ━━━━━━━━━━ 🏠 主菜单 (两级菜单) ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📊 系统监控").WithCallbackData("noop"), // 标题行 (无操作)
+			tu.InlineKeyboardButton("📊 系统监控").WithCallbackData(t.encodeQuery("menu_monitor")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📈 系统状态").WithCallbackData(t.encodeQuery("get_usage")),
-			tu.InlineKeyboardButton("📊 流量报告").WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
-		),
-
-		// ━━━━━━━━━━ 👥 用户管理 ━━━━━━━━━━
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("👥 用户管理").WithCallbackData("noop"), // 标题行 (无操作)
+			tu.InlineKeyboardButton("👥 用户管理").WithCallbackData(t.encodeQuery("menu_users")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("👥 所有客户").WithCallbackData(t.encodeQuery("get_inbounds")),
-			tu.InlineKeyboardButton("➕ 添加客户").WithCallbackData(t.encodeQuery("add_client")),
+			tu.InlineKeyboardButton("🛠 系统维护").WithCallbackData(t.encodeQuery("menu_maintenance")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📶 在线用户").WithCallbackData(t.encodeQuery("onlines")),
-			tu.InlineKeyboardButton("📋 入站列表").WithCallbackData(t.encodeQuery("inbounds")),
-		),
-
-		// ━━━━━━━━━━ 🛠 系统维护 ━━━━━━━━━━
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🛠 系统维护").WithCallbackData("noop"), // 标题行 (无操作)
+			tu.InlineKeyboardButton("⚙️ 高级设置").WithCallbackData(t.encodeQuery("menu_advanced")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
-			tu.InlineKeyboardButton("🔄 重置流量").WithCallbackData(t.encodeQuery("reset_all_traffics")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📥 备份数据").WithCallbackData(t.encodeQuery("get_backup")),
-			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
-		),
-
-		// ━━━━━━━━━━ ⚙️ 高级设置 ━━━━━━━━━━
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚙️ 高级设置").WithCallbackData("noop"), // 标题行 (无操作)
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚡ 机器优化").WithCallbackData(t.encodeQuery("machine_optimization")),
-			tu.InlineKeyboardButton("🌍 更新Geo").WithCallbackData(t.encodeQuery("update_geodata_ask")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🆕 Xray版本").WithCallbackData(t.encodeQuery("xrayversion")),
-			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
-			tu.InlineKeyboardButton("📝 封禁日志").WithCallbackData(t.encodeQuery("get_banlogs")),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("❓ 命令帮助").WithCallbackData(t.encodeQuery("commands")),
-			tu.InlineKeyboardButton("❌ 关闭键盘").WithCallbackData(t.encodeQuery("close_keyboard")),
+			tu.InlineKeyboardButton("❌ 关闭菜单").WithCallbackData(t.encodeQuery("close_keyboard")),
 		),
 	)
 	numericKeyboardClient := tu.InlineKeyboard(
@@ -1888,6 +1867,86 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		ReplyMarkup = numericKeyboardClient
 	}
 	t.SendMsgToTgbot(chatId, msg, ReplyMarkup)
+}
+
+// ━━━━━━━━━━ 两级菜单 - 子菜单函数 ━━━━━━━━━━
+
+// showMenuMonitor 显示系统监控子菜单
+func (t *Tgbot) showMenuMonitor(chatId int64, messageId int) {
+	keyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📈 系统状态").WithCallbackData(t.encodeQuery("get_usage")),
+			tu.InlineKeyboardButton("📊 流量报告").WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("menu_main")),
+		),
+	)
+	t.editMessageCallbackTgBot(chatId, messageId, keyboard)
+}
+
+// showMenuUsers 显示用户管理子菜单
+func (t *Tgbot) showMenuUsers(chatId int64, messageId int) {
+	keyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("👥 所有客户").WithCallbackData(t.encodeQuery("get_inbounds")),
+			tu.InlineKeyboardButton("➕ 添加客户").WithCallbackData(t.encodeQuery("add_client")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📶 在线用户").WithCallbackData(t.encodeQuery("onlines")),
+			tu.InlineKeyboardButton("📋 入站列表").WithCallbackData(t.encodeQuery("inbounds")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🚀 一键配置").WithCallbackData(t.encodeQuery("oneclick_options")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("menu_main")),
+		),
+	)
+	t.editMessageCallbackTgBot(chatId, messageId, keyboard)
+}
+
+// showMenuMaintenance 显示系统维护子菜单
+func (t *Tgbot) showMenuMaintenance(chatId int64, messageId int) {
+	keyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
+			tu.InlineKeyboardButton("🔄 重置流量").WithCallbackData(t.encodeQuery("reset_all_traffics")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📥 备份数据").WithCallbackData(t.encodeQuery("get_backup")),
+			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("menu_main")),
+		),
+	)
+	t.editMessageCallbackTgBot(chatId, messageId, keyboard)
+}
+
+// showMenuAdvanced 显示高级设置子菜单
+func (t *Tgbot) showMenuAdvanced(chatId int64, messageId int) {
+	keyboard := tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ 机器优化").WithCallbackData(t.encodeQuery("machine_optimization")),
+			tu.InlineKeyboardButton("🌍 更新Geo").WithCallbackData(t.encodeQuery("update_geodata_ask")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🆕 Xray版本").WithCallbackData(t.encodeQuery("xrayversion")),
+			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
+			tu.InlineKeyboardButton("📝 封禁日志").WithCallbackData(t.encodeQuery("get_banlogs")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("❓ 命令帮助").WithCallbackData(t.encodeQuery("commands")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("menu_main")),
+		),
+	)
+	t.editMessageCallbackTgBot(chatId, messageId, keyboard)
 }
 
 func (t *Tgbot) SendMsgToTgbot(chatId int64, msg string, replyMarkup ...telego.ReplyMarkup) {
