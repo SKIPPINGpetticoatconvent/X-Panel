@@ -12,10 +12,50 @@ on:
 
 jobs:
   # ===============================================================
-  # 发布前 QA 检查 - 所有构建任务的前置依赖
+  # 发布前 QA 检查 - 并行执行
   # ===============================================================
-  qa:
-    name: Pre-Release QA
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
+          args: --timeout=10m
+
+  nilaway:
+    name: NilAway
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install NilAway
+        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+
+      - name: Run NilAway (Deep Static Analysis)
+        run: nilaway -test=false ./...
+
+  test:
+    name: Test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,18 +77,19 @@ jobs:
       - name: Build Verification
         run: go build ./...
 
-      # 官方 golangci-lint-action v7 支持 golangci-lint v2
-      - name: Install NilAway
-        run: go install go.uber.org/nilaway/cmd/nilaway@latest
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Run NilAway (Deep Static Analysis)
-        run: nilaway -test=false ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          version: latest
-          args: --timeout=10m
+          go-version-file: go.mod
 
       - name: Run X-Panel E2E Tests (Local Mode)
         run: make e2e
@@ -58,7 +99,7 @@ jobs:
   # ===============================================================
   build-linux:
     name: Build for Linux
-    needs: qa # ← 依赖 QA 检查通过
+    needs: [lint, nilaway, test, e2e] # ← 依赖所有 QA 检查通过
     permissions:
       contents: write
     strategy:
@@ -192,7 +233,7 @@ jobs:
   # ===============================================================
   build-windows:
     name: Build for Windows
-    needs: qa # ← 依赖 QA 检查通过
+    needs: [lint, nilaway, test, e2e] # ← 依赖所有 QA 检查通过
     permissions:
       contents: write
     strategy:
