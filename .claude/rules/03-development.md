@@ -20,7 +20,7 @@ description: X-Panel 开发规范
 
 ## 3.3 Shell 脚本规范
 
-- **强制格式化**: 修改 Shell 脚本后，必须执行 `shfmt -i 2 -w -s .` 进行格式化。
+- **强制格式化**: 修改或新建 Shell 脚本后，必须执行 `shfmt -i 2 -w -s .` 进行格式化。
 - **强制检查**: 修改 `install.sh`、`x-ui.sh` 等脚本后，必须使用 `shellcheck` 检查并修复所有警告。
 - 确保脚本在 Ubuntu、Debian、CentOS 等主流 Linux 发行版兼容。
 
