@@ -10,13 +10,37 @@ IMAGE_NAME="xpanel-e2e-image"
 
 # Default Mode
 MODE="local"
-XPANEL_VERSION=$(cat "${PROJECT_ROOT}/config/version" | tr -d '\n')
+XPANEL_VERSION=$(tr -d '\n' <"${PROJECT_ROOT}/config/version")
 
 # Parse Args
+# Parse Args
+TEST_SCRIPT="verify_in_container.sh"
 while [[ $# -gt 0 ]]; do
   case $1 in
   --mode)
     MODE="$2"
+    shift
+    ;;
+  --test)
+    TEST_CASE="$2"
+    case $TEST_CASE in
+    ip_cert)
+      TEST_SCRIPT="verify_ip_cert.sh"
+      ;;
+    domain_cert)
+      TEST_SCRIPT="verify_domain_cert.sh"
+      ;;
+    failover)
+      TEST_SCRIPT="verify_ssl_fallback.sh"
+      ;;
+    install)
+      TEST_SCRIPT="verify_in_container.sh"
+      ;;
+    *)
+      echo "Unknown test case: $TEST_CASE"
+      exit 1
+      ;;
+    esac
     shift
     ;;
   *)
@@ -30,6 +54,7 @@ done
 echo "=========================================="
 echo "Starting X-Panel E2E Test"
 echo "Mode: ${MODE}"
+echo "Test: ${TEST_SCRIPT}"
 echo "Version: ${XPANEL_VERSION}"
 echo "=========================================="
 
@@ -131,7 +156,7 @@ fi
 
 # 2. Build Docker Image
 echo ">> [Host] Building Docker image..."
-docker build -t ${IMAGE_NAME} -f ${DOCKERFILE} .
+docker build -t ${IMAGE_NAME} -f "${DOCKERFILE}" .
 
 # 3. Run Container
 echo ">> [Host] Starting container..."
@@ -141,6 +166,13 @@ docker run -d --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -
 # 4. Inject Files
 echo ">> [Host] Injecting files..."
 docker cp "${PROJECT_ROOT}/install.sh" "${CONTAINER_NAME}:/root/install.sh"
+docker cp "${TEST_DIR}/${TEST_SCRIPT}" "${CONTAINER_NAME}:/root/${TEST_SCRIPT}"
+# Inject assets if available
+if [ -d "${TEST_DIR}/assets" ]; then
+  docker cp "${TEST_DIR}/assets" "${CONTAINER_NAME}:/root/assets"
+fi
+
+# We might also need other scripts
 docker cp "${TEST_DIR}/verify_in_container.sh" "${CONTAINER_NAME}:/root/verify_in_container.sh"
 
 if [ "${MODE}" == "local" ]; then
@@ -149,7 +181,8 @@ fi
 
 # 5. Execute Test
 echo ">> [Host] Executing test inside container..."
-docker exec ${CONTAINER_NAME} /bin/bash /root/verify_in_container.sh "${MODE}" "${XPANEL_VERSION}"
+docker exec ${CONTAINER_NAME} chmod +x /root/${TEST_SCRIPT}
+docker exec ${CONTAINER_NAME} /bin/bash /root/${TEST_SCRIPT} "${MODE}" "${XPANEL_VERSION}"
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
