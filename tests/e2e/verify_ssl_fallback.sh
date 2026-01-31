@@ -125,5 +125,5 @@ echo "   - New cert exists"
 
 # Cleanup
 if [ "${MODE}" == "local" ]; then
-  kill ${SERVER_PID} || true
+  kill "${SERVER_PID}" || true
 fi

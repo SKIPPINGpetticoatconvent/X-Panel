@@ -103,7 +103,8 @@ echo ">>> [Container] Manually invoking Mock ACME (simulating x-ui.sh logic)..."
 
 echo ">>> [Container] Manually invoking Mock ACME Install..."
 # Ensure certPath is used correctly in the injected script
-certPath="/root/cert/${TEST_IP}"
+# x-ui.sh uses /root/cert/ip for IP certificates
+certPath="/root/cert/ip"
 mkdir -p "\$certPath"
 
 ~/.acme.sh/acme.sh --installcert -d "${TEST_IP}" \\
@@ -118,8 +119,8 @@ bash /root/x-ui-test.sh
 
 # 4. Verification
 echo ">>> [Container] Verifying Certificate Installation..."
-CERT_PATH="/root/cert/${TEST_IP}/fullchain.pem"
-KEY_PATH="/root/cert/${TEST_IP}/privkey.pem"
+CERT_PATH="/root/cert/ip/fullchain.pem"
+KEY_PATH="/root/cert/ip/privkey.pem"
 
 if [ ! -f "$CERT_PATH" ]; then
   echo "❌ Certificate file missing: $CERT_PATH"
