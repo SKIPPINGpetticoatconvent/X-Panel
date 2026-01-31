@@ -3,6 +3,8 @@ name: QA Framework
 on:
   push:
     branches: ["main", "master"]
+    paths-ignore:
+      - "config/version"
   pull_request:
     branches: ["main", "master"]
 
