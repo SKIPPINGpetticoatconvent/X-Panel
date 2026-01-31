@@ -1849,7 +1849,7 @@ show_menu() {
   ${green}22.${plain} 启用 BBR 
   ${green}23.${plain} 更新 Geo 文件
   ${green}24.${plain} Speedtest by Ookla
-  ${green}25.${plain} (已空置)
+  ${green}25.${plain} WARP 管理
   ${green}26.${plain} 申请 IP 证书 (自签/废弃)
 ——————————————————————
 
@@ -1940,7 +1940,7 @@ show_menu() {
     run_speedtest
     ;;
   25)
-    echo -e "${yellow}此选项已空置${plain}"
+    warp_cloudflare
     ;;
   *)
     LOGE "请输入正确的数字选项 [0-26]"
