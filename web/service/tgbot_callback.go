@@ -1818,48 +1818,60 @@ func checkAdmin(tgId int64) bool {
 
 func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 	numericKeyboard := tu.InlineKeyboard(
-		// ━━━━━━━━━━ 📊 服务器监控 ━━━━━━━━━━
+		// ━━━━━━━━━━ 📊 系统监控 ━━━━━━━━━━
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📊 系统监控").WithCallbackData("noop"), // 标题行 (无操作)
+		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📈 系统状态").WithCallbackData(t.encodeQuery("get_usage")),
-			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
-		),
-		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📊 流量报告").WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
-			tu.InlineKeyboardButton("🔄 重置流量").WithCallbackData(t.encodeQuery("reset_all_traffics")),
 		),
-		// ━━━━━━━━━━ 📡 入站管理 ━━━━━━━━━━
+
+		// ━━━━━━━━━━ 👥 用户管理 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📋 入站列表").WithCallbackData(t.encodeQuery("inbounds")),
-			tu.InlineKeyboardButton("⚠️ 即将到期").WithCallbackData(t.encodeQuery("deplete_soon")),
+			tu.InlineKeyboardButton("👥 用户管理").WithCallbackData("noop"), // 标题行 (无操作)
 		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📥 备份数据").WithCallbackData(t.encodeQuery("get_backup")),
-			tu.InlineKeyboardButton("📝 封禁日志").WithCallbackData(t.encodeQuery("get_banlogs")),
-		),
-		// ━━━━━━━━━━ 👤 客户端管理 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("👥 所有客户").WithCallbackData(t.encodeQuery("get_inbounds")),
 			tu.InlineKeyboardButton("➕ 添加客户").WithCallbackData(t.encodeQuery("add_client")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📋 批量复制").WithCallbackData(t.encodeQuery("copy_all_links")),
 			tu.InlineKeyboardButton("📶 在线用户").WithCallbackData(t.encodeQuery("onlines")),
+			tu.InlineKeyboardButton("📋 入站列表").WithCallbackData(t.encodeQuery("inbounds")),
 		),
-		// ━━━━━━━━━━ ⚙️ 系统工具 ━━━━━━━━━━
+
+		// ━━━━━━━━━━ 🛠 系统维护 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🆕 Xray版本").WithCallbackData(t.encodeQuery("xrayversion")),
+			tu.InlineKeyboardButton("🛠 系统维护").WithCallbackData("noop"), // 标题行 (无操作)
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
+			tu.InlineKeyboardButton("🔄 重置流量").WithCallbackData(t.encodeQuery("reset_all_traffics")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📥 备份数据").WithCallbackData(t.encodeQuery("get_backup")),
 			tu.InlineKeyboardButton("🔥 防火墙").WithCallbackData(t.encodeQuery("firewall_menu")),
 		),
+
+		// ━━━━━━━━━━ ⚙️ 高级设置 ━━━━━━━━━━
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
-			tu.InlineKeyboardButton("⚡ 机器优化").WithCallbackData(t.encodeQuery("machine_optimization")),
+			tu.InlineKeyboardButton("⚙️ 高级设置").WithCallbackData("noop"), // 标题行 (无操作)
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
+			tu.InlineKeyboardButton("⚡ 机器优化").WithCallbackData(t.encodeQuery("machine_optimization")),
 			tu.InlineKeyboardButton("🌍 更新Geo").WithCallbackData(t.encodeQuery("update_geodata_ask")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🆕 Xray版本").WithCallbackData(t.encodeQuery("xrayversion")),
+			tu.InlineKeyboardButton("🔄 程序更新").WithCallbackData(t.encodeQuery("check_panel_update")),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📝 日志设置").WithCallbackData(t.encodeQuery("log_settings")),
+			tu.InlineKeyboardButton("📝 封禁日志").WithCallbackData(t.encodeQuery("get_banlogs")),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("❓ 命令帮助").WithCallbackData(t.encodeQuery("commands")),
+			tu.InlineKeyboardButton("❌ 关闭键盘").WithCallbackData(t.encodeQuery("close_keyboard")),
 		),
 	)
 	numericKeyboardClient := tu.InlineKeyboard(
@@ -1965,22 +1977,17 @@ func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 }
 
 func (t *Tgbot) prepareServerUsageInfo() string {
-	info, ipv4, ipv6 := "", "", ""
+	ipv4, ipv6 := "", ""
 
 	// get latest status of server
 	t.lastStatus = t.serverService.GetStatus(t.lastStatus)
 	onlines := p.GetOnlineClients()
 
-	info += t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname)
-	info += t.I18nBot("tgbot.messages.version", "Version=="+config.GetVersion())
-	info += t.I18nBot("tgbot.messages.xrayVersion", "XrayVersion=="+fmt.Sprint(t.lastStatus.Xray.Version))
-
 	// get ip address
 	netInterfaces, err := net.Interfaces()
 	if err != nil {
 		logger.Error("net.Interfaces failed, err: ", err.Error())
-		info += t.I18nBot("tgbot.messages.ip", "IP=="+t.I18nBot("tgbot.unknown"))
-		info += "\r\n"
+		ipv4 = t.I18nBot("tgbot.unknown")
 	} else {
 		for i := 0; i < len(netInterfaces); i++ {
 			if (netInterfaces[i].Flags & net.FlagUp) != 0 {
@@ -1997,22 +2004,48 @@ func (t *Tgbot) prepareServerUsageInfo() string {
 				}
 			}
 		}
-
-		info += t.I18nBot("tgbot.messages.ipv4", "IPv4=="+"<tg-spoiler>"+ipv4+"</tg-spoiler>")
-		info += t.I18nBot("tgbot.messages.ipv6", "IPv6=="+"<tg-spoiler>"+ipv6+"</tg-spoiler>")
 	}
 
-	info += t.I18nBot("tgbot.messages.serverUpTime", "UpTime=="+strconv.FormatUint(t.lastStatus.Uptime/86400, 10), "Unit=="+t.I18nBot("tgbot.days"))
-	info += t.I18nBot("tgbot.messages.serverLoad", "Load1=="+strconv.FormatFloat(t.lastStatus.Loads[0], 'f', 2, 64), "Load2=="+strconv.FormatFloat(t.lastStatus.Loads[1], 'f', 2, 64), "Load3=="+strconv.FormatFloat(t.lastStatus.Loads[2], 'f', 2, 64))
+	var sb strings.Builder
+
+	sb.WriteString(t.I18nBot("tgbot.messages.serverReportTitle") + "\n\n")
+
+	// 基础信息
+	sb.WriteString(t.I18nBot("tgbot.messages.headerBasic") + "\n")
+	sb.WriteString("───────────────\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname) + "\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.version", "Version=="+config.GetVersion()) + "\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.xrayVersion", "XrayVersion=="+fmt.Sprint(t.lastStatus.Xray.Version)) + "\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.serverUpTime", "UpTime=="+strconv.FormatUint(t.lastStatus.Uptime/86400, 10), "Unit=="+t.I18nBot("tgbot.days")) + "\n\n")
+
+	// 资源监控
+	sb.WriteString(t.I18nBot("tgbot.messages.headerResources") + "\n")
+	sb.WriteString("───────────────\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.serverLoad", "Load1=="+strconv.FormatFloat(t.lastStatus.Loads[0], 'f', 2, 64), "Load2=="+strconv.FormatFloat(t.lastStatus.Loads[1], 'f', 2, 64), "Load3=="+strconv.FormatFloat(t.lastStatus.Loads[2], 'f', 2, 64)) + "\n")
 	//nolint:gosec
-	info += t.I18nBot("tgbot.messages.serverMemory", "Current=="+common.FormatTraffic(int64(t.lastStatus.Mem.Current)), "Total=="+common.FormatTraffic(int64(t.lastStatus.Mem.Total)))
-	info += t.I18nBot("tgbot.messages.onlinesCount", "Count=="+fmt.Sprint(len(onlines)))
-	info += t.I18nBot("tgbot.messages.tcpCount", "Count=="+strconv.Itoa(t.lastStatus.TcpCount))
-	info += t.I18nBot("tgbot.messages.udpCount", "Count=="+strconv.Itoa(t.lastStatus.UdpCount))
+	sb.WriteString(t.I18nBot("tgbot.messages.serverMemory", "Current=="+common.FormatTraffic(int64(t.lastStatus.Mem.Current)), "Total=="+common.FormatTraffic(int64(t.lastStatus.Mem.Total))) + "\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.xrayStatus", "State=="+fmt.Sprint(t.lastStatus.Xray.State)) + "\n\n")
+
+	// 流量统计
+	sb.WriteString(t.I18nBot("tgbot.messages.headerTraffic") + "\n")
+	sb.WriteString("───────────────\n")
 	//nolint:gosec
-	info += t.I18nBot("tgbot.messages.traffic", "Total=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Sent+t.lastStatus.NetTraffic.Recv)), "Upload=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Sent)), "Download=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Recv)))
-	info += t.I18nBot("tgbot.messages.xrayStatus", "State=="+fmt.Sprint(t.lastStatus.Xray.State))
-	return info
+	sb.WriteString(t.I18nBot("tgbot.messages.traffic", "Total=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Sent+t.lastStatus.NetTraffic.Recv)), "Upload=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Sent)), "Download=="+common.FormatTraffic(int64(t.lastStatus.NetTraffic.Recv))) + "\n\n")
+
+	// 连接详情
+	sb.WriteString(t.I18nBot("tgbot.messages.headerNetwork") + "\n")
+	sb.WriteString("───────────────\n")
+	if ipv4 != "" {
+		sb.WriteString(t.I18nBot("tgbot.messages.ipv4", "IPv4=="+"<tg-spoiler>"+ipv4+"</tg-spoiler>") + "\n")
+	}
+	if ipv6 != "" {
+		sb.WriteString(t.I18nBot("tgbot.messages.ipv6", "IPv6=="+"<tg-spoiler>"+ipv6+"</tg-spoiler>") + "\n")
+	}
+	sb.WriteString(t.I18nBot("tgbot.messages.onlinesCount", "Count=="+fmt.Sprint(len(onlines))) + "\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.tcpCount", "Count=="+strconv.Itoa(t.lastStatus.TcpCount)) + "\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.udpCount", "Count=="+strconv.Itoa(t.lastStatus.UdpCount)) + "\n")
+
+	return sb.String()
 }
 
 func (t *Tgbot) UserLoginNotify(username string, password string, ip string, time string, status LoginStatus) {
@@ -2253,30 +2286,41 @@ func (t *Tgbot) clientInfoMsg(
 		}
 	}
 
-	output := ""
-	output += t.I18nBot("tgbot.messages.email", "Email=="+traffic.Email)
+	var sb strings.Builder
+
+	sb.WriteString(t.I18nBot("tgbot.messages.headerUserInfo") + "\n")
+	sb.WriteString("───────────────\n")
+	sb.WriteString(t.I18nBot("tgbot.messages.email", "Email=="+traffic.Email) + "\n")
+
 	if printEnabled {
-		output += t.I18nBot("tgbot.messages.enabled", "Enable=="+enabled)
+		sb.WriteString(t.I18nBot("tgbot.messages.enabled", "Enable=="+enabled) + "\n")
 	}
 	if printOnline {
-		output += t.I18nBot("tgbot.messages.online", "Status=="+status)
+		sb.WriteString(t.I18nBot("tgbot.messages.online", "Status=="+status) + "\n")
 	}
 	if printActive {
-		output += t.I18nBot("tgbot.messages.active", "Enable=="+active)
+		sb.WriteString(t.I18nBot("tgbot.messages.active", "Enable=="+active) + "\n")
 	}
+
+	if printTraffic {
+		sb.WriteString("\n" + t.I18nBot("tgbot.messages.headerTraffic") + "\n")
+		sb.WriteString("───────────────\n")
+		sb.WriteString(t.I18nBot("tgbot.messages.upload", "Upload=="+common.FormatTraffic(traffic.Up)) + "\n")
+		sb.WriteString(t.I18nBot("tgbot.messages.download", "Download=="+common.FormatTraffic(traffic.Down)) + "\n")
+		sb.WriteString(t.I18nBot("tgbot.messages.total", "UpDown=="+common.FormatTraffic((traffic.Up+traffic.Down)), "Total=="+total) + "\n")
+	}
+
 	if printDate {
+		sb.WriteString("\n" + t.I18nBot("tgbot.messages.headerExpire") + "\n")
+		sb.WriteString("───────────────\n")
 		if flag {
-			output += t.I18nBot("tgbot.messages.expireIn", "Time=="+expiryTime)
+			sb.WriteString(t.I18nBot("tgbot.messages.expireIn", "Time=="+expiryTime) + "\n")
 		} else {
-			output += t.I18nBot("tgbot.messages.expire", "Time=="+expiryTime)
+			sb.WriteString(t.I18nBot("tgbot.messages.expire", "Time=="+expiryTime) + "\n")
 		}
 	}
-	if printTraffic {
-		output += t.I18nBot("tgbot.messages.upload", "Upload=="+common.FormatTraffic(traffic.Up))
-		output += t.I18nBot("tgbot.messages.download", "Download=="+common.FormatTraffic(traffic.Down))
-		output += t.I18nBot("tgbot.messages.total", "UpDown=="+common.FormatTraffic((traffic.Up+traffic.Down)), "Total=="+total)
-	}
-	return output
+
+	return sb.String()
 }
 
 func (t *Tgbot) getClientUsage(chatId int64, tgUserID int64, email ...string) {
