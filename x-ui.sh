@@ -1429,29 +1429,120 @@ ssl_cert_issue_for_ip() {
 }
 
 warp_cloudflare() {
-  echo -e "${green}\t1.${plain} 安装 WARP socks5 代理"
-  echo -e "${green}\t2.${plain} 账户类型 (free, plus, team)"
-  echo -e "${green}\t3.${plain} 开启 / 关闭 WireProxy"
-  echo -e "${green}\t4.${plain} 卸载 WARP"
-  echo -e "${green}\t0.${plain} 返回主菜单"
-  read -rp "请输入选项: " choice
+  echo -e "
+  ${green}Cloudflare WARP 管理${plain}
+  ${green}脚本来源: ${plain}https://gitlab.com/fscarmen/warp
+——————————————————————
+  ${green}1.${plain} 进入 WARP 菜单 (推荐)
+——————————————————————
+  ${green}2.${plain} 安装 WARP Socks5 代理
+  ${green}3.${plain} 安装 WireProxy 代理
+  ${green}4.${plain} 添加 WARP IPv4
+  ${green}5.${plain} 添加 WARP IPv6
+  ${green}6.${plain} 添加 WARP 双栈
+——————————————————————
+  ${green}7.${plain} 开启/关闭 WARP
+  ${green}8.${plain} 开启/关闭 WireProxy
+  ${green}9.${plain} 更换 WARP IP (解锁流媒体)
+——————————————————————
+  ${green}10.${plain} 账户管理 (升级WARP+)
+  ${green}11.${plain} 卸载 WARP
+——————————————————————
+  ${green}0.${plain} 返回主菜单
+"
+  read -rp "请输入选项 [0-11]: " choice
   case "$choice" in
   0)
     show_menu
     ;;
   1)
-    bash <(curl -sSL https://raw.githubusercontent.com/hamid-gh98/x-ui-scripts/main/install_warp_proxy.sh)
+    # 进入完整 WARP 菜单
+    echo -e "${green}正在下载 WARP 管理脚本...${plain}"
+    wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh -O /tmp/warp_menu.sh && bash /tmp/warp_menu.sh
     ;;
   2)
-    warp a
+    # 安装 WARP Socks5 代理
+    echo -e "${green}正在安装 WARP Socks5 代理...${plain}"
+    wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh -O /tmp/warp_menu.sh && bash /tmp/warp_menu.sh c
     ;;
   3)
-    warp y
+    # 安装 WireProxy
+    echo -e "${green}正在安装 WireProxy 代理...${plain}"
+    wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh -O /tmp/warp_menu.sh && bash /tmp/warp_menu.sh w
     ;;
   4)
-    warp u
+    # 添加 WARP IPv4
+    echo -e "${green}正在添加 WARP IPv4...${plain}"
+    wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh -O /tmp/warp_menu.sh && bash /tmp/warp_menu.sh 4
     ;;
-  *) echo "无效选项" ;;
+  5)
+    # 添加 WARP IPv6
+    echo -e "${green}正在添加 WARP IPv6...${plain}"
+    wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh -O /tmp/warp_menu.sh && bash /tmp/warp_menu.sh 6
+    ;;
+  6)
+    # 添加 WARP 双栈
+    echo -e "${green}正在添加 WARP 双栈...${plain}"
+    wget -N https://gitlab.com/fscarmen/warp/-/raw/main/menu.sh -O /tmp/warp_menu.sh && bash /tmp/warp_menu.sh d
+    ;;
+  7)
+    # 开启/关闭 WARP
+    echo -e "${green}正在切换 WARP 状态...${plain}"
+    if command -v warp &>/dev/null; then
+      warp o
+    else
+      echo -e "${red}WARP 未安装，请先安装${plain}"
+    fi
+    ;;
+  8)
+    # 开启/关闭 WireProxy
+    echo -e "${green}正在切换 WireProxy 状态...${plain}"
+    if command -v warp &>/dev/null; then
+      warp y
+    else
+      echo -e "${red}WARP 未安装，请先安装${plain}"
+    fi
+    ;;
+  9)
+    # 更换 WARP IP
+    echo -e "${yellow}请输入目标地区代码 (如: us, jp, hk, sg, 留空随机):${plain}"
+    read -rp "地区代码: " region
+    if command -v warp &>/dev/null; then
+      if [ -z "$region" ]; then
+        warp i
+      else
+        warp i "$region"
+      fi
+    else
+      echo -e "${red}WARP 未安装，请先安装${plain}"
+    fi
+    ;;
+  10)
+    # 账户管理
+    echo -e "${green}正在进入账户管理...${plain}"
+    if command -v warp &>/dev/null; then
+      warp a
+    else
+      echo -e "${red}WARP 未安装，请先安装${plain}"
+    fi
+    ;;
+  11)
+    # 卸载 WARP
+    echo -e "${yellow}确定要卸载 WARP 吗? [y/n]${plain}"
+    read -rp "请确认: " confirm
+    if [[ $confirm =~ ^[Yy]$ ]]; then
+      if command -v warp &>/dev/null; then
+        warp u
+      else
+        echo -e "${red}WARP 未安装${plain}"
+      fi
+    else
+      echo -e "${green}已取消卸载${plain}"
+    fi
+    ;;
+  *)
+    echo -e "${red}无效选项，请输入 0-11${plain}"
+    ;;
   esac
 }
 
