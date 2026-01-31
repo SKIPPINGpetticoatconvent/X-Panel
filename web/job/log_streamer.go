@@ -96,7 +96,7 @@ func (ls *LogStreamer) Stop() error {
 	// 等待最多5秒让goroutine优雅退出
 	select {
 	case <-done:
-	case <-make(chan struct{}, 1):
+	case <-time.After(5 * time.Second):
 		logger.Warning("LogStreamer 停止超时")
 	}
 
@@ -152,18 +152,77 @@ func (ls *LogStreamer) parseLogLine(line string) {
 	}
 }
 
-// updateActiveClientIP 更新活跃客户端IP
+// updateActiveClientIP 更新活跃客户端IP（带容量保护）
 func (ls *LogStreamer) updateActiveClientIP(email string, ip string) {
 	activeClientsLock.Lock()
 	defer activeClientsLock.Unlock()
 
 	now := time.Now()
 
-	if _, ok := ActiveClientIPs[email]; !ok {
-		ActiveClientIPs[email] = make(map[string]time.Time)
+	ips, exists := ActiveClientIPs[email]
+	if !exists {
+		// 新用户：检查总用户数上限
+		if len(ActiveClientIPs) >= maxTotalEmails {
+			// 淘汰最久未活跃的用户
+			evictOldestEmail()
+		}
+		ips = make(map[string]time.Time)
+		ActiveClientIPs[email] = ips
 	}
 
-	ActiveClientIPs[email][ip] = now
+	// 如果 IP 已存在，仅更新时间戳
+	if _, ok := ips[ip]; ok {
+		ips[ip] = now
+		return
+	}
+
+	// 新 IP：检查单用户 IP 数上限
+	if len(ips) >= maxIPsPerEmail {
+		// 淘汰该用户下最老的 IP
+		evictOldestIP(ips)
+	}
+
+	ips[ip] = now
+}
+
+// evictOldestEmail 淘汰 ActiveClientIPs 中最久未活跃的用户（调用方需持有写锁）
+func evictOldestEmail() {
+	var oldestEmail string
+	var oldestTime time.Time
+	first := true
+
+	for email, ips := range ActiveClientIPs {
+		for _, t := range ips {
+			if first || t.Before(oldestTime) {
+				oldestTime = t
+				oldestEmail = email
+				first = false
+			}
+		}
+	}
+
+	if oldestEmail != "" {
+		delete(ActiveClientIPs, oldestEmail)
+	}
+}
+
+// evictOldestIP 淘汰 map 中最老的 IP 条目（调用方需持有写锁）
+func evictOldestIP(ips map[string]time.Time) {
+	var oldestIP string
+	var oldestTime time.Time
+	first := true
+
+	for ip, t := range ips {
+		if first || t.Before(oldestTime) {
+			oldestTime = t
+			oldestIP = ip
+			first = false
+		}
+	}
+
+	if oldestIP != "" {
+		delete(ips, oldestIP)
+	}
 }
 
 // GetActiveClientIPs 获取当前活跃的客户端IP映射（供外部查询）

@@ -9,6 +9,7 @@ import (
 
 	//	"os/exec"
 	//	"strings"
+	"sync"
 	"syscall"
 	_ "unsafe"
 
@@ -89,6 +90,7 @@ func runWebServer() {
 	}
 
 	var tgBotService service.TelegramService
+	var tgMu sync.RWMutex // 保护 tgBotService 的并发访问
 	var logForwarder *service.LogForwarder
 	if tgEnable {
 		// 将所有需要的服务作为参数传递进去，确保返回的 tgBotService 是一个完全初始化的、可用的实例。
@@ -147,46 +149,29 @@ func runWebServer() {
 		return
 	}
 
-	// 中文注释: 在面板服务启动后，我们在这里启动设备限制的后台任务
+	// 在面板服务启动后，启动设备限制的后台任务
 	go func() {
-		// 中文注释: 等待5秒，确保面板和Xray服务已基本稳定，避免任务启动过早
+		// 等待10秒，确保面板和Xray服务已基本稳定
 		time.Sleep(10 * time.Second)
 
-		// 中文注释: 创建一个定时器。这里的 "10 * time.Second" 就是任务执行的间隔时间。
-		// 您可以修改 10 为 2 或 1，来实现更短的延迟。
-		// 例如: time.NewTicker(2 * time.Second) 就是2秒执行一次。
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
-		// 〔中文注释〕: 步骤一：在循环外部，只声明一次 tgBotService 变量。
-		// 我们将其声明为接口类型，初始值为 nil。
-		var tgBotService service.TelegramService
+		// 使用受 mutex 保护的外部 tgBotService（已完整初始化，含依赖注入）
+		tgMu.RLock()
+		tgSvc := tgBotService
+		tgMu.RUnlock()
 
-		// 〔中文注释〕: 步骤二：检查 Telegram Bot 是否在面板设置中启用。
-		settingService := service.SettingService{}
-		tgEnable, err := settingService.GetTgbotEnabled()
-		if err != nil {
-			logger.Warningf("无法获取 Telegram Bot 设置: %v, 设备限制通知功能可能无法使用", err)
-		}
+		checkSettingService := service.SettingService{}
+		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgSvc, checkSettingService)
 
-		// 〔中文注释〕: 步骤三：如果 Bot 已启用，则初始化实例并赋值给上面声明的变量。
-		// 注意这里使用的是 `=` 而不是 `:=`，因为我们是给已存在的变量赋值。
-		if tgEnable {
-			tgBotService = new(service.Tgbot)
-		}
-
-		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
-		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService, settingService)
-
-		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
 		for {
 			<-ticker.C
 			checkJob.Run()
 		}
 	}()
 
-	// 中文注释: 启动 SSL 证书监控任务 (每6小时检查一次)
+	// 启动 SSL 证书监控任务 (每6小时检查一次)
 	go func() {
 		// 等待系统完全启动
 		time.Sleep(1 * time.Minute)
@@ -194,15 +179,13 @@ func runWebServer() {
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
 
-		var tgBotService service.TelegramService
-		settingService := service.SettingService{}
-		tgEnable, _ := settingService.GetTgbotEnabled()
+		// 使用受 mutex 保护的外部 tgBotService（已完整初始化，含依赖注入）
+		tgMu.RLock()
+		tgSvc := tgBotService
+		tgMu.RUnlock()
 
-		if tgEnable {
-			tgBotService = new(service.Tgbot)
-		}
-
-		monitorJob := job.NewCertMonitorJob(settingService, tgBotService)
+		certSettingService := service.SettingService{}
+		monitorJob := job.NewCertMonitorJob(certSettingService, tgSvc)
 
 		// 启动时立即运行一次检查
 		monitorJob.Run()
@@ -245,6 +228,7 @@ func runWebServer() {
 				logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
 			}
 
+			tgMu.Lock()
 			if tgEnable {
 				// 如果启用，确保服务实例已创建
 				if tgBotService == nil {
@@ -265,16 +249,19 @@ func runWebServer() {
 				// 如果已禁用，清理实例
 				tgBotService = nil
 				logForwarder = nil
-				// 同时清理其他服务中的引用 (可选，但为了安全起见)
+				// 同时清理其他服务中的引用
 				serverService.SetTelegramService(nil)
 				inboundService.SetTelegramService(nil)
 			}
+			tgMu.Unlock()
 
 			server = web.NewServer(&serverService, &xrayService, &inboundService, &outboundService)
 			// 重新注入 tgBotService
+			tgMu.RLock()
 			if tgBotService != nil {
 				server.SetTelegramService(tgBotService)
 			}
+			tgMu.RUnlock()
 			global.SetWebServer(server)
 			err = server.Start()
 			if err != nil {

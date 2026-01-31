@@ -27,11 +27,17 @@ import (
 // 中文注释: 以下是用于实现设备限制功能的核心代码
 // =================================================================
 
-// ActiveClientIPs 中文注释: 用于在内存中跟踪每个用户的活跃IP (TTL机制)
+// ActiveClientIPs 用于在内存中跟踪每个用户的活跃IP (TTL机制)
 // 结构: map[用户email] -> map[IP地址] -> 最后活跃时间
 var (
 	ActiveClientIPs   = make(map[string]map[string]time.Time)
 	activeClientsLock sync.RWMutex
+)
+
+// ActiveClientIPs 容量上限，防止内存无限增长
+const (
+	maxIPsPerEmail = 100  // 单个用户最多跟踪的 IP 数
+	maxTotalEmails = 5000 // 最多跟踪的用户数
 )
 
 // ClientStatus 中文注释: 用于跟踪每个用户的状态（是否因为设备超限而被禁用）
