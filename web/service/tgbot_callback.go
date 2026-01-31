@@ -1998,8 +1998,8 @@ func (t *Tgbot) prepareServerUsageInfo() string {
 			}
 		}
 
-		info += t.I18nBot("tgbot.messages.ipv4", "IPv4=="+ipv4)
-		info += t.I18nBot("tgbot.messages.ipv6", "IPv6=="+ipv6)
+		info += t.I18nBot("tgbot.messages.ipv4", "IPv4=="+"<tg-spoiler>"+ipv4+"</tg-spoiler>")
+		info += t.I18nBot("tgbot.messages.ipv6", "IPv6=="+"<tg-spoiler>"+ipv6+"</tg-spoiler>")
 	}
 
 	info += t.I18nBot("tgbot.messages.serverUpTime", "UpTime=="+strconv.FormatUint(t.lastStatus.Uptime/86400, 10), "Unit=="+t.I18nBot("tgbot.days"))
@@ -2038,10 +2038,10 @@ func (t *Tgbot) UserLoginNotify(username string, password string, ip string, tim
 	case LoginFail:
 		msg += t.I18nBot("tgbot.messages.loginFailed")
 		msg += t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname)
-		msg += t.I18nBot("tgbot.messages.password", "Password=="+password)
+		msg += t.I18nBot("tgbot.messages.password", "Password=="+"<tg-spoiler>"+password+"</tg-spoiler>")
 	}
 	msg += t.I18nBot("tgbot.messages.username", "Username=="+username)
-	msg += t.I18nBot("tgbot.messages.ip", "IP=="+ip)
+	msg += t.I18nBot("tgbot.messages.ip", "IP=="+"<tg-spoiler>"+ip+"</tg-spoiler>")
 	msg += t.I18nBot("tgbot.messages.time", "Time=="+time)
 	t.SendMsgToTgbotAdmins(msg)
 }
@@ -2328,7 +2328,7 @@ func (t *Tgbot) searchClientIps(chatId int64, email string, messageID ...int) {
 
 	output := ""
 	output += t.I18nBot("tgbot.messages.email", "Email=="+email)
-	output += t.I18nBot("tgbot.messages.ips", "IPs=="+ips)
+	output += t.I18nBot("tgbot.messages.ips", "IPs=="+"<tg-spoiler>"+ips+"</tg-spoiler>")
 
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
