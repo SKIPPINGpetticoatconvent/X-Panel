@@ -1,4 +1,4 @@
-.PHONY: build test e2e clean
+.PHONY: build test e2e clean all
 
 # 项目基础信息
 BINARY_NAME=x-ui
@@ -23,21 +23,8 @@ test:
 # 运行 E2E 测试 (Local Mode)
 # 自动编译并模拟安装验证
 e2e:
-	@echo "Running E2E Checks..."
-	chmod +x tests/e2e/runner.sh
-	@echo ">> [Core] Installation Test"
-	./tests/e2e/runner.sh --mode local --test install
-	@# Automatically discover and run other verified tests
-	@# Exclude specific tests (space separated)
-	@exclude_list="in_container ip_cert domain_cert"; \
-	for f in tests/e2e/verify_*.sh; do \
-		name=$$(basename $$f .sh | sed 's/^verify_//'); \
-		case " $$exclude_list " in \
-			*" $$name "*) echo ">> [Skip] $$name (Excluded)"; continue ;; \
-		esac; \
-		echo ">> [Auto] Running Test: $$name"; \
-		./tests/e2e/runner.sh --mode local --test $$name || exit 1; \
-	done
+	@chmod +x tests/e2e/run_suite.sh
+	@./tests/e2e/run_suite.sh
 
 # 运行 E2E 测试 (Online Mode)
 # 从 GitHub 下载真实 release 进行验证
