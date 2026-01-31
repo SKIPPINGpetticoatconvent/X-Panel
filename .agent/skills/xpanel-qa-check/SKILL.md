@@ -50,6 +50,21 @@ For any changes to `.toml` files:
     taplo fmt --check
     ```
 
+### 4. E2E Installation Verification
+
+For changes to `install.sh`, release process, or core service logic:
+
+1.  **Run Local E2E**:
+    ```bash
+    make e2e
+    ```
+    This builds the current code, runs a mock server, and verifies installation in a docker container.
+
+2.  **Verify Online Script** (Optional):
+    ```bash
+    make e2e-online
+    ```
+
 ## Automated QA Script
 
 You can also run the project's master QA script if available:
