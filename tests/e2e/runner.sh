@@ -29,16 +29,16 @@ while [[ $# -gt 0 ]]; do
     else
       # Legacy / Alias checks
       case $TEST_CASE in
-        install)
-          TEST_SCRIPT="verify_in_container.sh"
-          ;;
-        failover)
-          TEST_SCRIPT="verify_ssl_fallback.sh"
-          ;;
-        *)
-          echo "Unknown test case: $TEST_CASE"
-          exit 1
-          ;;
+      install)
+        TEST_SCRIPT="verify_in_container.sh"
+        ;;
+      failover)
+        TEST_SCRIPT="verify_ssl_fallback.sh"
+        ;;
+      *)
+        echo "Unknown test case: $TEST_CASE"
+        exit 1
+        ;;
       esac
     fi
     shift
