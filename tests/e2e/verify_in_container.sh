@@ -68,11 +68,11 @@ echo ">>> [Container] Verifying Installation..."
 if systemctl is-active --quiet x-ui; then
     echo "✅ Systemd service 'x-ui' is active."
     echo ">>> [Container] Recent Service Logs (Success):"
-    journalctl -u x-ui --no-pager -n 20
+    journalctl -u x-ui --no-pager -n 100
 else
     echo "❌ Systemd service 'x-ui' failed to start!"
-    echo ">>> [Container] Dumping systemd logs (equivalent to x-ui log):"
-    journalctl -u x-ui --no-pager -n 50
+    echo ">>> [Container] Dumping ALL systemd logs:"
+    journalctl -u x-ui --no-pager
     systemctl status x-ui --no-pager
     exit 1
 fi
