@@ -23,24 +23,24 @@ while [[ $# -gt 0 ]]; do
     ;;
   --test)
     TEST_CASE="$2"
-    case $TEST_CASE in
-    ip_cert)
-      TEST_SCRIPT="verify_ip_cert.sh"
-      ;;
-    domain_cert)
-      TEST_SCRIPT="verify_domain_cert.sh"
-      ;;
-    failover)
-      TEST_SCRIPT="verify_ssl_fallback.sh"
-      ;;
-    install)
-      TEST_SCRIPT="verify_in_container.sh"
-      ;;
-    *)
-      echo "Unknown test case: $TEST_CASE"
-      exit 1
-      ;;
-    esac
+    # Dynamic Discovery
+    if [[ -f "${TEST_DIR}/verify_${TEST_CASE}.sh" ]]; then
+      TEST_SCRIPT="verify_${TEST_CASE}.sh"
+    else
+      # Legacy / Alias checks
+      case $TEST_CASE in
+        install)
+          TEST_SCRIPT="verify_in_container.sh"
+          ;;
+        failover)
+          TEST_SCRIPT="verify_ssl_fallback.sh"
+          ;;
+        *)
+          echo "Unknown test case: $TEST_CASE"
+          exit 1
+          ;;
+      esac
+    fi
     shift
     ;;
   *)

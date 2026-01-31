@@ -23,9 +23,21 @@ test:
 # 运行 E2E 测试 (Local Mode)
 # 自动编译并模拟安装验证
 e2e:
-	@echo "Running E2E Installation Test (Local Mode)..."
+	@echo "Running E2E Checks..."
 	chmod +x tests/e2e/runner.sh
-	./tests/e2e/runner.sh --mode local
+	@echo ">> [Core] Installation Test"
+	./tests/e2e/runner.sh --mode local --test install
+	@# Automatically discover and run other verified tests
+	@# Exclude specific tests (space separated)
+	@exclude_list="in_container ip_cert domain_cert"; \
+	for f in tests/e2e/verify_*.sh; do \
+		name=$$(basename $$f .sh | sed 's/^verify_//'); \
+		case " $$exclude_list " in \
+			*" $$name "*) echo ">> [Skip] $$name (Excluded)"; continue ;; \
+		esac; \
+		echo ">> [Auto] Running Test: $$name"; \
+		./tests/e2e/runner.sh --mode local --test $$name || exit 1; \
+	done
 
 # 运行 E2E 测试 (Online Mode)
 # 从 GitHub 下载真实 release 进行验证
