@@ -1348,7 +1348,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
 		t.remoteCreateOneClickInbound("switch_vision", chatId)
 
-	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
+	// 〔中文注释〕: 【新增回调处理】 - 重启面板、VPS推荐
 	case "restart_panel":
 		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
