@@ -161,7 +161,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				}
 				logs := logger.GetLogs(count, level)
 				if len(logs) == 0 {
-					t.SendMsgToTgbot(chatId, "📋 **最近日志**\n\n❌ 未找到符合级别的日志记录")
+					t.SendMsgToTgbot(chatId, "📋 <b>最近日志</b>\n\n❌ 未找到符合级别的日志记录")
 				} else {
 					content := strings.Join(logs, "\n")
 					t.sendLongMessage(chatId, content)
@@ -1358,7 +1358,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			time.Sleep(20 * time.Second)
 			if err != nil {
 				// 〔中文注释〕: 如果执行出错，发送失败消息
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n\n错误信息已记录到日志，请检查命令或权限。\n\n`%v`", err))
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n\n错误信息已记录到日志，请检查命令或权限。\n\n<code>%v</code>", err))
 			} else {
 				// 〔中文注释〕: 执行成功，发送成功消息
 				t.SendMsgToTgbot(chatId, "🚀 面板重启成功！服务已成功恢复！")
@@ -1457,7 +1457,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "confirm_panel_update":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 更新指令已发送")
-		t.SendMsgToTgbot(chatId, "🔄 **X-Panel 更新任务已在后台启动**\n\n⏳ 请稍候，更新完成后将收到通知...")
+		t.SendMsgToTgbot(chatId, "🔄 <b>X-Panel 更新任务已在后台启动</b>\n\n⏳ 请稍候，更新完成后将收到通知...")
 		err := t.serverService.UpdatePanel("")
 		if err != nil {
 			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 发送更新指令失败: %v", err))
@@ -1479,9 +1479,9 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			),
 		)
 		t.editMessageCallbackTgBot(chatId, callbackQuery.Message.GetMessageID(), confirmKeyboard)
-		text := "🌍 **Geo 数据更新确认**\n\n" +
+		text := "🌍 <b>Geo 数据更新确认</b>\n\n" +
 			"这将从官方源下载最新的 GeoIP 和 GeoSite 数据，并自动重启 Xray 服务。\n\n" +
-			"⚠️ **注意：**\n" +
+			"⚠️ <b>注意：</b>\n" +
 			"• 更新期间 Xray 服务会短暂中断\n" +
 			"• 下载可能需要一些时间，请耐心等待\n\n" +
 			"确认要继续吗？"
@@ -1527,7 +1527,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "update_geodata_confirm":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 指令已发送")
-		t.SendMsgToTgbot(chatId, "🌍 **Geo 数据更新任务已在后台启动**\n\n⏳ 请稍候，更新完成后将收到通知...")
+		t.SendMsgToTgbot(chatId, "🌍 <b>Geo 数据更新任务已在后台启动</b>\n\n⏳ 请稍候，更新完成后将收到通知...")
 
 		// 调用 ServerService 的 UpdateGeoData 方法
 		if t.serverService != nil {
@@ -1634,7 +1634,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		}
 		logs := logger.GetLogs(count, level)
 		if len(logs) == 0 {
-			t.SendMsgToTgbot(chatId, "📋 **最近日志**\n\n❌ 未找到符合级别的日志记录")
+			t.SendMsgToTgbot(chatId, "📋 <b>最近日志</b>\n\n❌ 未找到符合级别的日志记录")
 		} else {
 			content := strings.Join(logs, "\n")
 			t.sendLongMessage(chatId, content)
@@ -3021,17 +3021,16 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		logger.Errorf("TG Bot: 远程创建入站成功，但发送通知失败: %v", err)
 	} else {
 		// 成功发送二维码/配置消息后，再给用户一个确认提示
-		t.SendMsgToTgbot(chatId, "✅ **入站已创建，【二维码/配置链接】已发送至管理员私信。**")
+		t.SendMsgToTgbot(chatId, "✅ <b>入站已创建，【二维码/配置链接】已发送至管理员私信。</b>")
 	}
 	// 【新增功能】：发送用法说明消息
-	// 使用 ** 粗体标记，并使用多行字符串确保换行显示。
-	usageMessage := `**用法说明：**
-	
-1、该功能已自动生成现今比较主流的入站协议，简单/直接，不用慢慢配置。
-2、【一键配置】生成功能中的最前面两种协议组合，适合【优化线路】去直连使用。
-3、随机分配一个可用端口，TG端会【自动放行】该端口，生成后请直接复制【**链接地址**】。
-4、TG端 的【一键配置】生成功能，与后台 Web端 类似，跟【入站】的数据是打通的。
-5、你可以在"一键创建"后于列表中，手动查看/复制或编辑详细信息，以便添加其他参数。`
+	// 使用 <b> 粗体标记，并使用多行字符串确保换行显示。
+	usageMessage := "<b>用法说明：</b>\n\n" +
+		"1、该功能已自动生成现今比较主流的入站协议，简单/直接，不用慢慢配置。\n" +
+		"2、【一键配置】生成功能中的最前面两种协议组合，适合【优化线路】去直连使用。\n" +
+		"3、随机分配一个可用端口，TG端会【自动放行】该端口，生成后请直接复制【<b>链接地址</b>】。\n" +
+		"4、TG端 的【一键配置】生成功能，与后台 Web端 类似，跟【入站】的数据是打通的。\n" +
+		"5、你可以在\"一键创建\"后于列表中，手动查看/复制或编辑详细信息，以便添加其他参数。"
 
 	t.SendMsgToTgbot(chatId, usageMessage)
 }
@@ -3060,7 +3059,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	if err := t.openPortWithFirewalld(port); err != nil {
 		// 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
-		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
+		ufwWarning = fmt.Sprintf("⚠️ <b>警告：端口放行失败</b>\n\n自动执行 <code>firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload</code> 命令失败，入站创建流程已继续，但请务必<b>手动</b>在您的 VPS 上放行端口 <code>%d</code>，否则服务将无法访问。失败详情：%v", port, port, err)
 	} // END NEW LOGIC
 
 	// 按照要求格式：inbound-端口号
@@ -3220,7 +3219,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	if err := t.openPortWithFirewalld(port); err != nil {
 		// 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
-		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
+		ufwWarning = fmt.Sprintf("⚠️ <b>警告：端口放行失败</b>\n\n自动执行 <code>firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload</code> 命令失败，入站创建流程已继续，但请务必<b>手动</b>在您的 VPS 上放行端口 <code>%d</code>，否则服务将无法访问。失败详情：%v", port, port, err)
 	} // END NEW LOGIC
 
 	// 按照要求格式：inbound-端口号
@@ -3327,7 +3326,7 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	var ufwWarning string
 	if err := t.openPortWithFirewalld(port); err != nil {
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
-		ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload` 命令失败，但入站创建已继续。请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。", port, port)
+		ufwWarning = fmt.Sprintf("⚠️ <b>警告：端口放行失败</b>\n\n自动执行 <code>firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload</code> 命令失败，但入站创建已继续。请务必<b>手动</b>在您的 VPS 上放行端口 <code>%d</code>，否则服务将无法访问。", port, port)
 	}
 
 	tag := fmt.Sprintf("inbound-%d", port)
@@ -3487,7 +3486,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 	// --- 3. 构造包含所有信息并严格遵循格式的描述消息 ---
 	baseCaption := fmt.Sprintf(
-		"入站备注（用户 Email）：\n\n------->>>  `%s`\n\n对应端口号：\n\n---------->>>>>  `%d`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制）\n\n生成时间：\n\n`%s`",
+		"入站备注（用户 Email）：\n\n------->>>  <code>%s</code>\n\n对应端口号：\n\n---------->>>>>  <code>%d</code>\n\n协议类型：\n\n<code>%s</code>\n\n设备限制：0（无限制）\n\n生成时间：\n\n<code>%s</code>",
 		inbound.Remark,
 		inbound.Port,
 		linkType,
@@ -3496,9 +3495,9 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 	var caption string
 	if inFromPanel {
-		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n%s\n\n👇 **可点击下方链接直接【复制/导入】** 👇", baseCaption)
+		caption = fmt.Sprintf("✅ <b>面板【一键配置】入站已创建成功！</b>\n\n%s\n\n👇 <b>可点击下方链接直接【复制/导入】</b> 👇", baseCaption)
 	} else {
-		caption = fmt.Sprintf("✅ **TG端 远程【一键配置】创建成功！**\n\n%s\n\n👇 **可点击下方链接直接【复制/导入】** 👇", baseCaption)
+		caption = fmt.Sprintf("✅ <b>TG端 远程【一键配置】创建成功！</b>\n\n%s\n\n👇 <b>可点击下方链接直接【复制/导入】</b> 👇", baseCaption)
 	}
 	// 发送主消息（包含描述和二维码）
 	if len(qrCodeBytes) > 0 {
@@ -3506,7 +3505,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 		photoParams := tu.Photo(
 			tu.ID(targetChatId),
 			tu.FileFromBytes(qrCodeBytes, "qrcode.png"),
-		).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
+		).WithCaption(caption).WithParseMode(telego.ModeHTML)
 
 		if _, err := bot.SendPhoto(context.Background(), photoParams); err != nil {
 			logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", targetChatId, err)
@@ -3789,7 +3788,7 @@ func (t *Tgbot) checkPanelUpdate(chatId int64) {
 
 	// 比较版本
 	if currentVersion == latestVersion {
-		t.SendMsgToTgbot(chatId, fmt.Sprintf("✅ 您的面板已经是最新版本！\n\n当前版本: `%s`", currentVersion))
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("✅ 您的面板已经是最新版本！\n\n当前版本: <code>%s</code>", currentVersion))
 		return
 	}
 
@@ -3804,10 +3803,10 @@ func (t *Tgbot) checkPanelUpdate(chatId int64) {
 	)
 
 	message := fmt.Sprintf(
-		"🔄 **发现新版本！**\n\n"+
-			"当前版本: `%s`\n"+
-			"最新版本: `%s`\n\n"+
-			"⚠️ **注意：** 更新将：\n"+
+		"🔄 <b>发现新版本！</b>\n\n"+
+			"当前版本: <code>%s</code>\n"+
+			"最新版本: <code>%s</code>\n\n"+
+			"⚠️ <b>注意：</b> 更新将：\n"+
 			"• 自动从 GitHub 拉取最新代码\n"+
 			"• 重启面板服务（期间无法访问）\n\n"+
 			"是否确认更新？",
@@ -3884,7 +3883,7 @@ func (t *Tgbot) showLogSettings(chatId int64) {
 		localLogStatus = "✅"
 	}
 
-	message := fmt.Sprintf("📝 **日志设置**\n\n"+
+	message := fmt.Sprintf("📝 <b>日志设置</b>\n\n"+
 		"📤 TG 转发: %s\n"+
 		"💾 本地日志: %s\n"+
 		"🔧 日志级别: %s\n\n"+

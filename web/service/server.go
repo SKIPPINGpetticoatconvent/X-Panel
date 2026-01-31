@@ -546,7 +546,7 @@ func (s *ServerService) UpdateXray(version string) error {
 
 		// 1. 在异步更新任务开始时发送开始通知
 		if tgAvailable {
-			startMessage := fmt.Sprintf("🔄 **开始更新 Xray 版本**\n\n正在更新到版本: `%s`\n\n⏳ 请稍候，这可能需要几分钟时间...", version)
+			startMessage := fmt.Sprintf("🔄 <b>开始更新 Xray 版本</b>\n\n正在更新到版本: <code>%s</code>\n\n⏳ 请稍候，这可能需要几分钟时间...", version)
 			if err := s.tgService.SendMessage(startMessage); err != nil {
 				logger.Warningf("发送Xray更新开始通知失败: %v", err)
 			}
@@ -632,13 +632,13 @@ func (s *ServerService) UpdateXray(version string) error {
 		if tgAvailable {
 			if updateErr == nil {
 				// 更新成功通知
-				successMessage := fmt.Sprintf("✅ **Xray 更新成功！**\n\n版本: `%s`\n\n🎉 Xray 已成功更新并重新启动！", version)
+				successMessage := fmt.Sprintf("✅ <b>Xray 更新成功！</b>\n\n版本: <code>%s</code>\n\n🎉 Xray 已成功更新并重新启动！", version)
 				if err := s.tgService.SendMessage(successMessage); err != nil {
 					logger.Warningf("发送Xray更新成功通知失败: %v", err)
 				}
 			} else {
 				// 更新失败通知
-				failMessage := fmt.Sprintf("❌ **Xray 更新失败**\n\n版本: `%s`\n\n错误信息: %v\n\n请检查日志以获取更多信息。", version, updateErr)
+				failMessage := fmt.Sprintf("❌ <b>Xray 更新失败</b>\n\n版本: <code>%s</code>\n\n错误信息: %v\n\n请检查日志以获取更多信息。", version, updateErr)
 				if err := s.tgService.SendMessage(failMessage); err != nil {
 					logger.Warningf("发送Xray更新失败通知失败: %v", err)
 				}

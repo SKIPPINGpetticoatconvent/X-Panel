@@ -254,7 +254,7 @@ func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 	keyboard := tu.InlineKeyboardGrid(tu.InlineKeyboardCols(1, buttons...))
 
 	// 发送版本选择消息
-	t.SendMsgToTgbot(chatId, "🚀 **Xray 版本管理**\n\n请选择要更新的版本：", keyboard)
+	t.SendMsgToTgbot(chatId, "🚀 <b>Xray 版本管理</b>\n\n请选择要更新的版本：", keyboard)
 }
 
 // 【新增方法】: 批量复制所有入站的客户端链接
@@ -431,7 +431,7 @@ func (t *Tgbot) sendMachineOptimizationOptions(chatId int64) {
 			tu.InlineKeyboardButton("⬅️ 返回主菜单").WithCallbackData(t.encodeQuery("get_inbounds")),
 		),
 	)
-	t.SendMsgToTgbot(chatId, "⚡ **机器优化一键方案**\n\n请选择您的机器配置类型：\n\n🖥️ **1C1G 机器**: 适用于低配VPS的深度优化\n🚀 **通用/高配优化**: 适用于高配VPS的全面优化", optimizationKeyboard)
+	t.SendMsgToTgbot(chatId, "⚡ <b>机器优化一键方案</b>\n\n请选择您的机器配置类型：\n\n🖥️ <b>1C1G 机器</b>: 适用于低配VPS的深度优化\n🚀 <b>通用/高配优化</b>: 适用于高配VPS的全面优化", optimizationKeyboard)
 }
 
 // 【新增函数】: 执行1C1G优化前显示确认对话框
@@ -448,25 +448,25 @@ func (t *Tgbot) performOptimization1C1G(chatId int64, messageId int) {
 	t.editMessageCallbackTgBot(chatId, messageId, confirmKeyboard)
 
 	// 发送详细说明
-	detailMsg := "🤔 **1C1G 机器优化确认**\n\n即将执行以下优化操作：\n\n**📊 内核参数深度优化（针对1C1G低配机器）:**\n• 内存管理优化 (swappiness, cache pressure等)\n• 网络参数优化 (TCP缓冲区、连接跟踪等)\n• 文件描述符限制优化\n\n**🚀 BBR 拥塞控制算法（网络性能提升）:**\n• 检测内核版本兼容性\n• 自动启用 BBR 算法（需要内核 4.9+）\n• 大幅提升网络吞吐量和降低延迟\n\n⚠️ **注意**: 此操作需要root权限，请确保您的VPS有足够权限。"
+	detailMsg := "🤔 <b>1C1G 机器优化确认</b>\n\n即将执行以下优化操作：\n\n<b>📊 内核参数深度优化（针对1C1G低配机器）:</b>\n• 内存管理优化 (swappiness, cache pressure等)\n• 网络参数优化 (TCP缓冲区、连接跟踪等)\n• 文件描述符限制优化\n\n<b>🚀 BBR 拥塞控制算法（网络性能提升）:</b>\n• 检测内核版本兼容性\n• 自动启用 BBR 算法（需要内核 4.9+）\n• 大幅提升网络吞吐量和降低延迟\n\n⚠️ <b>注意</b>: 此操作需要root权限，请确保您的VPS有足够权限。"
 	t.SendMsgToTgbot(chatId, detailMsg)
 }
 
 // 【新增函数】: 执行实际的1C1G优化操作
 func (t *Tgbot) executeOptimization1C1G(chatId int64, messageId int) {
-	t.SendMsgToTgbot(chatId, "🚀 **开始执行1C1G机器优化...**\n\n⏳ 正在执行优化操作，请稍候...")
+	t.SendMsgToTgbot(chatId, "🚀 <b>开始执行1C1G机器优化...</b>\n\n⏳ 正在执行优化操作，请稍候...")
 
 	go func() {
 		// 执行优化操作
 		_, err := t.execute1C1GOptimization()
 
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **优化执行失败**\n\n错误信息: %v\n\n💡 **排查建议**:\n• 请查看日志文件: /tmp/x-panel-optimization.log\n• 确保您的VPS具有root权限\n• 检查系统磁盘空间是否充足", err))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>优化执行失败</b>\n\n错误信息: %v\n\n💡 <b>排查建议</b>:\n• 请查看日志文件: /tmp/x-panel-optimization.log\n• 确保您的VPS具有root权限\n• 检查系统磁盘空间是否充足", err))
 		} else {
 			// 获取优化后的系统状态
 			statusMsg := t.getSystemStatusAfterOptimization()
 
-			resultMsg := fmt.Sprintf("✅ **1C1G机器优化执行完成！**\n\n📊 **优化结果:**\n• 内核参数已优化 ✅\n• 文件描述符限制已优化 ✅\n• BBR 网络加速已启用 ✅\n• 代理服务器参数已优化 ✅\n\n%s\n\n🎉 **优化成功完成，您的1C1G机器现在网络更快、更加稳定高效！**\n\n📋 **重要信息:**\n• 详细日志文件: `/tmp/x-panel-optimization.log`\n• 优化包含针对 Sing-box/Xray 的专用参数\n• BBR算法大幅提升网络性能\n• 设置了 5 分钟操作超时，防止脚本死锁\n⚠️ **注意**: 文件描述符限制优化需要重启服务器或重新登录才能完全生效。", statusMsg)
+			resultMsg := fmt.Sprintf("✅ <b>1C1G机器优化执行完成！</b>\n\n📊 <b>优化结果:</b>\n• 内核参数已优化 ✅\n• 文件描述符限制已优化 ✅\n• BBR 网络加速已启用 ✅\n• 代理服务器参数已优化 ✅\n\n%s\n\n🎉 <b>优化成功完成，您的1C1G机器现在网络更快、更加稳定高效！</b>\n\n📋 <b>重要信息:</b>\n• 详细日志文件: <code>/tmp/x-panel-optimization.log</code>\n• 优化包含针对 Sing-box/Xray 的专用参数\n• BBR算法大幅提升网络性能\n• 设置了 5 分钟操作超时，防止脚本死锁\n⚠️ <b>注意</b>: 文件描述符限制优化需要重启服务器或重新登录才能完全生效。", statusMsg)
 			t.SendMsgToTgbot(chatId, resultMsg)
 		}
 	}()
@@ -791,19 +791,19 @@ net.ipv4.tcp_congestion_control = bbr
 
 // 【新增函数】: 执行通用/高配优化操作
 func (t *Tgbot) executeGenericOptimization(chatId int64, messageId int) {
-	t.SendMsgToTgbot(chatId, "🚀 **开始执行通用/高配优化...**\n\n⏳ 正在执行优化操作，请稍候...")
+	t.SendMsgToTgbot(chatId, "🚀 <b>开始执行通用/高配优化...</b>\n\n⏳ 正在执行优化操作，请稍候...")
 
 	go func() {
 		// 执行优化操作
 		_, err := t.executeGenericOptimizationInternal()
 
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **优化执行失败**\n\n错误信息: %v\n\n💡 **排查建议**:\n• 请查看日志文件: /tmp/x-panel-generic-optimization.log\n• 确保您的VPS具有root权限\n• 检查系统磁盘空间是否充足", err))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>优化执行失败</b>\n\n错误信息: %v\n\n💡 <b>排查建议</b>:\n• 请查看日志文件: /tmp/x-panel-generic-optimization.log\n• 确保您的VPS具有root权限\n• 检查系统磁盘空间是否充足", err))
 		} else {
 			// 获取优化后的系统状态
 			statusMsg := t.getSystemStatusAfterOptimization()
 
-			resultMsg := fmt.Sprintf("✅ **通用/高配优化执行完成！**\n\n📊 **优化结果:**\n• 内核参数已优化 ✅\n• 文件描述符限制已优化 ✅\n• BBR 网络加速已启用 ✅\n\n%s\n\n🎉 **优化成功完成，您的VPS现在网络更快、更加稳定高效！**\n\n📋 **重要信息:**\n• 详细日志文件: `/tmp/x-panel-generic-optimization.log`\n• 优化包含针对高配VPS的专用参数\n• BBR算法大幅提升网络性能\n⚠️ **注意**: 文件描述符限制优化需要重启服务器或重新登录才能完全生效。", statusMsg)
+			resultMsg := fmt.Sprintf("✅ <b>通用/高配优化执行完成！</b>\n\n📊 <b>优化结果:</b>\n• 内核参数已优化 ✅\n• 文件描述符限制已优化 ✅\n• BBR 网络加速已启用 ✅\n\n%s\n\n🎉 <b>优化成功完成，您的VPS现在网络更快、更加稳定高效！</b>\n\n📋 <b>重要信息:</b>\n• 详细日志文件: <code>/tmp/x-panel-generic-optimization.log</code>\n• 优化包含针对高配VPS的专用参数\n• BBR算法大幅提升网络性能\n⚠️ <b>注意</b>: 文件描述符限制优化需要重启服务器或重新登录才能完全生效。", statusMsg)
 			t.SendMsgToTgbot(chatId, resultMsg)
 		}
 	}()
@@ -987,16 +987,16 @@ func (t *Tgbot) getSystemStatusAfterOptimization() string {
 	cmd := exec.Command("bash", "-c", "free -h")
 	output, err := cmd.Output()
 	if err == nil {
-		status.WriteString("\n**💾 内存使用情况:**\n")
-		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
+		status.WriteString("\n<b>💾 内存使用情况:</b>\n")
+		status.WriteString(fmt.Sprintf("<pre>%s</pre>", strings.TrimSpace(string(output))))
 	}
 
 	// 获取内核参数
 	cmd = exec.Command("bash", "-c", "sysctl vm.swappiness vm.vfs_cache_pressure vm.dirty_ratio")
 	output, err = cmd.Output()
 	if err == nil {
-		status.WriteString("\n**⚙️ 关键内核参数:**\n")
-		status.WriteString(fmt.Sprintf("```\n%s\n```", strings.TrimSpace(string(output))))
+		status.WriteString("\n<b>⚙️ 关键内核参数:</b>\n")
+		status.WriteString(fmt.Sprintf("<pre>%s</pre>", strings.TrimSpace(string(output))))
 	}
 
 	// 获取BBR状态
@@ -1006,15 +1006,15 @@ func (t *Tgbot) getSystemStatusAfterOptimization() string {
 		bbrStatus := strings.TrimSpace(string(output))
 		// 检查是否启用了 BBR
 		bbrEnabled := strings.Contains(bbrStatus, "bbr") && strings.Contains(bbrStatus, "fq")
-		status.WriteString("\n**🚀 BBR网络加速状态:**\n")
+		status.WriteString("\n<b>🚀 BBR网络加速状态:</b>\n")
 		if bbrEnabled {
-			status.WriteString("✅ **BBR 已启用**\n")
+			status.WriteString("✅ <b>BBR 已启用</b>\n")
 		} else {
-			status.WriteString("❌ **BBR 未启用**\n")
+			status.WriteString("❌ <b>BBR 未启用</b>\n")
 		}
-		status.WriteString(fmt.Sprintf("```\n%s\n```", bbrStatus))
+		status.WriteString(fmt.Sprintf("<pre>%s</pre>", bbrStatus))
 	} else {
-		status.WriteString("\n**🚀 BBR网络加速状态:**\n❌ **无法获取状态**\n")
+		status.WriteString("\n<b>🚀 BBR网络加速状态:</b>\n❌ <b>无法获取状态</b>\n")
 	}
 
 	return status.String()
@@ -1055,7 +1055,7 @@ func (t *Tgbot) sendFirewallMenu(chatId int64) {
 		),
 	)
 
-	t.SendMsgToTgbot(chatId, "🔥 **防火墙管理**\n\n请选择操作：", firewallKeyboard)
+	t.SendMsgToTgbot(chatId, "🔥 <b>防火墙管理</b>\n\n请选择操作：", firewallKeyboard)
 }
 
 // 【新增函数】: 检查当前防火墙状态
@@ -1066,9 +1066,9 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 
 		// 构建状态消息
 		var statusMsg strings.Builder
-		statusMsg.WriteString("🔍 **防火墙状态检测结果**\n\n")
+		statusMsg.WriteString("🔍 <b>防火墙状态检测结果</b>\n\n")
 
-		statusMsg.WriteString("📊 **防火墙**:\n")
+		statusMsg.WriteString("📊 <b>防火墙</b>:\n")
 		if firewalldInstalled {
 			statusMsg.WriteString(fmt.Sprintf("✅ 已安装\n📊 状态: %s\n\n", firewalldStatus))
 		} else {
@@ -1076,7 +1076,7 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 		}
 
 		// 推荐防火墙类型
-		statusMsg.WriteString("💡 **推荐**:\n")
+		statusMsg.WriteString("💡 <b>推荐</b>:\n")
 		statusMsg.WriteString("• 使用 Firewalld 防火墙\n")
 
 		t.SendMsgToTgbot(chatId, statusMsg.String())
@@ -1089,7 +1089,7 @@ func (t *Tgbot) installFirewalld(chatId int64) {
 		// 检查是否已安装
 		_, installed := t.getFirewalldStatus()
 		if installed {
-			t.SendMsgToTgbot(chatId, "ℹ️ **Firewalld 已安装**\n\nFirewalld 防火墙已经安装在您的系统上。")
+			t.SendMsgToTgbot(chatId, "ℹ️ <b>Firewalld 已安装</b>\n\nFirewalld 防火墙已经安装在您的系统上。")
 			return
 		}
 
@@ -1101,9 +1101,9 @@ func (t *Tgbot) installFirewalld(chatId int64) {
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Firewalld 安装失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>Firewalld 安装失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 		} else {
-			t.SendMsgToTgbot(chatId, "✅ **Firewalld 安装成功！**\n\nFirewalld 防火墙已成功安装到您的系统上。\n\n接下来您可以：\n• 启用防火墙\n• 配置端口规则\n• 查看防火墙状态")
+			t.SendMsgToTgbot(chatId, "✅ <b>Firewalld 安装成功！</b>\n\nFirewalld 防火墙已成功安装到您的系统上。\n\n接下来您可以：\n• 启用防火墙\n• 配置端口规则\n• 查看防火墙状态")
 		}
 	}()
 }
@@ -1114,7 +1114,7 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 		// 检查是否已安装
 		_, installed := t.getFail2BanStatus()
 		if installed {
-			t.SendMsgToTgbot(chatId, "ℹ️ **Fail2Ban 已安装**\n\nFail2Ban 入侵检测和预防系统已经安装在您的系统上。")
+			t.SendMsgToTgbot(chatId, "ℹ️ <b>Fail2Ban 已安装</b>\n\nFail2Ban 入侵检测和预防系统已经安装在您的系统上。")
 			return
 		}
 
@@ -1143,7 +1143,7 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 				cmd = exec.CommandContext(ctx, "bash", "-c", "dnf install -y fail2ban")
 				output, err = cmd.CombinedOutput()
 				if err != nil {
-					t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装失败**\n\n尝试了 apt、yum 和 dnf 包管理器，但都失败了。\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+					t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>Fail2Ban 安装失败</b>\n\n尝试了 apt、yum 和 dnf 包管理器，但都失败了。\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 					return
 				}
 			}
@@ -1156,7 +1156,7 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 		cmd = exec.CommandContext(ctx, "systemctl", "enable", "fail2ban")
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但启用服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>Fail2Ban 安装成功，但启用服务失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
 		}
 
@@ -1166,7 +1166,7 @@ func (t *Tgbot) installFail2Ban(chatId int64) {
 		cmd = exec.CommandContext(ctx, "systemctl", "start", "fail2ban")
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但启动服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>Fail2Ban 安装成功，但启动服务失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
 		}
 
@@ -1182,7 +1182,7 @@ backend = systemd
 EOF`)
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 安装成功，但配置 Firewalld 失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>Fail2Ban 安装成功，但配置 Firewalld 失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
 		}
 
@@ -1193,11 +1193,11 @@ EOF`)
 		cmd = exec.CommandContext(ctx, "systemctl", "restart", "fail2ban")
 		output, err = cmd.CombinedOutput()
 		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **Fail2Ban 配置成功，但重启服务失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>Fail2Ban 配置成功，但重启服务失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			return
 		}
 
-		t.SendMsgToTgbot(chatId, "✅ **Fail2Ban 安装并配置成功！**\n\nFail2Ban 入侵检测和预防系统已成功安装并配置为与 Firewalld 配合工作。\n\n• Fail2Ban 使用 `firewallcmd-rich-rules` 封禁 IP\n• 会自动监控日志文件并封禁可疑活动\n• 配置文件位于 `/etc/fail2ban/jail.local`\n\n您可以根据需要配置额外的 jail 规则。")
+		t.SendMsgToTgbot(chatId, "✅ <b>Fail2Ban 安装并配置成功！</b>\n\nFail2Ban 入侵检测和预防系统已成功安装并配置为与 Firewalld 配合工作。\n\n• Fail2Ban 使用 <code>firewallcmd-rich-rules</code> 封禁 IP\n• 会自动监控日志文件并封禁可疑活动\n• 配置文件位于 <code>/etc/fail2ban/jail.local</code>\n\n您可以根据需要配置额外的 jail 规则。")
 	}()
 }
 
@@ -1246,13 +1246,13 @@ func (t *Tgbot) enableFirewall(chatId int64) {
 			output, err = cmd.CombinedOutput()
 
 			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **防火墙启用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>防火墙启用失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			} else {
-				t.SendMsgToTgbot(chatId, "✅ **防火墙启用成功！**\n\n防火墙已成功启用并设置为开机自启动。")
+				t.SendMsgToTgbot(chatId, "✅ <b>防火墙启用成功！</b>\n\n防火墙已成功启用并设置为开机自启动。")
 			}
 		} else {
 			// 没有找到可用的防火墙或防火墙已经启用
-			t.SendMsgToTgbot(chatId, "ℹ️ **防火墙状态**\n\n没有检测到需要启用的防火墙，或者防火墙已经处于启用状态。\n\n请先检查防火墙状态。")
+			t.SendMsgToTgbot(chatId, "ℹ️ <b>防火墙状态</b>\n\n没有检测到需要启用的防火墙，或者防火墙已经处于启用状态。\n\n请先检查防火墙状态。")
 		}
 	}()
 }
@@ -1276,13 +1276,13 @@ func (t *Tgbot) disableFirewall(chatId int64) {
 			output, err = cmd.CombinedOutput()
 
 			if err != nil {
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **防火墙禁用失败**\n\n错误信息: %v\n\n输出: %s", err, string(output)))
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ <b>防火墙禁用失败</b>\n\n错误信息: %v\n\n输出: %s", err, string(output)))
 			} else {
-				t.SendMsgToTgbot(chatId, "✅ **防火墙禁用成功！**\n\n防火墙已成功禁用。请注意，禁用防火墙可能会降低服务器安全性。")
+				t.SendMsgToTgbot(chatId, "✅ <b>防火墙禁用成功！</b>\n\n防火墙已成功禁用。请注意，禁用防火墙可能会降低服务器安全性。")
 			}
 		} else {
 			// 没有找到可用的防火墙或防火墙已经禁用
-			t.SendMsgToTgbot(chatId, "ℹ️ **防火墙状态**\n\n没有检测到需要禁用的防火墙，或者防火墙已经处于禁用状态。")
+			t.SendMsgToTgbot(chatId, "ℹ️ <b>防火墙状态</b>\n\n没有检测到需要禁用的防火墙，或者防火墙已经处于禁用状态。")
 		}
 	}()
 }
@@ -1290,20 +1290,20 @@ func (t *Tgbot) disableFirewall(chatId int64) {
 // 【新增函数】: 开放端口
 func (t *Tgbot) openPort(chatId int64) {
 	// 这里简化处理，实际应用中可能需要更复杂的交互
-	t.SendMsgToTgbot(chatId, "🔓 **开放端口**\n\n⚠️ **安全警告**: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n```bash\nfirewall-cmd --permanent --add-port=[端口号]/tcp\nfirewall-cmd --reload\n```\n\n例如开放 8080 端口：\n`firewall-cmd --permanent --add-port=8080/tcp`")
+	t.SendMsgToTgbot(chatId, "🔓 <b>开放端口</b>\n\n⚠️ <b>安全警告</b>: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n<pre>firewall-cmd --permanent --add-port=[端口号]/tcp\nfirewall-cmd --reload</pre>\n\n例如开放 8080 端口：\n<code>firewall-cmd --permanent --add-port=8080/tcp</code>")
 }
 
 // 【新增函数】: 关闭端口
 func (t *Tgbot) closePort(chatId int64) {
 	// 这里简化处理，实际应用中可能需要更复杂的交互
-	t.SendMsgToTgbot(chatId, "🔒 **关闭端口**\n\n⚠️ **安全警告**: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n```bash\nfirewall-cmd --permanent --remove-port=[端口号]/tcp\nfirewall-cmd --reload\n```\n\n例如关闭 8080 端口：\n`firewall-cmd --permanent --remove-port=8080/tcp`")
+	t.SendMsgToTgbot(chatId, "🔒 <b>关闭端口</b>\n\n⚠️ <b>安全警告</b>: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n<pre>firewall-cmd --permanent --remove-port=[端口号]/tcp\nfirewall-cmd --reload</pre>\n\n例如关闭 8080 端口：\n<code>firewall-cmd --permanent --remove-port=8080/tcp</code>")
 }
 
 // 【新增函数】: 列出防火墙规则
 func (t *Tgbot) listFirewallRules(chatId int64) {
 	go func() {
 		var rulesMsg strings.Builder
-		rulesMsg.WriteString("📋 **防火墙规则列表**\n\n")
+		rulesMsg.WriteString("📋 <b>防火墙规则列表</b>\n\n")
 
 		// 检查 Firewalld 规则
 		_, firewalldInstalled := t.getFirewalldStatus()
@@ -1315,14 +1315,14 @@ func (t *Tgbot) listFirewallRules(chatId int64) {
 			output, err := cmd.CombinedOutput()
 
 			if err != nil {
-				rulesMsg.WriteString("❌ **获取防火墙规则失败**\n")
+				rulesMsg.WriteString("❌ <b>获取防火墙规则失败</b>\n")
 			} else {
-				rulesMsg.WriteString("📊 **防火墙规则**:\n```\n")
+				rulesMsg.WriteString("📊 <b>防火墙规则</b>:\n<pre>")
 				rulesMsg.WriteString(string(output))
-				rulesMsg.WriteString("```\n\n")
+				rulesMsg.WriteString("</pre>\n\n")
 			}
 		} else {
-			rulesMsg.WriteString("❌ **未检测到防火墙**\n\n请先安装并启用防火墙。")
+			rulesMsg.WriteString("❌ <b>未检测到防火墙</b>\n\n请先安装并启用防火墙。")
 		}
 
 		t.SendMsgToTgbot(chatId, rulesMsg.String())
@@ -1332,7 +1332,7 @@ func (t *Tgbot) listFirewallRules(chatId int64) {
 // 【新增函数】: 开放 X-Panel 端口
 func (t *Tgbot) openXPanelPorts(chatId int64) {
 	go func() {
-		t.SendMsgToTgbot(chatId, "🚀 **正在开放 X-Panel 所需端口...**\n\n请稍候，正在执行端口开放操作。")
+		t.SendMsgToTgbot(chatId, "🚀 <b>正在开放 X-Panel 所需端口...</b>\n\n请稍候，正在执行端口开放操作。")
 
 		// X-Panel 常用端口
 		ports := []string{"22", "80", "443", "13688", "8443"}
@@ -1373,10 +1373,10 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 
 		// 构建结果消息
 		var resultMsg strings.Builder
-		resultMsg.WriteString("🎯 **X-Panel 端口开放结果**\n\n")
+		resultMsg.WriteString("🎯 <b>X-Panel 端口开放结果</b>\n\n")
 
 		if len(successPorts) > 0 {
-			resultMsg.WriteString("✅ **成功开放的端口**:\n")
+			resultMsg.WriteString("✅ <b>成功开放的端口</b>:\n")
 			for _, port := range successPorts {
 				resultMsg.WriteString(fmt.Sprintf("• 端口 %s\n", port))
 			}
@@ -1384,7 +1384,7 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 		}
 
 		if len(failedPorts) > 0 {
-			resultMsg.WriteString("❌ **开放失败的端口**:\n")
+			resultMsg.WriteString("❌ <b>开放失败的端口</b>:\n")
 			for _, port := range failedPorts {
 				resultMsg.WriteString(fmt.Sprintf("• 端口 %s\n", port))
 			}
@@ -1392,11 +1392,11 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 		}
 
 		if len(successPorts) == len(ports) {
-			resultMsg.WriteString("🎉 **所有端口开放成功！**\n\nX-Panel 现在可以通过这些端口正常访问。")
+			resultMsg.WriteString("🎉 <b>所有端口开放成功！</b>\n\nX-Panel 现在可以通过这些端口正常访问。")
 		} else if len(successPorts) > 0 {
-			resultMsg.WriteString("⚠️ **部分端口开放成功**\n\n请检查失败的端口，或手动配置防火墙规则。")
+			resultMsg.WriteString("⚠️ <b>部分端口开放成功</b>\n\n请检查失败的端口，或手动配置防火墙规则。")
 		} else {
-			resultMsg.WriteString("❌ **所有端口开放失败**\n\n请检查防火墙状态或手动配置。")
+			resultMsg.WriteString("❌ <b>所有端口开放失败</b>\n\n请检查防火墙状态或手动配置。")
 		}
 
 		t.SendMsgToTgbot(chatId, resultMsg.String())
@@ -1431,7 +1431,7 @@ func (t *Tgbot) getFirewalldStatus() (string, bool) {
 
 // showLogMenu 显示日志查看菜单
 func (t *Tgbot) showLogMenu(chatId int64) {
-	message := "📋 **日志查看菜单**\n\n请选择日志查看选项："
+	message := "📋 <b>日志查看菜单</b>\n\n请选择日志查看选项："
 
 	keyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(

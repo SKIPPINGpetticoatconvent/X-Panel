@@ -330,7 +330,7 @@ func (s *ServerService) UpdatePanel(version string) error {
 
 		// 1. 发送开始通知
 		if tgAvailable {
-			startMessage := "🔄 **开始更新 X-Panel**\n\n正在检查最新版本...\n\n⏳ 请稍候，这可能需要几分钟时间..."
+			startMessage := "🔄 <b>开始更新 X-Panel</b>\n\n正在检查最新版本...\n\n⏳ 请稍候，这可能需要几分钟时间..."
 			if err := s.tgService.SendMessage(startMessage); err != nil {
 				logger.Warningf("发送X-Panel更新开始通知失败: %v", err)
 			}
@@ -445,13 +445,13 @@ func (s *ServerService) UpdatePanel(version string) error {
 		if tgAvailable {
 			if updateErr == nil {
 				// 更新成功通知
-				successMessage := fmt.Sprintf("🎉 **X-Panel 更新成功！**\n\n版本: `%s`\n✅ 脚本已更新\n✅ 面板二进制已替换\n🔄 服务已成功重启\n✨ 感谢您的耐心等待", version)
+				successMessage := fmt.Sprintf("🎉 <b>X-Panel 更新成功！</b>\n\n版本: <code>%s</code>\n✅ 脚本已更新\n✅ 面板二进制已替换\n🔄 服务已成功重启\n✨ 感谢您的耐心等待", version)
 				if err := s.tgService.SendMessage(successMessage); err != nil {
 					logger.Warningf("发送X-Panel更新成功通知失败: %v", err)
 				}
 			} else {
 				// 更新失败通知
-				failMessage := fmt.Sprintf("❌ **X-Panel 更新失败**\n\n版本: `%s`\n错误信息: %v\n\n请检查日志以获取更多信息。", version, updateErr)
+				failMessage := fmt.Sprintf("❌ <b>X-Panel 更新失败</b>\n\n版本: <code>%s</code>\n错误信息: %v\n\n请检查日志以获取更多信息。", version, updateErr)
 				if err := s.tgService.SendMessage(failMessage); err != nil {
 					logger.Warningf("发送X-Panel更新失败通知失败: %v", err)
 				}
@@ -479,7 +479,7 @@ func (s *ServerService) UpdateGeoData() error {
 
 		// 1. 发送开始通知
 		if tgAvailable {
-			startMessage := "🔄 **开始更新 Geo 数据**\n\n正在下载最新的 geoip.dat 和 geosite.dat 文件...\n\n⏳ 请稍候，这可能需要几分钟时间..."
+			startMessage := "🔄 <b>开始更新 Geo 数据</b>\n\n正在下载最新的 geoip.dat 和 geosite.dat 文件...\n\n⏳ 请稍候，这可能需要几分钟时间..."
 			if err := s.tgService.SendMessage(startMessage); err != nil {
 				logger.Warningf("发送 Geo 数据更新开始通知失败: %v", err)
 			}
@@ -583,7 +583,7 @@ func (s *ServerService) UpdateGeoData() error {
 		if tgAvailable {
 			if successCount > 0 {
 				// 更新成功通知
-				successMessage := fmt.Sprintf("🎉 **Geo 数据更新成功！**\n\n✅ 成功更新 %d 个文件\n🔄 Xray 服务已重启\n\n更新的文件:\n", successCount)
+				successMessage := fmt.Sprintf("🎉 <b>Geo 数据更新成功！</b>\n\n✅ 成功更新 %d 个文件\n🔄 Xray 服务已重启\n\n更新的文件:\n", successCount)
 				for _, file := range geoFiles {
 					successMessage += fmt.Sprintf("• %s\n", file.FileName)
 				}
@@ -594,13 +594,13 @@ func (s *ServerService) UpdateGeoData() error {
 				}
 			} else if successCount == 0 {
 				// 完全失败通知
-				failMessage := "❌ **Geo 数据更新失败**\n\n没有成功更新任何文件，请检查网络连接和日志。"
+				failMessage := "❌ <b>Geo 数据更新失败</b>\n\n没有成功更新任何文件，请检查网络连接和日志。"
 				if err := s.tgService.SendMessage(failMessage); err != nil {
 					logger.Warningf("发送 Geo 数据更新失败通知失败: %v", err)
 				}
 			} else {
 				// 部分成功通知
-				warningMessage := fmt.Sprintf("⚠️ **Geo 数据更新完成（部分失败）**\n\n✅ 成功更新 %d 个文件\n❌ 部分文件更新失败\n\n", successCount)
+				warningMessage := fmt.Sprintf("⚠️ <b>Geo 数据更新完成（部分失败）</b>\n\n✅ 成功更新 %d 个文件\n❌ 部分文件更新失败\n\n", successCount)
 				for _, errorMsg := range errorMessages {
 					warningMessage += errorMsg + "\n"
 				}
