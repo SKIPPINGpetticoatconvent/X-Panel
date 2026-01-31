@@ -78,14 +78,20 @@ if [ "${MODE}" == "local" ]; then
     if [ -f "${PROJECT_ROOT}/bin/xray-linux-amd64" ]; then
         cp "${PROJECT_ROOT}/bin/xray-linux-amd64" release_temp/x-ui/bin/
     else 
-         echo ">> [Host] Warning: xray binary not found locally, downloading..."
-         wget -q -O release_temp/x-ui/bin/xray-linux-amd64 https://github.com/XTLS/Xray-core/releases/download/v1.8.4/Xray-linux-64.zip
-         # Wait, that's a zip. complexity...
-         # Let's just create a dummy script for xray if possible?
-         # No, x-ui might rely on `xray -version` parsing.
-         # Let's try to mock it:
-         echo '#!/bin/sh' > release_temp/x-ui/bin/xray-linux-amd64
-         echo 'echo "Xray 1.8.4 (Xray, Penetrates Everything.) Custom"' >> release_temp/x-ui/bin/xray-linux-amd64
+         echo ">> [Host] Creating mock xray binary..."
+         # Create a dummy xray script
+         cat <<EOF > release_temp/x-ui/bin/xray-linux-amd64
+#!/bin/sh
+if [ "\$1" = "-version" ] || [ "\$1" = "version" ]; then
+    echo "Xray 1.8.4 (Mock) Custom"
+else
+    # Keep running to simulate daemon if needed, or just exit 0?
+    # x-ui usually starts it as a subprocess.
+    # If it exits immediately, x-ui might restart it loop.
+    echo "Starting Mock Xray..."
+    sleep 3600
+fi
+EOF
          chmod +x release_temp/x-ui/bin/xray-linux-amd64
     fi
 
