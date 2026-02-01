@@ -255,13 +255,9 @@ func (s *SubService) genVmessLink(inbound *model.Inbound, email string) string {
 			obj["sni"], _ = sniValue.(string)
 		}
 
-		tlsSettings, _ := searchKey(tlsSetting, "settings")
-		if tlsSetting != nil {
+		if tlsSettings, _ := searchKey(tlsSetting, "settings"); tlsSettings != nil {
 			if fpValue, ok := searchKey(tlsSettings, "fingerprint"); ok {
 				obj["fp"], _ = fpValue.(string)
-			}
-			if insecure, ok := searchKey(tlsSettings, "allowInsecure"); ok {
-				obj["allowInsecure"], _ = insecure.(bool)
 			}
 		}
 	}
@@ -422,14 +418,9 @@ func (s *SubService) genVlessLink(inbound *model.Inbound, email string) string {
 		}
 
 		tlsSettings, _ := searchKey(tlsSetting, "settings")
-		if tlsSetting != nil {
+		if tlsSettings != nil {
 			if fpValue, ok := searchKey(tlsSettings, "fingerprint"); ok {
 				params["fp"], _ = fpValue.(string)
-			}
-			if insecure, ok := searchKey(tlsSettings, "allowInsecure"); ok {
-				if insecure.(bool) {
-					params["allowInsecure"] = "1"
-				}
 			}
 		}
 
@@ -633,14 +624,9 @@ func (s *SubService) genTrojanLink(inbound *model.Inbound, email string) string 
 		}
 
 		tlsSettings, _ := searchKey(tlsSetting, "settings")
-		if tlsSetting != nil {
+		if tlsSettings != nil {
 			if fpValue, ok := searchKey(tlsSettings, "fingerprint"); ok {
 				params["fp"], _ = fpValue.(string)
-			}
-			if insecure, ok := searchKey(tlsSettings, "allowInsecure"); ok {
-				if insecure.(bool) {
-					params["allowInsecure"] = "1"
-				}
 			}
 		}
 	}

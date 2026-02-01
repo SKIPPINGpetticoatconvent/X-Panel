@@ -434,14 +434,14 @@ class TlsStreamSettings extends CommonClass {
     serverName = "",
     alpn = [],
     fingerprint = "",
-    allowInsecure = false,
+    pinnedPeerCertSha256 = "",
     echConfigList = "",
   ) {
     super();
     this.serverName = serverName;
     this.alpn = alpn;
     this.fingerprint = fingerprint;
-    this.allowInsecure = allowInsecure;
+    this.pinnedPeerCertSha256 = pinnedPeerCertSha256;
     this.echConfigList = echConfigList;
   }
 
@@ -450,7 +450,7 @@ class TlsStreamSettings extends CommonClass {
       json.serverName,
       json.alpn,
       json.fingerprint,
-      json.allowInsecure,
+      json.pinnedPeerCertSha256,
       json.echConfigList,
     );
   }
@@ -460,7 +460,7 @@ class TlsStreamSettings extends CommonClass {
       serverName: this.serverName,
       alpn: this.alpn,
       fingerprint: this.fingerprint,
-      allowInsecure: this.allowInsecure,
+      pinnedPeerCertSha256: this.pinnedPeerCertSha256,
       echConfigList: this.echConfigList,
     };
   }
@@ -1043,19 +1043,19 @@ class Outbound extends CommonClass {
       stream.hysteria.initStreamReceiveWindow = parseInt(urlParams.get('initStreamReceiveWindow'));
     }
     if (urlParams.has('maxStreamReceiveWindow')) {
-       stream.hysteria.maxStreamReceiveWindow = parseInt(urlParams.get('maxStreamReceiveWindow'));
+      stream.hysteria.maxStreamReceiveWindow = parseInt(urlParams.get('maxStreamReceiveWindow'));
     }
     if (urlParams.has('initConnectionReceiveWindow')) {
-       stream.hysteria.initConnectionReceiveWindow = parseInt(urlParams.get('initConnectionReceiveWindow'));
+      stream.hysteria.initConnectionReceiveWindow = parseInt(urlParams.get('initConnectionReceiveWindow'));
     }
     if (urlParams.has('maxConnectionReceiveWindow')) {
-       stream.hysteria.maxConnectionReceiveWindow = parseInt(urlParams.get('maxConnectionReceiveWindow'));
+      stream.hysteria.maxConnectionReceiveWindow = parseInt(urlParams.get('maxConnectionReceiveWindow'));
     }
     if (urlParams.has('maxIdleTimeout')) {
-       stream.hysteria.maxIdleTimeout = parseInt(urlParams.get('maxIdleTimeout'));
+      stream.hysteria.maxIdleTimeout = parseInt(urlParams.get('maxIdleTimeout'));
     }
     if (urlParams.has('keepAlivePeriod')) {
-       stream.hysteria.keepAlivePeriod = parseInt(urlParams.get('keepAlivePeriod'));
+      stream.hysteria.keepAlivePeriod = parseInt(urlParams.get('keepAlivePeriod'));
     }
     if (urlParams.has('disablePathMTUDiscovery')) {
       stream.hysteria.disablePathMTUDiscovery = urlParams.get('disablePathMTUDiscovery') === 'true';

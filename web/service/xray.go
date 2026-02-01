@@ -118,6 +118,10 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 
+	// Sanitize Outbounds: Remove allowInsecure to adapt to Xray-core v25+
+	// Sanitize Outbounds: Remove allowInsecure to adapt to Xray-core v25+
+	_ = xrayConfig.AdaptToXrayCoreV25()
+
 	inbounds, err := s.inboundService.GetAllInbounds()
 	if err != nil {
 		return nil, err

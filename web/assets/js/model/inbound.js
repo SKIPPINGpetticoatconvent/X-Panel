@@ -555,10 +555,6 @@ class TlsStreamSettings extends XrayCommonClass {
     minVersion = TLS_VERSION_OPTION.TLS12,
     maxVersion = TLS_VERSION_OPTION.TLS13,
     cipherSuites = "",
-    rejectUnknownSni = false,
-    verifyPeerCertInNames = ["dns.google", "cloudflare-dns.com"],
-    disableSystemRoot = false,
-    enableSessionResumption = false,
     certificates = [new TlsStreamSettings.Cert()],
     alpn = [ALPN_OPTION.H2, ALPN_OPTION.HTTP1],
     echServerKeys = "",
@@ -602,7 +598,6 @@ class TlsStreamSettings extends XrayCommonClass {
 
     if (!ObjectUtil.isEmpty(json.settings)) {
       settings = new TlsStreamSettings.Settings(
-        json.settings.allowInsecure,
         json.settings.fingerprint,
         json.settings.echConfigList,
       );
@@ -716,26 +711,26 @@ TlsStreamSettings.Cert = class extends XrayCommonClass {
 
 TlsStreamSettings.Settings = class extends XrayCommonClass {
   constructor(
-    allowInsecure = false,
     fingerprint = UTLS_FINGERPRINT.UTLS_CHROME,
+    pinnedPeerCertSha256 = "",
     echConfigList = "",
   ) {
     super();
-    this.allowInsecure = allowInsecure;
     this.fingerprint = fingerprint;
+    this.pinnedPeerCertSha256 = pinnedPeerCertSha256;
     this.echConfigList = echConfigList;
   }
   static fromJson(json = {}) {
     return new TlsStreamSettings.Settings(
-      json.allowInsecure,
       json.fingerprint,
+      json.pinnedPeerCertSha256,
       json.echConfigList,
     );
   }
   toJson() {
     return {
-      allowInsecure: this.allowInsecure,
       fingerprint: this.fingerprint,
+      pinnedPeerCertSha256: this.pinnedPeerCertSha256,
       echConfigList: this.echConfigList,
     };
   }
