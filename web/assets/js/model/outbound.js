@@ -905,7 +905,6 @@ class Outbound extends CommonClass {
         json.sni,
         json.alpn ? json.alpn.split(",") : [],
         json.fp,
-        json.allowInsecure,
       );
     }
 
@@ -956,14 +955,13 @@ class Outbound extends CommonClass {
     if (security === "tls") {
       let fp = url.searchParams.get("fp") ?? "none";
       let alpn = url.searchParams.get("alpn");
-      let allowInsecure = url.searchParams.get("allowInsecure");
       let sni = url.searchParams.get("sni") ?? "";
       let ech = url.searchParams.get("ech") ?? "";
       stream.tls = new TlsStreamSettings(
         sni,
         alpn ? alpn.split(",") : [],
         fp,
-        allowInsecure == 1,
+        "",
         ech,
       );
     }

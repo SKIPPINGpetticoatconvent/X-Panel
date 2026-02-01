@@ -555,6 +555,10 @@ class TlsStreamSettings extends XrayCommonClass {
     minVersion = TLS_VERSION_OPTION.TLS12,
     maxVersion = TLS_VERSION_OPTION.TLS13,
     cipherSuites = "",
+    rejectUnknownSni = false,
+    verifyPeerCertByName = "",
+    disableSystemRoot = false,
+    enableSessionResumption = false,
     certificates = [new TlsStreamSettings.Cert()],
     alpn = [ALPN_OPTION.H2, ALPN_OPTION.HTTP1],
     echServerKeys = "",
@@ -567,9 +571,9 @@ class TlsStreamSettings extends XrayCommonClass {
     this.maxVersion = maxVersion;
     this.cipherSuites = cipherSuites;
     this.rejectUnknownSni = rejectUnknownSni;
-    this.verifyPeerCertInNames = Array.isArray(verifyPeerCertInNames)
-      ? verifyPeerCertInNames.join(",")
-      : verifyPeerCertInNames;
+    this.verifyPeerCertByName = Array.isArray(verifyPeerCertByName)
+      ? verifyPeerCertByName.join(",")
+      : verifyPeerCertByName;
     this.disableSystemRoot = disableSystemRoot;
     this.enableSessionResumption = enableSessionResumption;
     this.certs = certificates;
@@ -608,7 +612,7 @@ class TlsStreamSettings extends XrayCommonClass {
       json.maxVersion,
       json.cipherSuites,
       json.rejectUnknownSni,
-      json.verifyPeerCertInNames,
+      json.verifyPeerCertByName ?? json.verifyPeerCertInNames,
       json.disableSystemRoot,
       json.enableSessionResumption,
       certs,
@@ -626,7 +630,7 @@ class TlsStreamSettings extends XrayCommonClass {
       maxVersion: this.maxVersion,
       cipherSuites: this.cipherSuites,
       rejectUnknownSni: this.rejectUnknownSni,
-      verifyPeerCertInNames: this.verifyPeerCertInNames.split(","),
+      verifyPeerCertByName: this.verifyPeerCertByName,
       disableSystemRoot: this.disableSystemRoot,
       enableSessionResumption: this.enableSessionResumption,
       certificates: TlsStreamSettings.toJsonArray(this.certs),
@@ -1347,9 +1351,6 @@ class Inbound extends XrayCommonClass {
       if (this.stream.tls.alpn.length > 0) {
         obj.alpn = this.stream.tls.alpn.join(",");
       }
-      if (this.stream.tls.settings.allowInsecure) {
-        obj.allowInsecure = this.stream.tls.settings.allowInsecure;
-      }
     }
 
     return "vmess://" + Base64.encode(JSON.stringify(obj, null, 2));
@@ -1432,9 +1433,6 @@ class Inbound extends XrayCommonClass {
       if (this.stream.isTls) {
         params.set("fp", this.stream.tls.settings.fingerprint);
         params.set("alpn", this.stream.tls.alpn);
-        if (this.stream.tls.settings.allowInsecure) {
-          params.set("allowInsecure", "1");
-        }
         if (!ObjectUtil.isEmpty(this.stream.tls.sni)) {
           params.set("sni", this.stream.tls.sni);
         }
@@ -1552,9 +1550,6 @@ class Inbound extends XrayCommonClass {
       if (this.stream.isTls) {
         params.set("fp", this.stream.tls.settings.fingerprint);
         params.set("alpn", this.stream.tls.alpn);
-        if (this.stream.tls.settings.allowInsecure) {
-          params.set("allowInsecure", "1");
-        }
         if (this.stream.tls.settings.echConfigList?.length > 0) {
           params.set("ech", this.stream.tls.settings.echConfigList);
         }
@@ -1651,9 +1646,6 @@ class Inbound extends XrayCommonClass {
       if (this.stream.isTls) {
         params.set("fp", this.stream.tls.settings.fingerprint);
         params.set("alpn", this.stream.tls.alpn);
-        if (this.stream.tls.settings.allowInsecure) {
-          params.set("allowInsecure", "1");
-        }
         if (this.stream.tls.settings.echConfigList?.length > 0) {
           params.set("ech", this.stream.tls.settings.echConfigList);
         }

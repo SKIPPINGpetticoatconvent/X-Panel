@@ -52,9 +52,6 @@
     <a-form-item label="Reject Unknown SNI">
       <a-switch v-model="inbound.stream.tls.rejectUnknownSni"></a-switch>
     </a-form-item>
-    <a-form-item label="Return New Pinned Cert" v-if="inbound.stream.tls.settings.allowInsecure !== undefined">
-        <a-alert type="warning" message="Deprecated: AllowInsecure is removed in Xray-core v25+" banner />
-    </a-form-item>
     <a-form-item label="Pinned Peer Cert SHA256">
       <a-input v-model="inbound.stream.tls.settings.pinnedPeerCertSha256" placeholder="SHA256 Hash of the Peer Certificate"></a-input>
     </a-form-item>
@@ -64,8 +61,8 @@
     <a-form-item label="Session Resumption">
       <a-switch v-model="inbound.stream.tls.enableSessionResumption"></a-switch>
     </a-form-item>
-    <a-form-item label="VerifyPeerCertInNames">
-      <a-input v-model.trim="inbound.stream.tls.verifyPeerCertInNames"></a-input>
+    <a-form-item label="VerifyPeerCertByName">
+      <a-input v-model.trim="inbound.stream.tls.verifyPeerCertByName"></a-input>
     </a-form-item>
     <template v-for="cert,index in inbound.stream.tls.certs">
       <a-form-item label='{{ i18n "certificate" }}'>
