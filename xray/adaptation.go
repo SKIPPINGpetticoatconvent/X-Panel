@@ -36,9 +36,7 @@ func (c *Config) AdaptToXrayCoreV25() error {
 
 	// Sanitize Inbounds: Migrate verifyPeerCertInNames -> verifyPeerCertByName
 	for i := range c.InboundConfigs {
-		if migrateTlsSettings(&c.InboundConfigs[i].StreamSettings) {
-			// StreamSettings was modified in place
-		}
+		migrateTlsSettings(&c.InboundConfigs[i].StreamSettings)
 	}
 
 	return nil

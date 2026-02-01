@@ -3324,7 +3324,6 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 			"minVersion":              "1.2",
 			"rejectUnknownSni":        false,
 			"serverName":              domain,
-			"verifyPeerCertByName": "dns.google,cloudflare-dns.com",
 		},
 		"xhttpSettings": map[string]any{
 			"headers":              map[string]any{}, // 可按需填充（JS 为 {}）

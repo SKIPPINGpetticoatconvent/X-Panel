@@ -1537,8 +1537,7 @@ async openPort(port) {
                                 maxVersion: "1.3",
                                 minVersion: "1.2",
                                 rejectUnknownSni: false,
-                                serverName: serverName, // 使用面板域名的 SNI
-                                verifyPeerCertByName: "dns.google,cloudflare-dns.com"
+                                serverName: serverName
                            },
 						   xhttpSettings: {
                                 headers: {},                 // 可按需填充
