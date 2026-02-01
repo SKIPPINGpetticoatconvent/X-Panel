@@ -48,7 +48,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Cache NilAway
+        id: cache-nilaway
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/nilaway
+          key: nilaway-${{ runner.os }}-latest
+
       - name: Install NilAway
+        if: steps.cache-nilaway.outputs.cache-hit != 'true'
         run: go install go.uber.org/nilaway/cmd/nilaway@latest
 
       - name: Run NilAway (Deep Static Analysis)

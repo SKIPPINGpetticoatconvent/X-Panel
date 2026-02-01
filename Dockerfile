@@ -13,6 +13,10 @@ RUN apk --no-cache --update add \
     unzip \
     git
 
+# 下载 Go 依赖 (利用 Docker 缓存)
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY . .
 
 # 下载 x-ui.sh 管理脚本
