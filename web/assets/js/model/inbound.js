@@ -1248,7 +1248,7 @@ class Inbound extends XrayCommonClass {
   canEnableTlsFlow() {
     if (
       (this.stream.security === "tls" || this.stream.security === "reality") &&
-      this.network === "tcp"
+      (this.network === "tcp" || this.network === "xhttp")
     ) {
       return this.protocol === Protocols.VLESS;
     }
@@ -1459,7 +1459,7 @@ class Inbound extends XrayCommonClass {
       if (!ObjectUtil.isEmpty(this.stream.reality.settings.mldsa65Verify)) {
         params.set("pqv", this.stream.reality.settings.mldsa65Verify);
       }
-      if (type == "tcp" && !ObjectUtil.isEmpty(flow)) {
+      if ((type == "tcp" || type == "xhttp") && !ObjectUtil.isEmpty(flow)) {
         params.set("flow", flow);
       }
     } else {
