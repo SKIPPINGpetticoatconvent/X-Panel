@@ -208,6 +208,37 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
+          cache: false
+
+      - name: Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.platform }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.platform }}-
+
+      - name: Resolve Bootlin Arch
+        id: bootlin
+        run: |
+          case "${{ matrix.platform }}" in
+            amd64) echo "ARCH=x86-64" >> $GITHUB_OUTPUT ;;
+            arm64) echo "ARCH=aarch64" >> $GITHUB_OUTPUT ;;
+            armv7) echo "ARCH=armv7-eabihf" >> $GITHUB_OUTPUT ;;
+            armv6) echo "ARCH=armv6-eabihf" >> $GITHUB_OUTPUT ;;
+            armv5) echo "ARCH=armv5-eabi" >> $GITHUB_OUTPUT ;;
+            386) echo "ARCH=x86-i686" >> $GITHUB_OUTPUT ;;
+            s390x) echo "ARCH=s390x-z13" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Cache Bootlin Toolchain
+        id: cache-bootlin
+        uses: actions/cache@v4
+        with:
+          path: /tmp/bootlin-toolchain
+          key: bootlin-${{ steps.bootlin.outputs.ARCH }}-v1
 
       - name: Build X-Panel for Linux
         run: |
@@ -224,19 +255,32 @@ jobs:
             386) BOOTLIN_ARCH="x86-i686" ;;
             s390x) BOOTLIN_ARCH="s390x-z13" ;;
           esac
-          echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }})"
-          TARBALL_BASE="https://toolchains.bootlin.com/downloads/releases/toolchains/$BOOTLIN_ARCH/tarballs/"
-          TARBALL_URL=$(curl -fsSL "$TARBALL_BASE" | grep -oE "${BOOTLIN_ARCH}--musl--stable-[^\"]+\\.tar\\.xz" | sort -r | head -n1)
-          [ -z "$TARBALL_URL" ] && { echo "Failed to locate Bootlin musl toolchain for arch=$BOOTLIN_ARCH" >&2; exit 1; }
-          echo "Downloading: $TARBALL_URL"
-          cd /tmp
-          curl -fL -sS -o "$(basename "$TARBALL_URL")" "$TARBALL_BASE/$TARBALL_URL"
-          tar -xf "$(basename "$TARBALL_URL")"
-          TOOLCHAIN_DIR=$(find . -maxdepth 1 -type d -name "${BOOTLIN_ARCH}--musl--stable-*" | head -n1)
-          export PATH="$(realpath "$TOOLCHAIN_DIR")/bin:$PATH"
-          export CC=$(realpath "$(find "$TOOLCHAIN_DIR/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
-          [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_DIR/bin" >&2; exit 1; }
-          cd -
+          TOOLCHAIN_ROOT="/tmp/bootlin-toolchain"
+          if [ -d "$TOOLCHAIN_ROOT" ] && [ -n "$(ls -A "$TOOLCHAIN_ROOT")" ]; then
+             echo "Using cached toolchain from $TOOLCHAIN_ROOT"
+          else
+             echo "Resolving Bootlin musl toolchain for arch=$BOOTLIN_ARCH (platform=${{ matrix.platform }})"
+             TARBALL_BASE="https://toolchains.bootlin.com/downloads/releases/toolchains/$BOOTLIN_ARCH/tarballs/"
+             TARBALL_URL=$(curl -fsSL "$TARBALL_BASE" | grep -oE "${BOOTLIN_ARCH}--musl--stable-[^\"]+\\.tar\\.xz" | sort -r | head -n1)
+             [ -z "$TARBALL_URL" ] && { echo "Failed to locate Bootlin musl toolchain for arch=$BOOTLIN_ARCH" >&2; exit 1; }
+             echo "Downloading: $TARBALL_URL"
+             
+             cd /tmp
+             curl -fL -sS -o "$(basename "$TARBALL_URL")" "$TARBALL_BASE/$TARBALL_URL"
+             tar -xf "$(basename "$TARBALL_URL")"
+             EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "${BOOTLIN_ARCH}--musl--stable-*" | head -n1)
+             
+             mkdir -p "$TOOLCHAIN_ROOT"
+             mv "$EXTRACTED_DIR"/* "$TOOLCHAIN_ROOT/"
+             # Cleanup
+             rm -f "$(basename "$TARBALL_URL")"
+             rmdir "$EXTRACTED_DIR"
+             cd -
+          fi
+
+          export PATH="$TOOLCHAIN_ROOT/bin:$PATH"
+          export CC=$(realpath "$(find "$TOOLCHAIN_ROOT/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
+          [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_ROOT/bin" >&2; exit 1; }
           if [ "${{ matrix.platform }}" = "armv5" ]; then
             go build -ldflags "-w -s" -o xui-release -v main.go
           else
@@ -337,6 +381,17 @@ jobs:
         with:
           go-version-file: go.mod
           check-latest: true
+          cache: false
+
+      - name: Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\go-build
+            ~\go\pkg\mod
+          key: ${{ runner.os }}-go-${{ matrix.platform }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.platform }}-
 
       - name: Build X-Panel for Windows
         shell: pwsh

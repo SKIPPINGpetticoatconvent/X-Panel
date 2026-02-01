@@ -4,10 +4,16 @@ ENV container docker
 ENV LC_ALL C
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN sed -i 's/# deb/deb/g' /etc/apt/sources.list
-
 RUN apt-get update \
-    && apt-get install -y systemd systemd-sysv \
+    && apt-get install -y --no-install-recommends \
+       systemd \
+       systemd-sysv \
+       curl \
+       wget \
+       sudo \
+       python3 \
+       iproute2 \
+       procps \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -26,14 +32,6 @@ RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
 
 VOLUME [ "/sys/fs/cgroup" ]
 
-# Install dependencies required by install.sh (simulating a fresh OS)
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    sudo \
-    python3 \
-    iproute2 \
-    procps \
-    && apt-get clean
+
 
 CMD ["/lib/systemd/systemd"]
