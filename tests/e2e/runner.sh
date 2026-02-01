@@ -11,6 +11,7 @@ IMAGE_NAME="xpanel-e2e-image"
 # Default Mode
 MODE="local"
 SKIP_BUILD=false
+SKIP_DOCKER_BUILD=false
 KEEP_ARTIFACT=false
 XPANEL_VERSION=$(tr -d '\n' <"${PROJECT_ROOT}/config/version")
 
@@ -32,6 +33,9 @@ while [[ $# -gt 0 ]]; do
     ;;
   --keep-artifact)
     KEEP_ARTIFACT=true
+    ;;
+  --skip-docker-build)
+    SKIP_DOCKER_BUILD=true
     ;;
   --test)
     TEST_CASE="$2"
@@ -169,8 +173,12 @@ EOF
 fi
 
 # 2. Build Docker Image
-echo ">> [Host] Building Docker image..."
-docker build -t ${IMAGE_NAME} -f "${DOCKERFILE}" .
+if [ "$SKIP_DOCKER_BUILD" = false ]; then
+  echo ">> [Host] Building Docker image..."
+  docker build -t ${IMAGE_NAME} -f "${DOCKERFILE}" .
+else
+  echo ">> [Host] Skipping Docker build (--skip-docker-build)"
+fi
 
 # 3. Run Container
 echo ">> [Host] Starting container..."

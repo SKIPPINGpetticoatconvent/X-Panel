@@ -77,8 +77,8 @@ jobs:
       - name: Build Verification
         run: go build ./...
 
-  e2e:
-    name: E2E Tests
+  e2e-build:
+    name: E2E Build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -91,17 +91,93 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Run Modernized E2E Tests (Parallel)
-        run: make e2e
-        env:
-          EXCLUDE_LIST: ""
+      - name: Build binary and create tarball
+        run: |
+          VERSION=$(tr -d '\n' < config/version)
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X 'github.com/SKIPPINGpetticoatconvent/X-Panel/config.version=${VERSION}'" -o x-ui main.go
+
+          mkdir -p release_temp/x-ui/bin
+          cp x-ui release_temp/x-ui/
+
+          # 创建 mock xray 二进制
+          cat <<'XRAY_EOF' > release_temp/x-ui/bin/xray-linux-amd64
+          #!/bin/sh
+          if [ "$1" = "-version" ] || [ "$1" = "version" ]; then
+          echo "Xray 1.8.4 (Mock) Custom"
+          else
+          echo "Starting Mock Xray..."
+          sleep 3600
+          fi
+          XRAY_EOF
+          chmod +x release_temp/x-ui/bin/xray-linux-amd64
+
+          touch release_temp/x-ui/bin/geosite.dat
+          touch release_temp/x-ui/bin/geoip.dat
+          cp x-ui.sh release_temp/x-ui/ || touch release_temp/x-ui/x-ui.sh
+          cp x-ui.service release_temp/x-ui/ || true
+
+          cd release_temp
+          tar -czf "${GITHUB_WORKSPACE}/x-ui-linux-amd64.tar.gz" x-ui
+          cd ..
+          rm -rf release_temp x-ui
+
+      - name: Build Docker image and export
+        run: |
+          docker build -t xpanel-e2e-image -f tests/e2e/docker/Dockerfile.ubuntu22 .
+          docker save xpanel-e2e-image -o xpanel-e2e-image.tar
+
+      - name: Upload E2E tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-tarball
+          path: x-ui-linux-amd64.tar.gz
+          retention-days: 1
+
+      - name: Upload E2E Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-image
+          path: xpanel-e2e-image.tar
+          retention-days: 1
+
+  e2e-test:
+    name: "E2E: ${{ matrix.test }}"
+    needs: [e2e-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [install, ip_cert, domain_cert, ssl_fallback]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download E2E tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-tarball
+
+      - name: Download E2E Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-image
+
+      - name: Load Docker image
+        run: docker load -i xpanel-e2e-image.tar
+
+      - name: Run E2E test (${{ matrix.test }})
+        run: |
+          chmod +x tests/e2e/runner.sh
+          ./tests/e2e/runner.sh --mode local --test ${{ matrix.test }} --skip-build --skip-docker-build
 
   # ===============================================================
   # Linux 平台的构建任务
   # ===============================================================
   build-linux:
     name: Build for Linux
-    needs: [lint, nilaway, test, e2e] # ← 依赖所有 QA 检查通过
+    needs: [lint, nilaway, test, e2e-test] # ← 依赖所有 QA 检查通过
     permissions:
       contents: write
     strategy:
@@ -235,7 +311,7 @@ jobs:
   # ===============================================================
   build-windows:
     name: Build for Windows
-    needs: [lint, nilaway, test, e2e] # ← 依赖所有 QA 检查通过
+    needs: [lint, nilaway, test, e2e-test] # ← 依赖所有 QA 检查通过
     permissions:
       contents: write
     strategy:
