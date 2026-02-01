@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-02-01T04:25:13.032Z",
+  "projectRoot": "/home/ub/X-Panel",
+  "structure": {
+    "hasPackageJson": true,
+    "hasTsConfig": false,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1769919913032
+}
