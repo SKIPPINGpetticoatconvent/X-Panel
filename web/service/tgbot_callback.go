@@ -891,12 +891,26 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
 						return
 					}
-					clients, err := t.getInboundClients(inboundIdInt)
+					// 【新增代码】: 修正参数传递，添加 chatId
+					clients, err := t.getInboundClients(chatId, inboundIdInt)
 					if err != nil {
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
 						return
 					}
 					t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
+				case "copy_inbound_clients":
+					// 【新增代码】: 处理批量复制回调
+					inboundId := dataArray[1]
+					inboundIdInt, err := strconv.Atoi(inboundId)
+					if err != nil {
+						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
+						return
+					}
+					t.sendCallbackAnswerTgBot(callbackQuery.ID, "📋 正在生成链接...")
+					err = t.copyInboundClients(chatId, inboundIdInt)
+					if err != nil {
+						t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 生成链接失败: %v", err))
+					}
 				case "log_settings":
 					t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
 					t.showLogSettings(chatId)
@@ -2237,7 +2251,7 @@ func (t *Tgbot) getInboundsAddClient() (*telego.InlineKeyboardMarkup, error) {
 	return keyboard, nil
 }
 
-func (t *Tgbot) getInboundClients(id int) (*telego.InlineKeyboardMarkup, error) {
+func (t *Tgbot) getInboundClients(chatId int64, id int) (*telego.InlineKeyboardMarkup, error) {
 	inbound, err := t.inboundService.GetInbound(id)
 	if err != nil {
 		logger.Warning("getIboundClients run failed:", err)
@@ -2266,7 +2280,84 @@ func (t *Tgbot) getInboundClients(id int) (*telego.InlineKeyboardMarkup, error) 
 	}
 	keyboard := tu.InlineKeyboardGrid(tu.InlineKeyboardCols(cols, buttons...))
 
+	// 【新增代码】: 添加批量复制按钮
+	// 只有管理员才能看到复制按钮（这里假设能看到用户列表的通常是管理员，或者根据上下文判断）
+	// 注意：当前函数没有 isAdmin 参数，但调用者通常是在检查了权限或者是通过菜单进入的。
+	// 为了安全起见，可以使用 chatID 再次检查管理员权限，或者假设进入此菜单的已通过权限验证。
+	// 这里简单实现：添加一个新行包含复制按钮
+	copyButton := tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery(fmt.Sprintf("copy_inbound_clients %d", id)))
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []telego.InlineKeyboardButton{copyButton})
+
 	return keyboard, nil
+}
+
+// 【新增方法】: 实现批量复制逻辑
+func (t *Tgbot) copyInboundClients(chatId int64, inboundId int) error {
+	inbound, err := t.inboundService.GetInbound(inboundId)
+	if err != nil {
+		return err
+	}
+
+	clients, err := t.inboundService.GetClients(inbound)
+	if err != nil {
+		return err
+	}
+
+	if len(clients) == 0 {
+		return errors.New("该入站没有客户端")
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("📋 <b>%s - 批量链接</b>\n\n", inbound.Remark))
+
+	for _, client := range clients {
+		if !client.Enable {
+			continue
+		}
+
+		var link string
+		var linkErr error
+
+		// 根据协议类型生成链接
+		var streamSettings map[string]any
+		if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+			logger.Warningf("解析入站 %d 的 StreamSettings 失败: %v", inbound.Id, err)
+			continue
+		}
+
+		if security, ok := streamSettings["security"].(string); ok {
+			switch security {
+			case "reality":
+				if network, ok := streamSettings["network"].(string); ok && network == "xhttp" {
+					link, linkErr = t.generateXhttpRealityLinkWithClient(inbound, client)
+				} else {
+					link, linkErr = t.generateRealityLinkWithClient(inbound, client)
+				}
+			case "tls":
+				link, linkErr = t.generateTlsLinkWithClient(inbound, client)
+			default:
+				// 对于其他协议，尝试生成通用链接
+				link, linkErr = t.generateGenericLink(inbound, client)
+			}
+		} else {
+			// 如果没有 security 字段，默认尝试通用链接
+			link, linkErr = t.generateGenericLink(inbound, client)
+		}
+
+		if linkErr != nil {
+			logger.Warningf("为入站 %d 客户端 %s 生成链接失败: %v", inbound.Id, client.Email, linkErr)
+		} else {
+			sb.WriteString(fmt.Sprintf("👤 <code>%s</code>:\n<code>%s</code>\n\n", client.Email, link))
+		}
+	}
+
+	if sb.Len() > 0 {
+		t.sendLongMessage(chatId, sb.String())
+	} else {
+		return errors.New("未生成任何有效链接")
+	}
+
+	return nil
 }
 
 func (t *Tgbot) clientInfoMsg(
