@@ -170,7 +170,7 @@ jobs:
       - name: Run E2E test (${{ matrix.test }})
         run: |
           chmod +x tests/e2e/runner.sh
-          ./tests/e2e/runner.sh --mode local --test ${{ matrix.test }} --skip-build --skip-docker-build
+          ./tests/e2e/runner.sh --mode local --test ${{ matrix.test }} --skip-build --skip-docker-build --keep-artifact
 
   # ===============================================================
   # Linux 平台的构建任务
