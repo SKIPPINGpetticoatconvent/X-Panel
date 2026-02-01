@@ -344,29 +344,10 @@ func (t *Tgbot) copyAllLinks(chatId int64) error {
 	// 将所有链接合并为单个字符串
 	allLinksText := strings.Join(allLinks, "\n")
 
-	// Base64 编码
-	encodedData := base64.StdEncoding.EncodeToString([]byte(allLinksText))
+	t.SendMsgToTgbot(chatId, "📋 <b>所有节点链接</b>\n👇 复制下方内容即可导入：")
 
-	t.SendMsgToTgbot(chatId, "📋 <b>所有节点链接 (Base64)</b>\n👇 复制下方内容即可导入：")
-
-	// 检查消息长度，如果超过限制则分段发送
-	const maxMessageLength = 4000 // Telegram 消息限制
-	if len(encodedData) <= maxMessageLength {
-		t.SendMsgToTgbot(chatId, encodedData)
-	} else {
-		// 分段发送 Base64 字符串
-		// 注意：直接按长度切分即可，Base64 只是字符串
-		dataRunes := []rune(encodedData)
-		totalLength := len(dataRunes)
-
-		for i := 0; i < totalLength; i += maxMessageLength {
-			end := i + maxMessageLength
-			if end > totalLength {
-				end = totalLength
-			}
-			t.SendMsgToTgbot(chatId, string(dataRunes[i:end]))
-		}
-	}
+	// 使用 sendLongMessage 分段发送内容
+	t.sendLongMessage(chatId, allLinksText)
 
 	return nil
 }
