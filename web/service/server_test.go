@@ -82,10 +82,10 @@ func TestNormalizeCountryCode(t *testing.T) {
 		{"Singapore", "SG"},
 		{"Hong Kong", "HK"},
 		{"Taiwan", "TW"},
-		{"us", "US"},                // 小写转大写
-		{"jp", "JP"},                // 两字母代码直接返回
+		{"us", "US"}, // 小写转大写
+		{"jp", "JP"}, // 两字母代码直接返回
 		{"Unknown Country", "Unknown"},
-		{"  US  ", "US"},            // 空格处理
+		{"  US  ", "US"}, // 空格处理
 	}
 
 	for _, tt := range tests {

@@ -132,9 +132,9 @@ func TestAllSetting_CheckValid_PathNormalization(t *testing.T) {
 	s := &AllSetting{
 		WebPort:      8080,
 		SubPort:      8443,
-		WebBasePath:  "panel",   // 缺少 / 前缀和后缀
-		SubPath:      "sub",     // 缺少 / 前缀和后缀
-		SubJsonPath:  "json",    // 缺少 / 前缀和后缀
+		WebBasePath:  "panel", // 缺少 / 前缀和后缀
+		SubPath:      "sub",   // 缺少 / 前缀和后缀
+		SubJsonPath:  "json",  // 缺少 / 前缀和后缀
 		TimeLocation: "UTC",
 	}
 

@@ -6,12 +6,12 @@ import (
 
 func TestInbound_GenXrayInboundConfig(t *testing.T) {
 	tests := []struct {
-		name           string
-		inbound        Inbound
-		wantPort       int
-		wantProtocol   string
-		wantTag        string
-		wantListenStr  string // Listen 字段的字符串表示
+		name          string
+		inbound       Inbound
+		wantPort      int
+		wantProtocol  string
+		wantTag       string
+		wantListenStr string // Listen 字段的字符串表示
 	}{
 		{
 			name: "带 Listen IP",

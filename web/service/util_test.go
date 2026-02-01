@@ -6,10 +6,10 @@ import (
 
 func TestGenerateRealityServerNames(t *testing.T) {
 	tests := []struct {
-		name     string
-		host     string
-		wantLen  int
-		wantFirst string
+		name       string
+		host       string
+		wantLen    int
+		wantFirst  string
 		wantSecond string
 	}{
 		{

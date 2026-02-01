@@ -14,6 +14,7 @@ import (
 	"x-ui/config"
 	"x-ui/database/model"
 	"x-ui/util/crypto"
+	"x-ui/util/json_util"
 	"x-ui/xray"
 
 	"gorm.io/driver/sqlite"
@@ -85,6 +86,14 @@ func runSeeders(isUsersEmpty bool) error {
 	} else {
 		var seedersHistory []string
 		db.Model(&model.HistoryOfSeeders{}).Pluck("seeder_name", &seedersHistory)
+
+		if !slices.Contains(seedersHistory, "TlsConfigMigration") {
+			if err := migrateTlsInbounds(); err != nil {
+				log.Printf("TlsConfigMigration seeder failed: %v", err)
+				return err
+			}
+			db.Create(&model.HistoryOfSeeders{SeederName: "TlsConfigMigration"})
+		}
 
 		if !slices.Contains(seedersHistory, "UserPasswordHash") && !isUsersEmpty {
 			var users []model.User
@@ -200,6 +209,29 @@ func Checkpoint() error {
 	err := db.Exec("PRAGMA wal_checkpoint;").Error
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// migrateTlsInbounds performs a one-time database migration for all inbound records,
+// applying TLS configuration changes (remove allowInsecure, migrate verifyPeerCertInNames,
+// migrate pinnedPeerCertSha256 separator) directly in the database.
+func migrateTlsInbounds() error {
+	var inbounds []model.Inbound
+	if err := db.Find(&inbounds).Error; err != nil {
+		return err
+	}
+	for _, inbound := range inbounds {
+		if inbound.StreamSettings == "" {
+			continue
+		}
+		raw := json_util.RawMessage(inbound.StreamSettings)
+		if xray.MigrateTlsSettings(&raw) {
+			if err := db.Model(&model.Inbound{}).Where("id = ?", inbound.Id).
+				Update("stream_settings", string(raw)).Error; err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

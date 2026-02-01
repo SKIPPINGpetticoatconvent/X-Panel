@@ -110,15 +110,15 @@ func TestConfig_Equals(t *testing.T) {
 		{
 			name: "相同配置",
 			a: Config{
-				LogConfig:   json_util.RawMessage(`{"loglevel":"warning"}`),
-				DNSConfig:   json_util.RawMessage(`{"servers":["8.8.8.8"]}`),
+				LogConfig: json_util.RawMessage(`{"loglevel":"warning"}`),
+				DNSConfig: json_util.RawMessage(`{"servers":["8.8.8.8"]}`),
 				InboundConfigs: []InboundConfig{
 					{Port: 443, Protocol: "vless", Tag: "in-1"},
 				},
 			},
 			b: Config{
-				LogConfig:   json_util.RawMessage(`{"loglevel":"warning"}`),
-				DNSConfig:   json_util.RawMessage(`{"servers":["8.8.8.8"]}`),
+				LogConfig: json_util.RawMessage(`{"loglevel":"warning"}`),
+				DNSConfig: json_util.RawMessage(`{"servers":["8.8.8.8"]}`),
 				InboundConfigs: []InboundConfig{
 					{Port: 443, Protocol: "vless", Tag: "in-1"},
 				},

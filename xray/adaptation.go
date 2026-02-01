@@ -23,6 +23,13 @@ func (c *Config) AdaptToXrayCoreV25() error {
 							delete(tls, "allowInsecure")
 							modified = true
 						}
+						// Migrate pinnedPeerCertSha256 separator: ~ → ,
+						if pinned, ok := tls["pinnedPeerCertSha256"].(string); ok {
+							if strings.Contains(pinned, "~") {
+								tls["pinnedPeerCertSha256"] = strings.ReplaceAll(pinned, "~", ",")
+								modified = true
+							}
+						}
 					}
 				}
 			}
@@ -34,18 +41,21 @@ func (c *Config) AdaptToXrayCoreV25() error {
 		}
 	}
 
-	// Sanitize Inbounds: Migrate verifyPeerCertInNames -> verifyPeerCertByName
+	// Sanitize Inbounds: Migrate TLS settings (verifyPeerCertInNames, allowInsecure, pinnedPeerCertSha256)
 	for i := range c.InboundConfigs {
-		migrateTlsSettings(&c.InboundConfigs[i].StreamSettings)
+		MigrateTlsSettings(&c.InboundConfigs[i].StreamSettings)
 	}
 
 	return nil
 }
 
-// migrateTlsSettings renames verifyPeerCertInNames to verifyPeerCertByName
-// and converts the value from []string to a comma-separated string.
+// MigrateTlsSettings performs all TLS-related migrations on a streamSettings JSON blob:
+//   - verifyPeerCertInNames ([]string) → verifyPeerCertByName (comma-separated string)
+//   - Remove allowInsecure from inbound tlsSettings
+//   - Migrate pinnedPeerCertSha256 separator from ~ to ,
+//
 // Returns true if the data was modified.
-func migrateTlsSettings(raw *json_util.RawMessage) bool {
+func MigrateTlsSettings(raw *json_util.RawMessage) bool {
 	if len(*raw) == 0 {
 		return false
 	}
@@ -58,34 +68,58 @@ func migrateTlsSettings(raw *json_util.RawMessage) bool {
 		return false
 	}
 
-	oldVal, exists := tls["verifyPeerCertInNames"]
-	if !exists {
-		return false
-	}
+	modified := false
 
-	// Convert []any to comma-separated string
-	var newVal string
-	switch v := oldVal.(type) {
-	case []any:
-		parts := make([]string, 0, len(v))
-		for _, item := range v {
-			parts = append(parts, fmt.Sprint(item))
+	// (A) verifyPeerCertInNames → verifyPeerCertByName
+	if oldVal, exists := tls["verifyPeerCertInNames"]; exists {
+		var newVal string
+		switch v := oldVal.(type) {
+		case []any:
+			parts := make([]string, 0, len(v))
+			for _, item := range v {
+				parts = append(parts, fmt.Sprint(item))
+			}
+			newVal = strings.Join(parts, ",")
+		case string:
+			newVal = v
+		default:
+			newVal = fmt.Sprint(v)
 		}
-		newVal = strings.Join(parts, ",")
-	case string:
-		newVal = v
-	default:
-		newVal = fmt.Sprint(v)
+		delete(tls, "verifyPeerCertInNames")
+		if newVal != "" {
+			tls["verifyPeerCertByName"] = newVal
+		}
+		modified = true
 	}
 
-	delete(tls, "verifyPeerCertInNames")
-	if newVal != "" {
-		tls["verifyPeerCertByName"] = newVal
+	// (B) Remove allowInsecure from inbound tlsSettings
+	if _, exists := tls["allowInsecure"]; exists {
+		delete(tls, "allowInsecure")
+		modified = true
 	}
 
-	if newData, err := json.Marshal(stream); err == nil {
-		*raw = json_util.RawMessage(newData)
-		return true
+	// (C) Migrate pinnedPeerCertSha256 separator: ~ → ,
+	// In inbound config, pinnedPeerCertSha256 is nested under tlsSettings.settings
+	if settings, ok := tls["settings"].(map[string]any); ok {
+		if pinned, ok := settings["pinnedPeerCertSha256"].(string); ok {
+			if strings.Contains(pinned, "~") {
+				settings["pinnedPeerCertSha256"] = strings.ReplaceAll(pinned, "~", ",")
+				modified = true
+			}
+		}
 	}
-	return false
+	// In outbound config, pinnedPeerCertSha256 is directly under tlsSettings
+	if pinned, ok := tls["pinnedPeerCertSha256"].(string); ok {
+		if strings.Contains(pinned, "~") {
+			tls["pinnedPeerCertSha256"] = strings.ReplaceAll(pinned, "~", ",")
+			modified = true
+		}
+	}
+
+	if modified {
+		if newData, err := json.Marshal(stream); err == nil {
+			*raw = json_util.RawMessage(newData)
+		}
+	}
+	return modified
 }

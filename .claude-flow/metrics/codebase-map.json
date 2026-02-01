@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-01T09:07:28.934Z",
+  "timestamp": "2026-02-01T09:22:29.035Z",
   "projectRoot": "/home/ub/X-Panel",
   "structure": {
     "hasPackageJson": true,
@@ -7,5 +7,5 @@
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1769936848934
+  "scannedAt": 1769937749035
 }

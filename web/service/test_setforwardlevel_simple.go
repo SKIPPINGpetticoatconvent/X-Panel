@@ -54,9 +54,9 @@ func TestLogForwarder_LevelComparison(t *testing.T) {
 
 	// 测试级别比较：数值越小，级别越高
 	tests := []struct {
-		name     string
-		setLevel logging.Level
-		testLog  logging.Level
+		name       string
+		setLevel   logging.Level
+		testLog    logging.Level
 		shouldSkip bool
 	}{
 		{"ERROR > INFO", logging.INFO, logging.ERROR, false},
