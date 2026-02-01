@@ -10,6 +10,8 @@ IMAGE_NAME="xpanel-e2e-image"
 
 # Default Mode
 MODE="local"
+SKIP_BUILD=false
+KEEP_ARTIFACT=false
 XPANEL_VERSION=$(tr -d '\n' <"${PROJECT_ROOT}/config/version")
 
 # Parse Args
@@ -20,6 +22,16 @@ while [[ $# -gt 0 ]]; do
   --mode)
     MODE="$2"
     shift
+    ;;
+  --container-name)
+    CONTAINER_NAME="$2"
+    shift
+    ;;
+  --skip-build)
+    SKIP_BUILD=true
+    ;;
+  --keep-artifact)
+    KEEP_ARTIFACT=true
     ;;
   --test)
     TEST_CASE="$2"
@@ -61,7 +73,9 @@ echo "=========================================="
 cleanup() {
   echo ">> Cleaning up..."
   docker rm -f ${CONTAINER_NAME} >/dev/null 2>&1 || true
-  rm -f "${PROJECT_ROOT}/x-ui-linux-amd64.tar.gz"
+  if [ "$KEEP_ARTIFACT" = false ]; then
+    rm -f "${PROJECT_ROOT}/x-ui-linux-amd64.tar.gz"
+  fi
 }
 # Trap exit to ensure cleanup (optional, maybe we want to inspect failed container)
 # trap cleanup EXIT
@@ -69,7 +83,7 @@ cleanup() {
 cleanup
 
 # 1. Build Binary (Local Mode Only)
-if [ "${MODE}" == "local" ]; then
+if [ "${MODE}" == "local" ] && [ "$SKIP_BUILD" = false ]; then
   echo ">> [Host] Building x-ui binary..."
   cd "${PROJECT_ROOT}"
 
