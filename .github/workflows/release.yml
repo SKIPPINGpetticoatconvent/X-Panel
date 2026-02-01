@@ -129,7 +129,15 @@ jobs:
           cd ..
           rm -rf release_temp x-ui
 
+      - name: Cache E2E Docker Image
+        id: cache-e2e-image
+        uses: actions/cache@v4
+        with:
+          path: xpanel-e2e-image.tar
+          key: e2e-image-${{ runner.os }}-${{ hashFiles('tests/e2e/docker/Dockerfile.ubuntu22') }}
+
       - name: Build Docker image and export
+        if: steps.cache-e2e-image.outputs.cache-hit != 'true'
         run: |
           docker build -t xpanel-e2e-image -f tests/e2e/docker/Dockerfile.ubuntu22 .
           docker save xpanel-e2e-image -o xpanel-e2e-image.tar
