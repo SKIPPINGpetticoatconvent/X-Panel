@@ -1918,6 +1918,9 @@ func (t *Tgbot) showMenuUsers(chatId int64, messageId int) {
 			tu.InlineKeyboardButton("📋 入站列表").WithCallbackData(t.encodeQuery("inbounds")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📋 批量复制链接").WithCallbackData(t.encodeQuery("copy_all_links")),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🚀 一键配置").WithCallbackData(t.encodeQuery("oneclick_options")),
 		),
 		tu.InlineKeyboardRow(
