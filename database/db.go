@@ -95,6 +95,14 @@ func runSeeders(isUsersEmpty bool) error {
 			db.Create(&model.HistoryOfSeeders{SeederName: "TlsConfigMigration"})
 		}
 
+		if !slices.Contains(seedersHistory, "XhttpFlowMigration") {
+			if err := migrateXhttpFlow(); err != nil {
+				log.Printf("XhttpFlowMigration seeder failed: %v", err)
+				return err
+			}
+			db.Create(&model.HistoryOfSeeders{SeederName: "XhttpFlowMigration"})
+		}
+
 		if !slices.Contains(seedersHistory, "UserPasswordHash") && !isUsersEmpty {
 			var users []model.User
 			db.Find(&users)
@@ -231,6 +239,33 @@ func migrateTlsInbounds() error {
 				Update("stream_settings", string(raw)).Error; err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// migrateXhttpFlow performs a one-time database migration for all VLESS inbounds,
+// adding "flow": "xtls-rprx-vision" to clients if they are using XHTTP and TLS/Reality.
+func migrateXhttpFlow() error {
+	var inbounds []model.Inbound
+	// Only check VLESS protocol
+	if err := db.Where("protocol = ?", "vless").Find(&inbounds).Error; err != nil {
+		return err
+	}
+
+	for _, inbound := range inbounds {
+		if inbound.Settings == "" || inbound.StreamSettings == "" {
+			continue
+		}
+		settingsRaw := json_util.RawMessage(inbound.Settings)
+		streamRaw := json_util.RawMessage(inbound.StreamSettings)
+
+		if xray.MigrateXhttpFlowInSettings(&settingsRaw, streamRaw) {
+			if err := db.Model(&model.Inbound{}).Where("id = ?", inbound.Id).
+				Update("settings", string(settingsRaw)).Error; err != nil {
+				return err
+			}
+			log.Printf("Migrated XHTTP Flow for inbound %d (%s)", inbound.Id, inbound.Remark)
 		}
 	}
 	return nil

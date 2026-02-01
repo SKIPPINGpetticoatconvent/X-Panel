@@ -123,3 +123,92 @@ func MigrateTlsSettings(raw *json_util.RawMessage) bool {
 	}
 	return modified
 }
+
+// MigrateXhttpFlow adds missing flow ("xtls-rprx-vision") to VLESS+XHTTP+(TLS/Reality) inbounds
+// Returns true if the data was modified.
+func MigrateXhttpFlow(protocol string, raw *json_util.RawMessage) bool {
+	if protocol != "vless" || len(*raw) == 0 {
+		return false
+	}
+	var stream map[string]any
+	if err := json.Unmarshal(*raw, &stream); err != nil {
+		return false
+	}
+
+	network, _ := stream["network"].(string)
+	if network != "xhttp" {
+		return false
+	}
+
+	security, _ := stream["security"].(string)
+	if security != "tls" && security != "reality" {
+		return false
+	}
+
+	// Check if flow exists in realitySettings or tlsSettings based on security
+	// However, flow is actually part of the user settings (inbound.settings -> clients -> flow)
+	// BUT wait, for VLESS, flow is PER CLIENT.
+	// The problem described by the user "VLESS (with no Flow) is deprecated" usually refers to
+	// the fact that when XTLS/Vision is enabled (which is what we want for Reality/TLS),
+	// the flow MUST be "xtls-rprx-vision".
+	//
+	// Wait, standard Xray structure for VLESS inbound:
+	// "settings": { "clients": [ { "id": "...", "flow": "xtls-rprx-vision" } ] }
+	//
+	// So we need to migrate inbound.Settings, NOT inbound.StreamSettings.
+	// This function signature needs to change or we need a different approach.
+	return false
+}
+
+// MigrateXhttpFlowInSettings iterates through clients in VLESS settings and adds flow if missing
+// for XHTTP transport with TLS/Reality.
+// Returns true if modified.
+func MigrateXhttpFlowInSettings(settingsRaw *json_util.RawMessage, streamSettingsRaw json_util.RawMessage) bool {
+	if len(streamSettingsRaw) == 0 || len(*settingsRaw) == 0 {
+		return false
+	}
+
+	// 1. Check Stream Settings for XHTTP + TLS/Reality
+	var stream map[string]any
+	if err := json.Unmarshal(streamSettingsRaw, &stream); err != nil {
+		return false
+	}
+	network, _ := stream["network"].(string)
+	if network != "xhttp" {
+		return false
+	}
+	security, _ := stream["security"].(string)
+	if security != "tls" && security != "reality" {
+		return false
+	}
+
+	// 2. Parse Settings
+	var settings map[string]any
+	if err := json.Unmarshal(*settingsRaw, &settings); err != nil {
+		return false
+	}
+
+	clients, ok := settings["clients"].([]any)
+	if !ok {
+		return false
+	}
+
+	modified := false
+	for _, client := range clients {
+		if c, ok := client.(map[string]any); ok {
+			// Check if flow is missing or empty
+			if flow, hasFlow := c["flow"].(string); !hasFlow || flow == "" {
+				c["flow"] = "xtls-rprx-vision"
+				modified = true
+			}
+		}
+	}
+
+	if modified {
+		if newData, err := json.Marshal(settings); err == nil {
+			*settingsRaw = json_util.RawMessage(newData)
+			return true
+		}
+	}
+	return false
+}

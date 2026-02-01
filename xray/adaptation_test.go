@@ -214,3 +214,41 @@ func TestConfig_AdaptVerifyPeerCertInNames(t *testing.T) {
 		t.Errorf("corrupted other fields. Config: %s", out)
 	}
 }
+
+func TestMigrateXhttpFlowInSettings(t *testing.T) {
+	// 1. Valid case: XHTTP + TLS, missing flow -> should add
+	streamSettings := `{"network": "xhttp", "security": "tls"}`
+	settings := `{"clients": [{"id": "uuid1", "flow": ""}, {"id": "uuid2"}]}`
+	settingsRaw := json_util.RawMessage(settings)
+
+	modified := MigrateXhttpFlowInSettings(&settingsRaw, json_util.RawMessage(streamSettings))
+	if !modified {
+		t.Errorf("expected modified=true, got false")
+	}
+	if !strings.Contains(string(settingsRaw), `"flow":"xtls-rprx-vision"`) {
+		t.Errorf("expected flow to be added, got: %s", string(settingsRaw))
+	}
+
+	// 2. Case: Not XHTTP -> should skip
+	streamSettingsInfo := `{"network": "tcp", "security": "tls"}`
+	settingsInfo := `{"clients": [{"id": "uuid1", "flow": ""}]}`
+	settingsRawInfo := json_util.RawMessage(settingsInfo)
+	if MigrateXhttpFlowInSettings(&settingsRawInfo, json_util.RawMessage(streamSettingsInfo)) {
+		t.Errorf("expected not modified for non-xhttp network")
+	}
+
+	// 3. Case: XHTTP + None security -> should skip
+	streamSettingsNone := `{"network": "xhttp", "security": "none"}`
+	settingsRawNone := json_util.RawMessage(settingsInfo)
+	if MigrateXhttpFlowInSettings(&settingsRawNone, json_util.RawMessage(streamSettingsNone)) {
+		t.Errorf("expected not modified for none security")
+	}
+
+	// 4. Case: Already has flow -> should skip
+	streamSettingsHas := `{"network": "xhttp", "security": "tls"}`
+	settingsHas := `{"clients": [{"id": "uuid1", "flow": "xtls-rprx-vision"}]}`
+	settingsRawHas := json_util.RawMessage(settingsHas)
+	if MigrateXhttpFlowInSettings(&settingsRawHas, json_util.RawMessage(streamSettingsHas)) {
+		t.Errorf("expected not modified when flow exists")
+	}
+}
