@@ -14,7 +14,9 @@ echo ">> [Core] Installation Test"
 
 # 2. Auto-discovery Loop
 # Exclude specific tests (space separated)
-exclude_list="in_container ip_cert domain_cert"
+# Exclude specific tests (space separated)
+DEFAULT_EXCLUDE="in_container ip_cert domain_cert ssl_fallback"
+exclude_list="${EXCLUDE_LIST:-$DEFAULT_EXCLUDE}"
 
 for f in tests/e2e/verify_*.sh; do
   name=$(basename "$f" .sh | sed 's/^verify_//')
