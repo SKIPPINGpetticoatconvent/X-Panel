@@ -83,6 +83,20 @@ func (t *Tgbot) checkBBRSupport() (string, bool, error) {
 func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool) {
 	chatId := callbackQuery.Message.GetChat().ID
 
+	// 优先处理对所有用户开放的命令（无需 Admin 权限）
+	decodedQueryCommon, err := t.decodeQuery(callbackQuery.Data)
+	if err == nil {
+		dataArrayCommon := strings.Split(decodedQueryCommon, " ")
+		if len(dataArrayCommon) > 0 && dataArrayCommon[0] == "copy_all_links" {
+			t.sendCallbackAnswerTgBot(callbackQuery.ID, "📋 正在生成所有客户端链接...")
+			err := t.copyAllLinks(chatId)
+			if err != nil {
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 生成链接失败: %v", err))
+			}
+			return
+		}
+	}
+
 	if isAdmin {
 		// get query from hash storage
 		decodedQuery, err := t.decodeQuery(callbackQuery.Data)
@@ -1450,13 +1464,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "update_xray_cancel":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
-		return
-	case "copy_all_links":
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "📋 正在生成所有客户端链接...")
-		err := t.copyAllLinks(chatId)
-		if err != nil {
-			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 生成链接失败: %v", err))
-		}
 		return
 
 	// 【新增代码】: 处理机器优化一键方案相关回调
