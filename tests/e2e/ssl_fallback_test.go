@@ -25,13 +25,16 @@ func (s *E2ETestSuite) TestSSLFallback() {
 	s.execCommand([]string{"systemctl", "restart", "x-ui"})
 	time.Sleep(5 * time.Second)
 
-	// 4. 等待 CertMonitorJob 触发 (模拟等待 70s)
-	// 原脚本中等待 70s 是为了跨过每分钟的 :05 定时任务
-	s.T().Log("Waiting for CertMonitorJob to trigger (Simulating 70s wait)...")
-	// 注意：在实际测试中，我们可能希望手动触发该 Job 提高效率，但为了 100% 还原 Shell 逻辑先等待。
-	time.Sleep(70 * time.Second)
+	// 4. Trigger CertMonitorJob immediately via SIGUSR2 signal
+	s.T().Log("Triggering CertMonitorJob via SIGUSR2 signal...")
+	_, _, err := s.execCommand([]string{"bash", "-c", "kill -SIGUSR2 $(pgrep x-ui)"})
+	s.Require().NoError(err, "Failed to send SIGUSR2 to x-ui")
 
-	// 5. 验证是否回退
+	// 5. Wait a short time for the job to complete and the panel to potentially restart
+	s.T().Log("Waiting for job execution and potential restart...")
+	time.Sleep(5 * time.Second)
+
+	// 6. Verify fallback
 	s.T().Log("Verifying fallback results...")
 	dbPath := "/etc/x-ui/x-ui.db"
 	_, newCertPath, _ := s.execCommand([]string{"sqlite3", dbPath, "SELECT value FROM settings WHERE key='webCertFile';"})

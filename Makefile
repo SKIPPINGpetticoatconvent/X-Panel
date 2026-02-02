@@ -20,18 +20,15 @@ test:
 	@echo "Running unit tests..."
 	go test ./...
 
-# 运行 E2E 测试 (Local Mode)
-# 自动编译并模拟安装验证
+# 运行 E2E 测试
 e2e:
-	@chmod +x tests/e2e/run_suite.sh
-	@./tests/e2e/run_suite.sh
+	@echo "Running E2E tests (Standard)..."
+	go test -v -timeout 15m ./tests/e2e/...
 
-# 运行 E2E 测试 (Online Mode)
-# 从 GitHub 下载真实 release 进行验证
-e2e-online:
-	@echo "Running E2E Installation Test (Online Mode)..."
-	chmod +x tests/e2e/runner.sh
-	./tests/e2e/runner.sh --mode online
+# 运行特定 E2E 安装测试
+e2e-install:
+	@echo "Running E2E Installation Test..."
+	go test -v ./tests/e2e/... -run TestE2E/TestInstallation
 
 # 清理构建产物
 clean:

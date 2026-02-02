@@ -41,14 +41,22 @@ func (s *E2ETestSuite) SetupSuite() {
 	_, filename, _, _ := runtime.Caller(0)
 	s.projectRoot = filepath.Join(filepath.Dir(filename), "../..")
 
-	// 定义容器请求
-	req := testcontainers.ContainerRequest{
-		FromDockerfile: testcontainers.FromDockerfile{
+	// Determine if we should use a pre-built image or build from Dockerfile
+	imageName := os.Getenv("E2E_IMAGE")
+	fromDockerfile := testcontainers.FromDockerfile{}
+	if imageName == "" {
+		fromDockerfile = testcontainers.FromDockerfile{
 			Context:    s.projectRoot,
 			Dockerfile: "tests/e2e/docker/Dockerfile.ubuntu22",
 			KeepImage:  false,
-		},
-		Privileged: true,
+		}
+	}
+
+	// 定义容器请求
+	req := testcontainers.ContainerRequest{
+		Image:          imageName,
+		FromDockerfile: fromDockerfile,
+		Privileged:     true,
 		Mounts: testcontainers.Mounts(
 			testcontainers.ContainerMount{
 				Source: testcontainers.GenericBindMountSource{HostPath: "/sys/fs/cgroup"},

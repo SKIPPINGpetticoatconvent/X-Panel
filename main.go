@@ -171,6 +171,7 @@ func runWebServer() {
 		}
 	}()
 
+	var monitorJob *job.CertMonitorJob
 	// 启动 SSL 证书监控任务 (每6小时检查一次)
 	go func() {
 		// 等待系统完全启动
@@ -185,7 +186,7 @@ func runWebServer() {
 		tgMu.RUnlock()
 
 		certSettingService := service.SettingService{}
-		monitorJob := job.NewCertMonitorJob(certSettingService, tgSvc)
+		monitorJob = job.NewCertMonitorJob(certSettingService, tgSvc)
 
 		// 启动时立即运行一次检查
 		monitorJob.Run()
@@ -198,11 +199,16 @@ func runWebServer() {
 
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
-	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM)
+	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGUSR2)
 	for {
 		sig := <-sigCh
 
 		switch sig {
+		case syscall.SIGUSR2:
+			if monitorJob != nil {
+				logger.Info("Received SIGUSR2 signal. Triggering CertMonitorJob manually...")
+				monitorJob.Run()
+			}
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP signal. Restarting servers...")
 
