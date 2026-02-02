@@ -13,7 +13,6 @@ import (
 	_ "unsafe"
 
 	// 中文注释: 新增了 time 和 x-ui/job 的导入，这是运行定时任务所必需的包
-	"time"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -160,31 +159,29 @@ func runWebServer() {
 	checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgSvc, checkSettingService)
 	// 注册并启动后台任务
 	jobManager.Register(checkJob)
-	jobManager.StartAll()
 
 	// 初始化 CertMonitorJob (提前初始化以支持 SIGUSR2 信号触发)
-	tgMu.RLock()
-	tgSvc = tgBotService
-	tgMu.RUnlock()
 	certSettingService := service.SettingService{}
 	monitorJob := job.NewCertMonitorJob(certSettingService, tgSvc)
+	jobManager.Register(monitorJob)
 
-	// 启动 SSL 证书监控任务 (每6小时检查一次)
-	go func() {
-		// 等待系统完全启动
-		time.Sleep(1 * time.Minute)
+	// 初始化 XrayTrafficJob
+	trafficJob := job.NewXrayTrafficJob(&xrayService, &inboundService, &outboundService)
+	jobManager.Register(trafficJob)
 
-		ticker := time.NewTicker(6 * time.Hour)
-		defer ticker.Stop()
+	// 初始化 CheckXrayRunningJob
+	xrayRunningJob := job.NewCheckXrayRunningJob(&xrayService)
+	jobManager.Register(xrayRunningJob)
 
-		// 启动时立即运行一次检查
-		monitorJob.Run()
+	// 初始化 ClearLogsJob
+	clearLogsJob := job.NewClearLogsJob()
+	jobManager.Register(clearLogsJob)
 
-		for {
-			<-ticker.C
-			monitorJob.Run()
-		}
-	}()
+	// 初始化 XrayRestartJob (Config Watcher)
+	restartJob := job.NewXrayRestartJob(&xrayService)
+	jobManager.Register(restartJob)
+
+	jobManager.StartAll()
 
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals

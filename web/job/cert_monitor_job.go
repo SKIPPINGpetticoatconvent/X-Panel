@@ -1,6 +1,7 @@
 package job
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"x-ui/logger"
@@ -24,14 +26,61 @@ type CertMonitorJob struct {
 	settingService  service.SettingService
 	panelService    service.PanelService
 	telegramService service.TelegramService
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 func NewCertMonitorJob(settingService service.SettingService, telegramService service.TelegramService) *CertMonitorJob {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &CertMonitorJob{
 		settingService:  settingService,
 		telegramService: telegramService,
 		panelService:    service.PanelService{},
+		ctx:             ctx,
+		cancel:          cancel,
 	}
+}
+
+func (j *CertMonitorJob) Name() string {
+	return "CertMonitorJob"
+}
+
+func (j *CertMonitorJob) Start() error {
+	j.wg.Add(1)
+	go func() {
+		defer j.wg.Done()
+
+		// 初始延迟等待系统启动
+		select {
+		case <-time.After(1 * time.Minute):
+		case <-j.ctx.Done():
+			return
+		}
+
+		// 立即执行一次
+		j.Run()
+
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				j.Run()
+			case <-j.ctx.Done():
+				return
+			}
+		}
+	}()
+	return nil
+}
+
+func (j *CertMonitorJob) Stop() error {
+	j.cancel()
+	j.wg.Wait()
+	return nil
 }
 
 // Run executes the certificate check
