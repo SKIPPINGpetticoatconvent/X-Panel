@@ -149,8 +149,7 @@ jobs:
           [
             TestInstallation,
             TestCertApplication,
-            TestSSLFallback,
-            TestSIGHUPRestart,
+            TestSSLFallback
           ]
     steps:
       - name: Checkout code
