@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 
 	//	"os/exec"
 	//	"strings"
@@ -197,16 +196,16 @@ func runWebServer() {
 
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
-	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGUSR2)
+	setupSignalHandler(sigCh)
 	for {
 		sig := <-sigCh
 
+		// 处理自定义信号 (如 SIGUSR2)
+		if handleCustomSignal(sig, monitorJob) {
+			continue
+		}
+
 		switch sig {
-		case syscall.SIGUSR2:
-			if monitorJob != nil {
-				logger.Info("Received SIGUSR2 signal. Triggering CertMonitorJob manually...")
-				monitorJob.Run()
-			}
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP signal. Restarting servers...")
 
