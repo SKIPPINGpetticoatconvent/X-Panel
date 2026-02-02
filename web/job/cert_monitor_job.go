@@ -36,6 +36,9 @@ func NewCertMonitorJob(settingService service.SettingService, telegramService se
 
 // Run executes the certificate check
 func (j *CertMonitorJob) Run() {
+	if j.telegramService == nil {
+		return
+	}
 	// Check if certificate is configured
 	certFile, err := j.settingService.GetCertFile()
 	if err != nil || certFile == "" {

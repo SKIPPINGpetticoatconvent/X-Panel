@@ -20,6 +20,10 @@ func NewXrayTrafficJob(xrayService *service.XrayService, inboundService *service
 }
 
 func (j *XrayTrafficJob) Run() {
+	if j.xrayService == nil || j.inboundService == nil || j.outboundService == nil {
+		return
+	}
+
 	if !j.xrayService.IsXrayRunning() {
 		return
 	}
