@@ -44,6 +44,11 @@ func (s *E2ETestSuite) TestSSLFallback() {
 
 	// 验证旧文件是否被清理
 	exitCode, _, _ := s.execCommand([]string{"ls", certPath})
+	if exitCode == 0 {
+		// If verification failed, print logs
+		_, logs, _ := s.execCommand([]string{"journalctl", "-u", "x-ui", "--no-pager", "-n", "2000"})
+		s.T().Logf("X-UI Service Logs:\n%s", logs)
+	}
 	s.NotEqual(0, exitCode, "Old certificate file should have been deleted")
 
 	s.T().Log("SSL Fallback E2E Test Passed!")
