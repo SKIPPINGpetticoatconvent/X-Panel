@@ -115,5 +115,8 @@ func (s *E2ETestSuite) execCommand(cmd []string) (int, string, error) {
 }
 
 func TestE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode.")
+	}
 	suite.Run(t, new(E2ETestSuite))
 }

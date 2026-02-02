@@ -252,3 +252,68 @@ func TestMigrateXhttpFlowInSettings(t *testing.T) {
 		t.Errorf("expected not modified when flow exists")
 	}
 }
+
+func TestMigrate_EdgeCases(t *testing.T) {
+	t.Run("Nil Input", func(t *testing.T) {
+		var raw json_util.RawMessage
+		modified := MigrateTlsSettings(&raw)
+		if modified {
+			t.Error("MigrateTlsSettings should not modify nil input")
+		}
+	})
+
+	t.Run("Empty Json", func(t *testing.T) {
+		raw := json_util.RawMessage(`{}`)
+		modified := MigrateTlsSettings(&raw)
+		if modified {
+			t.Error("MigrateTlsSettings should not modify empty json without tlsSettings")
+		}
+	})
+
+	t.Run("Invalid verifyPeerCertInNames type", func(t *testing.T) {
+		raw := json_util.RawMessage(`{
+			"tlsSettings": {
+				"verifyPeerCertInNames": 123
+			}
+		}`)
+		modified := MigrateTlsSettings(&raw)
+		if !modified {
+			t.Error("expected modified=true for invalid type conversion")
+		}
+		if !strings.Contains(string(raw), `"verifyPeerCertByName":"123"`) {
+			t.Errorf("conversion failed: %s", string(raw))
+		}
+	})
+
+	t.Run("Missing pinnedPeerCertSha256 settings", func(t *testing.T) {
+		raw := json_util.RawMessage(`{
+			"tlsSettings": {
+				"settings": {}
+			}
+		}`)
+		modified := MigrateTlsSettings(&raw)
+		if modified {
+			t.Error("should not modify when field is missing")
+		}
+	})
+}
+
+func TestMigrateXhttpFlowInSettings_EdgeCases(t *testing.T) {
+	t.Run("Missing clients field", func(t *testing.T) {
+		stream := json_util.RawMessage(`{"network": "xhttp", "security": "tls"}`)
+		settings := json_util.RawMessage(`{"other": "data"}`)
+		modified := MigrateXhttpFlowInSettings(&settings, stream)
+		if modified {
+			t.Error("expected modified=false when clients field is missing")
+		}
+	})
+
+	t.Run("Empty stream settings", func(t *testing.T) {
+		stream := json_util.RawMessage(``)
+		settings := json_util.RawMessage(`{"clients": []}`)
+		modified := MigrateXhttpFlowInSettings(&settings, stream)
+		if modified {
+			t.Error("expected modified=false for empty stream settings")
+		}
+	})
+}
