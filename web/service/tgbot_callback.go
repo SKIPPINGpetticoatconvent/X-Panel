@@ -1846,15 +1846,6 @@ func (t *Tgbot) SubmitAddClient() (bool, error) {
 	return t.inboundService.AddInboundClient(newInbound)
 }
 
-func checkAdmin(tgId int64) bool {
-	for _, adminId := range adminIds {
-		if adminId == tgId {
-			return true
-		}
-	}
-	return false
-}
-
 func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 	numericKeyboard := tu.InlineKeyboard(
 		// ━━━━━━━━━━ 🏠 主菜单 (两级菜单) ━━━━━━━━━━

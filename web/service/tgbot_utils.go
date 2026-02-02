@@ -30,12 +30,17 @@ func (t *Tgbot) SetHostname() {
 	if err != nil {
 		logger.Error("get hostname error:", err)
 		hostname = ""
+		t.state.SetHostname("")
 		return
 	}
 	hostname = host
+	t.state.SetHostname(host)
 }
 
 func (t *Tgbot) Stop() {
+	// 停止 BotState 中的 handler
+	t.state.Stop()
+	// 同步更新全局变量（向后兼容）
 	if botHandler != nil {
 		_ = botHandler.Stop()
 	}

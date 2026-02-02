@@ -34,16 +34,24 @@ type TelegramService interface {
 	GetDomain() (string, error)
 }
 
-// 全局状态实例（向后兼容，逐步迁移到 Tgbot.state）
+// 注意：全局变量正在逐步迁移到 BotState 结构体中
+// 以下变量保留用于向后兼容，将在后续版本中移除
 var (
-	bot         *telego.Bot
-	botHandler  *th.BotHandler
-	adminIds    []int64
-	isRunning   bool
-	hostname    string
+	// Deprecated: 使用 Tgbot.state.GetBot() 替代
+	bot *telego.Bot
+	// Deprecated: 使用 Tgbot.state.GetBotHandler() 替代
+	botHandler *th.BotHandler
+	// Deprecated: 使用 Tgbot.state.GetAdminIds() 替代
+	adminIds []int64
+	// Deprecated: 使用 Tgbot.state.IsRunning() 替代
+	isRunning bool
+	// Deprecated: 使用 Tgbot.state.GetHostname() 替代
+	hostname string
+	// Deprecated: 使用 Tgbot.state.GetHashStorage() 替代
 	hashStorage *global.HashStorage
 
 	// clients data to adding new client
+	// Deprecated: 使用 Tgbot.state.GetClientData() 替代
 	receiver_inbound_ID int
 	client_Id           string
 	client_Flow         string
@@ -62,6 +70,8 @@ var (
 	client_Method       string
 )
 
+// 用户状态管理（向后兼容）
+// Deprecated: 使用 Tgbot.state.GetUserState/SetUserState/DeleteUserState 替代
 var (
 	userStates   = make(map[int64]string)
 	userStatesMu sync.RWMutex
@@ -162,7 +172,7 @@ func (t *Tgbot) I18nBot(name string, params ...string) string {
 }
 
 func (t *Tgbot) GetHashStorage() *global.HashStorage {
-	return hashStorage
+	return t.state.GetHashStorage()
 }
 
 func (t *Tgbot) Start(i18nFS embed.FS) error {
@@ -173,7 +183,8 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	}
 
 	// Initialize hash storage to store callback queries
-	hashStorage = global.NewHashStorage(20 * time.Minute)
+	t.state.InitHashStorage(20 * time.Minute)
+	hashStorage = t.state.GetHashStorage() // 向后兼容
 
 	t.SetHostname()
 
@@ -206,7 +217,8 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 		}
 
 		// Reset adminIds to avoid duplicates when Start is called multiple times
-		adminIds = []int64{}
+		t.state.ClearAdminIds()
+		adminIds = []int64{} // 向后兼容
 
 		for _, adminID := range strings.Split(trimmedID, ",") {
 			cleanedID := strings.TrimSpace(adminID)
@@ -226,11 +238,12 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 				return fmt.Errorf("invalid admin ID '%d': Chat ID must be a positive number", id)
 			}
 
-			adminIds = append(adminIds, int64(id))
+			t.state.AddAdminId(int64(id))
+			adminIds = append(adminIds, int64(id)) // 向后兼容
 			logger.Infof("Added admin ID: %d", id)
 		}
 
-		if len(adminIds) == 0 {
+		if len(t.state.GetAdminIds()) == 0 {
 			logger.Warningf("No valid admin IDs were parsed from chat ID string: %s", tgBotID)
 			return fmt.Errorf("no valid admin IDs found in chat ID configuration")
 		}
@@ -252,17 +265,19 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	}
 
 	// Create new Telegram bot instance with enhanced validation
-	bot, err = t.NewBot(tgBotToken, tgBotProxy, tgBotAPIServer)
+	newBot, err := t.NewBot(tgBotToken, tgBotProxy, tgBotAPIServer)
 	if err != nil {
 		logger.Error("Failed to initialize Telegram bot API:", err)
 		return fmt.Errorf("failed to initialize Telegram bot: %v. Please check your bot token and network settings", err)
 	}
+	t.state.SetBot(newBot)
+	bot = newBot // 向后兼容
 
 	// Test bot connectivity by getting bot info
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	botInfo, err := bot.GetMe(ctx)
+	botInfo, err := t.state.GetBot().GetMe(ctx)
 	if err != nil {
 		logger.Error("Failed to get bot information:", err)
 		return fmt.Errorf("failed to verify bot token with Telegram API: %v. Please ensure the token is valid and has not been revoked", err)
@@ -271,7 +286,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	logger.Infof("Successfully connected to Telegram bot: @%s (ID: %d)", botInfo.Username, botInfo.ID)
 
 	// After bot initialization, set up bot commands with localized descriptions
-	err = bot.SetMyCommands(context.Background(), &telego.SetMyCommandsParams{
+	err = t.state.GetBot().SetMyCommands(context.Background(), &telego.SetMyCommandsParams{
 		Commands: []telego.BotCommand{
 			{Command: "start", Description: t.I18nBot("tgbot.commands.startDesc")},
 			{Command: "help", Description: t.I18nBot("tgbot.commands.helpDesc")},
@@ -288,10 +303,11 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	}
 
 	// Start receiving Telegram bot messages
-	if !isRunning {
+	if !t.state.IsRunning() {
 		logger.Info("Telegram bot receiver started")
 		go t.OnReceive()
-		isRunning = true
+		t.state.SetRunning(true)
+		isRunning = true // 向后兼容
 	}
 
 	// 确保 LogForwarder 被激活
@@ -340,10 +356,20 @@ func (t *Tgbot) NewBot(token string, proxyUrl string, apiServerUrl string) (*tel
 }
 
 func (t *Tgbot) IsRunning() bool {
-	return isRunning
+	return t.state.IsRunning()
 }
 
-// 线程安全的用户状态管理函数
+// checkAdmin 检查用户是否为管理员（包级函数，向后兼容）
+func checkAdmin(userId int64) bool {
+	for _, adminId := range adminIds {
+		if userId == adminId {
+			return true
+		}
+	}
+	return false
+}
+
+// getUserState 线程安全地获取用户状态（包级函数，向后兼容）
 func getUserState(userId int64) (string, bool) {
 	userStatesMu.RLock()
 	defer userStatesMu.RUnlock()
@@ -351,12 +377,14 @@ func getUserState(userId int64) (string, bool) {
 	return state, exists
 }
 
+// setUserState 线程安全地设置用户状态（包级函数，向后兼容）
 func setUserState(userId int64, state string) {
 	userStatesMu.Lock()
 	defer userStatesMu.Unlock()
 	userStates[userId] = state
 }
 
+// deleteUserState 线程安全地删除用户状态（包级函数，向后兼容）
 func deleteUserState(userId int64) {
 	userStatesMu.Lock()
 	defer userStatesMu.Unlock()
