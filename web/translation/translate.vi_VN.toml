@@ -813,9 +813,9 @@ change_email = "⚙️📧 Email"
 change_comment = "⚙️💬 Bình Luận"
 ResetAllTraffics = "Đặt lại tất cả lưu lượng"
 SortedTrafficUsageReport = "Báo cáo sử dụng lưu lượng đã sắp xếp"
-restartPanel = "🚀 Restart Panel"
-oneClick = "⚡ One-Click Config"
-updatePanel = "🔄 Update Panel"
+restartPanel = "🚀 Khởi động lại Panel"
+oneClick = "⚡ Cấu hình 1 click"
+updatePanel = "🔄 Cập nhật Panel"
 
 [tgbot.answers]
 successfulOperation = "✅ Thành công!"

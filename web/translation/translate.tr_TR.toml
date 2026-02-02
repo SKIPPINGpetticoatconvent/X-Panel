@@ -813,9 +813,9 @@ change_email = "⚙️📧 E-posta"
 change_comment = "⚙️💬 Yorum"
 ResetAllTraffics = "Tüm Trafikleri Sıfırla"
 SortedTrafficUsageReport = "Sıralı Trafik Kullanım Raporu"
-restartPanel = "🚀 Restart Panel"
-oneClick = "⚡ One-Click Config"
-updatePanel = "🔄 Update Panel"
+restartPanel = "🚀 Paneli Yeniden Başlat"
+oneClick = "⚡ Tek Tıkla Kurulum"
+updatePanel = "🔄 Paneli Güncelle"
 
 [tgbot.answers]
 successfulOperation = "✅ İşlem başarılı!"

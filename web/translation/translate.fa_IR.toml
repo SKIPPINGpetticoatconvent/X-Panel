@@ -813,9 +813,9 @@ change_email = "⚙️📧 ایمیل"
 change_comment = "⚙️💬 نظر"
 ResetAllTraffics = "بازنشانی همه ترافیک‌ها"
 SortedTrafficUsageReport = "گزارش استفاده از ترافیک مرتب‌شده"
-restartPanel = "🚀 Restart Panel"
-oneClick = "⚡ One-Click Config"
-updatePanel = "🔄 Update Panel"
+restartPanel = "🚀 راه‌اندازی مجدد پنل"
+oneClick = "⚡ پیکربندی با یک کلیک"
+updatePanel = "🔄 بروزرسانی پنل"
 
 [tgbot.answers]
 successfulOperation = "✅ انجام شد!"

@@ -813,9 +813,9 @@ change_email = "⚙️📧 Email"
 change_comment = "⚙️💬 Комментарий"
 ResetAllTraffics = "Сбросить весь трафик"
 SortedTrafficUsageReport = "Отсортированный отчет об использовании трафика"
-restartPanel = "🚀 Restart Panel"
-oneClick = "⚡ One-Click Config"
-updatePanel = "🔄 Update Panel"
+restartPanel = "🚀 Перезапустить панель"
+oneClick = "⚡ Конфиг в один клик"
+updatePanel = "🔄 Обновить панель"
 
 [tgbot.answers]
 successfulOperation = "✅ Успешно!"

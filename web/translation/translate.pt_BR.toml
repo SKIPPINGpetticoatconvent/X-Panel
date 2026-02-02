@@ -813,9 +813,9 @@ change_email = "⚙️📧 E-mail"
 change_comment = "⚙️💬 Comentário"
 ResetAllTraffics = "Redefinir Todo o Tráfego"
 SortedTrafficUsageReport = "Relatório de Uso de Tráfego Ordenado"
-restartPanel = "🚀 Restart Panel"
-oneClick = "⚡ One-Click Config"
-updatePanel = "🔄 Update Panel"
+restartPanel = "🚀 Reiniciar Painel"
+oneClick = "⚡ Config em 1 clique"
+updatePanel = "🔄 Atualizar Painel"
 
 [tgbot.answers]
 successfulOperation = "✅ Operação bem-sucedida!"

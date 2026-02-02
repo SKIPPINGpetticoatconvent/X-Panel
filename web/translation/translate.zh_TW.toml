@@ -811,8 +811,8 @@ change_email = "⚙️📧 電子郵件"
 change_comment = "⚙️💬 評論"
 ResetAllTraffics = "重設所有流量"
 SortedTrafficUsageReport = "流量使用報告"
-oneClick = "🚀 一鍵配置"
-restartPanel = "🚀 重启面板"
+oneClick = "⚡ 一鍵配置"
+restartPanel = "🚀 重啟面板"
 updatePanel = "🔄 更新面板"
 
 [tgbot.answers]
