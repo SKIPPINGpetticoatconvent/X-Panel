@@ -14,18 +14,33 @@ import (
 	"go.uber.org/atomic"
 )
 
+// 注意：全局变量正在逐步迁移到 XrayService 结构体中
+// 以下变量保留用于向后兼容，将在后续版本中移除
 var (
-	p                 *xray.Process
-	lock              sync.Mutex
-	isNeedXrayRestart atomic.Bool // Indicates that restart was requested for Xray
-	isManuallyStopped atomic.Bool // Indicates that Xray was stopped manually from the panel
-	result            string
+	// Deprecated: 使用 XrayService.GetProcess() 替代
+	p *xray.Process
+	// Deprecated: 使用 XrayService 实例方法替代
+	lock sync.Mutex
+	// Deprecated: 使用 XrayService.IsNeedRestart() 替代
+	isNeedXrayRestart atomic.Bool
+	// Deprecated: 使用 XrayService.IsManuallyStopped() 替代
+	isManuallyStopped atomic.Bool
+	// Deprecated: 使用 XrayService.GetResult() 替代
+	result string
 )
 
+// XrayService 管理 Xray 进程的服务
 type XrayService struct {
 	inboundService *InboundService
 	settingService SettingService
 	xrayAPI        xray.XrayAPI
+
+	// 以下字段用于封装进程状态（新架构）
+	process         *xray.Process
+	processLock     sync.Mutex
+	needRestart     atomic.Bool
+	manuallyStopped atomic.Bool
+	lastResult      string
 }
 
 // SetInboundService 用于从外部注入 InboundService 实例
@@ -40,6 +55,11 @@ func (s *XrayService) SetXrayAPI(api xray.XrayAPI) {
 
 // IsXrayRunning 检查 Xray 是否正在运行
 func (s *XrayService) IsXrayRunning() bool {
+	// 优先使用新架构的 process 字段
+	if s.process != nil {
+		return s.process.IsRunning()
+	}
+	// 向后兼容：回退到全局变量
 	return p != nil && p.IsRunning()
 }
 
@@ -49,6 +69,11 @@ func (s *XrayService) IsXrayRunning() bool {
 // 如果 Xray 没有运行 (p == nil)，则返回 0。
 // 我们的后台任务将调用这个函数来获取端口号。
 func (s *XrayService) GetApiPort() int {
+	// 优先使用新架构的 process 字段
+	if s.process != nil {
+		return s.process.GetAPIPort()
+	}
+	// 向后兼容：回退到全局变量
 	if p == nil {
 		return 0
 	}
@@ -56,11 +81,15 @@ func (s *XrayService) GetApiPort() int {
 }
 
 func (s *XrayService) GetXrayErr() error {
-	if p == nil {
+	proc := s.process
+	if proc == nil {
+		proc = p // 向后兼容
+	}
+	if proc == nil {
 		return nil
 	}
 
-	err := p.GetErr()
+	err := proc.GetErr()
 	if err == nil {
 		return nil
 	}
@@ -75,17 +104,27 @@ func (s *XrayService) GetXrayErr() error {
 }
 
 func (s *XrayService) GetXrayResult() string {
+	// 优先检查新架构的 lastResult
+	if s.lastResult != "" {
+		return s.lastResult
+	}
+	// 向后兼容：检查全局变量
 	if result != "" {
 		return result
 	}
 	if s.IsXrayRunning() {
 		return ""
 	}
-	if p == nil {
+	proc := s.process
+	if proc == nil {
+		proc = p // 向后兼容
+	}
+	if proc == nil {
 		return ""
 	}
 
-	result = p.GetResult()
+	s.lastResult = proc.GetResult()
+	result = s.lastResult // 向后兼容
 
 	if runtime.GOOS == "windows" && result == "exit status 1" {
 		// exit status 1 on Windows means that Xray process was killed
@@ -97,10 +136,14 @@ func (s *XrayService) GetXrayResult() string {
 }
 
 func (s *XrayService) GetXrayVersion() string {
-	if p == nil {
+	proc := s.process
+	if proc == nil {
+		proc = p // 向后兼容
+	}
+	if proc == nil {
 		return "Unknown"
 	}
-	return p.GetVersion()
+	return proc.GetVersion()
 }
 
 func RemoveIndex(s []any, index int) []any {
@@ -423,7 +466,11 @@ func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, 
 		logger.Debug("Attempted to fetch Xray traffic, but Xray is not running:", err)
 		return nil, nil, err
 	}
-	apiPort := p.GetAPIPort()
+	proc := s.process
+	if proc == nil {
+		proc = p // 向后兼容
+	}
+	apiPort := proc.GetAPIPort()
 	_ = s.xrayAPI.Init(apiPort)
 	defer s.xrayAPI.Close()
 
@@ -436,10 +483,15 @@ func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, 
 }
 
 func (s *XrayService) RestartXray(isForce bool) error {
+	s.processLock.Lock()
+	defer s.processLock.Unlock()
+	// 同步全局变量（向后兼容）
 	lock.Lock()
 	defer lock.Unlock()
+
 	logger.Debug("restart Xray, force:", isForce)
-	isManuallyStopped.Store(false)
+	s.manuallyStopped.Store(false)
+	isManuallyStopped.Store(false) // 向后兼容
 
 	xrayConfig, err := s.GetXrayConfig()
 	if err != nil {
@@ -455,16 +507,19 @@ func (s *XrayService) RestartXray(isForce bool) error {
 	}
 
 	if s.IsXrayRunning() {
-		if !isForce && p.GetConfig().Equals(xrayConfig) && !isNeedXrayRestart.Load() {
+		if !isForce && s.process.GetConfig().Equals(xrayConfig) && !s.needRestart.Load() {
 			logger.Debug("It does not need to restart Xray")
 			return nil
 		}
-		_ = p.Stop()
+		_ = s.process.Stop()
 	}
 
-	p = xray.NewProcess(xrayConfig)
-	result = ""
-	err = p.Start()
+	newProcess := xray.NewProcess(xrayConfig)
+	s.process = newProcess
+	p = newProcess // 向后兼容
+	s.lastResult = ""
+	result = "" // 向后兼容
+	err = s.process.Start()
 	if err != nil {
 		return err
 	}
@@ -473,25 +528,39 @@ func (s *XrayService) RestartXray(isForce bool) error {
 }
 
 func (s *XrayService) StopXray() error {
+	s.processLock.Lock()
+	defer s.processLock.Unlock()
+	// 同步全局变量（向后兼容）
 	lock.Lock()
 	defer lock.Unlock()
-	isManuallyStopped.Store(true)
+
+	s.manuallyStopped.Store(true)
+	isManuallyStopped.Store(true) // 向后兼容
 	logger.Debug("Attempting to stop Xray...")
 	if s.IsXrayRunning() {
-		return p.Stop()
+		return s.process.Stop()
 	}
 	return errors.New("xray is not running")
 }
 
 func (s *XrayService) SetToNeedRestart() {
-	isNeedXrayRestart.Store(true)
+	s.needRestart.Store(true)
+	isNeedXrayRestart.Store(true) // 向后兼容
 }
 
 func (s *XrayService) IsNeedRestartAndSetFalse() bool {
-	return isNeedXrayRestart.CompareAndSwap(true, false)
+	// 同时更新两个变量
+	result := s.needRestart.CompareAndSwap(true, false)
+	_ = isNeedXrayRestart.CompareAndSwap(true, false) // 向后兼容
+	return result
 }
 
 // Check if Xray is not running and wasn't stopped manually, i.e. crashed
 func (s *XrayService) DidXrayCrash() bool {
-	return !s.IsXrayRunning() && !isManuallyStopped.Load()
+	return !s.IsXrayRunning() && !s.manuallyStopped.Load()
+}
+
+// GetProcess 返回当前 Xray 进程实例
+func (s *XrayService) GetProcess() *xray.Process {
+	return s.process
 }
