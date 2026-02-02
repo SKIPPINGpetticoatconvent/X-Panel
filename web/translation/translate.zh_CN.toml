@@ -475,6 +475,7 @@
 "warpRoutingDesc" = "注意：在使用这些选项之前，请按照面板 GitHub 上的步骤在你的服务器上以 socks5 代理模式安装 WARP。WARP 将通过 Cloudflare 服务器将流量路由到网站。"
 "Template" = "高级 Xray 配置模板"
 "TemplateDesc" = "最终的 Xray 配置文件将基于此模板生成"
+"unlockFreedomStrategyWarning" = "确定要修改吗？默认为 AsIs。"
 "FreedomStrategy" = "Freedom 协议策略"
 "FreedomStrategyDesc" = "设置 Freedom 协议中网络的输出策略"
 "RoutingStrategy" = "配置路由域策略"

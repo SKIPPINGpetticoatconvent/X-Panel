@@ -13,12 +13,18 @@
             <template #title>{{ i18n "pages.xray.FreedomStrategy" }}</template>
             <template #description>{{ i18n "pages.xray.FreedomStrategyDesc" }}</template>
             <template #control>
-                <a-select v-model="freedomStrategy" :dropdown-class-name="themeSwitcher.currentTheme"
-                    :style="{ width: '100%' }">
-                    <a-select-option v-for="s in OutboundDomainStrategies" :value="s">
-                        <span>[[ s ]]</span>
-                    </a-select-option>
-                </a-select>
+                <div :style="{ display: 'flex', alignItems: 'center' }">
+                    <a-select v-model="freedomStrategy" :disabled="freedomStrategyLocked" :dropdown-class-name="themeSwitcher.currentTheme"
+                        :style="{ flex: 1, marginRight: '10px' }">
+                        <a-select-option v-for="s in OutboundDomainStrategies" :value="s">
+                            <span>[[ s ]]</span>
+                        </a-select-option>
+                    </a-select>
+                    <a-popconfirm v-if="freedomStrategyLocked" title='{{ i18n "pages.xray.unlockFreedomStrategyWarning" }}' @confirm="freedomStrategyLocked = false">
+                         <a-button icon="lock" type="danger"></a-button>
+                    </a-popconfirm>
+                    <a-button v-else icon="unlock" @click="freedomStrategyLocked = true"></a-button>
+                </div>
             </template>
         </a-setting-list-item>
         <a-setting-list-item paddings="small">
