@@ -138,6 +138,8 @@ func runWebServer() {
 			logger.Warningf("启动日志转发器失败: %v", err)
 		}
 	}
+	// 初始化 JobManager
+	jobManager := job.NewManager()
 
 	var subServer *sub.Server
 	subServer = sub.NewServer(&inboundService, &settingService)
@@ -156,10 +158,9 @@ func runWebServer() {
 
 	checkSettingService := service.SettingService{}
 	checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgSvc, checkSettingService)
-	// 启动设备限制任务 (非阻塞，内部有 goroutine)
-	if err := checkJob.Start(); err != nil {
-		logger.Warningf("启动设备限制任务失败: %v", err)
-	}
+	// 注册并启动后台任务
+	jobManager.Register(checkJob)
+	jobManager.StartAll()
 
 	// 初始化 CertMonitorJob (提前初始化以支持 SIGUSR2 信号触发)
 	tgMu.RLock()
@@ -200,10 +201,8 @@ func runWebServer() {
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP signal. Restarting servers...")
 
-			// 停止设备限制任务
-			if checkJob != nil {
-				_ = checkJob.Stop()
-			}
+			// 停止所有后台任务
+			jobManager.StopAll()
 
 			// 停止日志转发器
 			if logForwarder != nil {
@@ -285,18 +284,12 @@ func runWebServer() {
 			}
 			log.Println("Sub server restarted successfully.")
 
-			// 重启设备限制任务
-			if checkJob != nil {
-				if err := checkJob.Start(); err != nil {
-					logger.Warningf("重启设备限制任务失败: %v", err)
-				}
-			}
+			// 重启后台任务
+			jobManager.StartAll()
 
 		default:
-			// 停止设备限制任务
-			if checkJob != nil {
-				_ = checkJob.Stop()
-			}
+			// 停止所有后台任务
+			jobManager.StopAll()
 
 			// 停止日志转发器
 			if logForwarder != nil {
