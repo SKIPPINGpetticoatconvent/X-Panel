@@ -298,30 +298,6 @@ func (s *Server) startTask() {
 	if err != nil {
 		logger.Warning("start xray failed:", err)
 	}
-	// Check whether xray is running every second
-	_, _ = s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob(s.xrayService))
-
-	// Check if xray needs to be restarted every 30 seconds
-	_, _ = s.cron.AddFunc("@daily", func() {
-		if s.xrayService.IsNeedRestartAndSetFalse() {
-			err := s.xrayService.RestartXray(false)
-			if err != nil {
-				logger.Error("restart xray failed:", err)
-			}
-		}
-	})
-
-	go func() {
-		time.Sleep(time.Second * 5)
-		// Statistics every 30 seconds, start the delay for 5 seconds for the first time, and staggered with the time to restart xray
-		// 启动并忽略可能的错误（AddJob 可能返回 error）
-		_, _ = s.cron.AddJob("30 * * * * *", job.NewXrayTrafficJob(s.xrayService, s.inboundService, s.outboundService))
-		_, _ = s.cron.AddJob("30 * * * * *", job.NewCheckClientIpJob())
-		_, _ = s.cron.AddJob("5 * * * * *", job.NewCertMonitorJob(s.settingService, s.tgbotService))
-	}()
-
-	// check client ips from log file every day
-	_, _ = s.cron.AddJob("@daily", job.NewClearLogsJob())
 
 	// Make a traffic condition every day, 8:30
 	var entry cron.EntryID

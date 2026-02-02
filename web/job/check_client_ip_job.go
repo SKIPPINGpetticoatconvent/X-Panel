@@ -99,6 +99,10 @@ func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService se
 	}
 }
 
+func (j *CheckDeviceLimitJob) Name() string {
+	return "CheckDeviceLimitJob"
+}
+
 // Start 启动重构后的设备限制任务（使用 LogStreamer）
 func (j *CheckDeviceLimitJob) Start() error {
 	if j.isStreamerRunning {

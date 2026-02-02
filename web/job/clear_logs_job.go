@@ -1,18 +1,63 @@
 package job
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"x-ui/logger"
 	"x-ui/xray"
 )
 
-type ClearLogsJob struct{}
+type ClearLogsJob struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+}
 
 func NewClearLogsJob() *ClearLogsJob {
-	return new(ClearLogsJob)
+	ctx, cancel := context.WithCancel(context.Background())
+	return &ClearLogsJob{
+		ctx:    ctx,
+		cancel: cancel,
+	}
+}
+
+func (j *ClearLogsJob) Name() string {
+	return "ClearLogsJob"
+}
+
+// Start runs daily log clearing
+func (j *ClearLogsJob) Start() error {
+	j.wg.Add(1)
+	go func() {
+		defer j.wg.Done()
+		// @daily -> 24h
+		// 但是 cron 的 @daily 是每天午夜。Ticker 是随启动时间。
+		// 为了简化，我们先用 24h。如果需要更精准的午夜执行，可以算一下 sleep 时间。
+		// 这里暂用 Ticker 24h 作为一个简单的近似替代。
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				j.Run()
+			case <-j.ctx.Done():
+				return
+			}
+		}
+	}()
+	return nil
+}
+
+func (j *ClearLogsJob) Stop() error {
+	j.cancel()
+	j.wg.Wait()
+	return nil
 }
 
 // ensureFileExists creates the necessary directories and file if they don't exist
