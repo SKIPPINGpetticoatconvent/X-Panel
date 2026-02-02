@@ -149,30 +149,21 @@ func runWebServer() {
 	}
 
 	// 在面板服务启动后，启动设备限制的后台任务
-	go func() {
-		// 等待10秒，确保面板和Xray服务已基本稳定
-		time.Sleep(10 * time.Second)
+	// 使用受 mutex 保护的外部 tgBotService（已完整初始化，含依赖注入）
+	tgMu.RLock()
+	tgSvc := tgBotService
+	tgMu.RUnlock()
 
-		ticker := time.NewTicker(10 * time.Second)
-		defer ticker.Stop()
-
-		// 使用受 mutex 保护的外部 tgBotService（已完整初始化，含依赖注入）
-		tgMu.RLock()
-		tgSvc := tgBotService
-		tgMu.RUnlock()
-
-		checkSettingService := service.SettingService{}
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgSvc, checkSettingService)
-
-		for {
-			<-ticker.C
-			checkJob.Run()
-		}
-	}()
+	checkSettingService := service.SettingService{}
+	checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgSvc, checkSettingService)
+	// 启动设备限制任务 (非阻塞，内部有 goroutine)
+	if err := checkJob.Start(); err != nil {
+		logger.Warningf("启动设备限制任务失败: %v", err)
+	}
 
 	// 初始化 CertMonitorJob (提前初始化以支持 SIGUSR2 信号触发)
 	tgMu.RLock()
-	tgSvc := tgBotService
+	tgSvc = tgBotService
 	tgMu.RUnlock()
 	certSettingService := service.SettingService{}
 	monitorJob := job.NewCertMonitorJob(certSettingService, tgSvc)
@@ -208,6 +199,11 @@ func runWebServer() {
 		switch sig {
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP signal. Restarting servers...")
+
+			// 停止设备限制任务
+			if checkJob != nil {
+				_ = checkJob.Stop()
+			}
 
 			// 停止日志转发器
 			if logForwarder != nil {
@@ -289,7 +285,19 @@ func runWebServer() {
 			}
 			log.Println("Sub server restarted successfully.")
 
+			// 重启设备限制任务
+			if checkJob != nil {
+				if err := checkJob.Start(); err != nil {
+					logger.Warningf("重启设备限制任务失败: %v", err)
+				}
+			}
+
 		default:
+			// 停止设备限制任务
+			if checkJob != nil {
+				_ = checkJob.Stop()
+			}
+
 			// 停止日志转发器
 			if logForwarder != nil {
 				if err := logForwarder.Stop(); err != nil {
