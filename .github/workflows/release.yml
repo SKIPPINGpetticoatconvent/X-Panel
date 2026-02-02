@@ -102,7 +102,7 @@ jobs:
       - name: Build binary and create tarball
         run: |
           VERSION=$(tr -d '\n' < config/version)
-          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X 'github.com/SKIPPINGpetticoatconvent/X-Panel/config.version=${VERSION}'" -o x-ui main.go
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X 'github.com/SKIPPINGpetticoatconvent/X-Panel/config.version=${VERSION}'" -o x-ui .
 
           mkdir -p release_temp/x-ui/bin
           cp x-ui release_temp/x-ui/
@@ -282,9 +282,9 @@ jobs:
           export CC=$(realpath "$(find "$TOOLCHAIN_ROOT/bin" -name '*-gcc.br_real' -type f -executable | head -n1)")
           [ -z "$CC" ] && { echo "No gcc.br_real found in $TOOLCHAIN_ROOT/bin" >&2; exit 1; }
           if [ "${{ matrix.platform }}" = "armv5" ]; then
-            go build -ldflags "-w -s" -o xui-release -v main.go
+            go build -ldflags "-w -s" -o xui-release -v .
           else
-            go build -ldflags "-w -s -linkmode external -extldflags '-static'" -o xui-release -v main.go
+            go build -ldflags "-w -s -linkmode external -extldflags '-static'" -o xui-release -v .
           fi
           file xui-release
           ldd xui-release || echo "Static binary confirmed"
@@ -401,7 +401,7 @@ jobs:
           $env:CGO_ENABLED = "0"
 
           # 1. 编译 Go 程序
-          go build -ldflags "-w -s" -o x-ui-release.exe -v main.go
+          go build -ldflags "-w -s" -o x-ui-release.exe -v .
 
           # 2. 创建主目录
           mkdir x-ui
