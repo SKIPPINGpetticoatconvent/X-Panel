@@ -5,294 +5,73 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	//	"os/exec"
-	//	"strings"
-	"sync"
 	"syscall"
 	_ "unsafe"
 
-	// 中文注释: 新增了 x-ui/job 的导入，这是运行定时任务所必需的包
-
+	"x-ui/bootstrap"
 	"x-ui/config"
 	"x-ui/database"
 	"x-ui/logger"
-	"x-ui/sub"
 	"x-ui/util/crypto"
-	"x-ui/web"
-	"x-ui/web/global"
-	"x-ui/web/job"
 	"x-ui/web/service"
-	"x-ui/xray"
-
-	"github.com/joho/godotenv"
-	"github.com/op/go-logging"
 )
 
-// runWebServer 是【设备限制】项目的主执行函数
+// runWebServer 是主执行函数，使用 bootstrap 模块简化启动流程
 func runWebServer() {
-	log.Printf("Starting %v %v", config.GetName(), config.GetVersion())
-
-	_ = godotenv.Load()
-
-	// 初始化数据库
-	err := database.InitDB(config.GetDBPath())
+	// 初始化应用
+	app, err := bootstrap.Initialize()
 	if err != nil {
-		log.Fatalf("Error initializing database: %v", err)
+		log.Fatalf("Error initializing application: %v", err)
 	}
 
-	// 获取本地日志配置
-	settingService := service.SettingService{}
-	localLogEnabled, err := settingService.GetLocalLogEnabled()
-	if err != nil {
-		logger.Warningf("无法获取本地日志配置，使用默认设置: %v", err)
-		localLogEnabled = false // 默认禁用本地日志，符合用户需求
-	}
+	// 创建运行时
+	runtime := bootstrap.NewRuntime(app)
 
-	// 根据配置和日志级别初始化logger
-	switch config.GetLogLevel() {
-	case config.Debug:
-		logger.InitLogger(logging.DEBUG, localLogEnabled)
-	case config.Info:
-		logger.InitLogger(logging.INFO, localLogEnabled)
-	case config.Notice:
-		logger.InitLogger(logging.NOTICE, localLogEnabled)
-	case config.Warning:
-		logger.InitLogger(logging.WARNING, localLogEnabled)
-	case config.Error:
-		logger.InitLogger(logging.ERROR, localLogEnabled)
-	default:
-		log.Fatalf("Unknown log level: %v", config.GetLogLevel())
-	}
-
-	// 〔中文注释〕: 1. 初始化所有需要的服务实例
-	xrayService := service.XrayService{}
-	serverService := service.ServerService{}
-	// 还需要 InboundService 等，按需添加
-	inboundService := service.InboundService{}
-	lastStatus := service.Status{}
-
-	// 创建 Xray API 实例
-	xrayApi := xray.XrayAPI{}
-
-	// 注入到 XrayService 中
-	xrayService.SetXrayAPI(xrayApi)
-
-	// 注入到 InboundService 中
-	inboundService.SetXrayAPI(xrayApi)
-
-	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
-	tgEnable, err := settingService.GetTgbotEnabled()
-	if err != nil {
+	// 初始化 Telegram Bot
+	if err := runtime.InitTelegramBot(); err != nil {
 		logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
 	}
 
-	var tgBotService service.TelegramService
-	var tgMu sync.RWMutex // 保护 tgBotService 的并发访问
-	var logForwarder *service.LogForwarder
-	if tgEnable {
-		// 将所有需要的服务作为参数传递进去，确保返回的 tgBotService 是一个完全初始化的、可用的实例。
-		tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
-		tgBotService = tgBot
+	// 执行依赖注入
+	app.WireServices(runtime.GetTelegramService())
 
-		// 创建日志转发器
-		logForwarder = service.NewLogForwarder(&settingService, tgBotService)
-	}
-
-	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
-	//    首先注入 XrayService 和 InboundService，确保 GetStatus 方法可以正常调用
-	serverService.SetXrayService(&xrayService)
-	serverService.SetInboundService(&inboundService)
-	xrayService.SetInboundService(&inboundService)
-	//    将 tgBotService 实例注入到 serverService 中。
-	//    这样 serverService 内部的 tgService 字段就不再是 nil 了。
-	serverService.SetTelegramService(tgBotService)
-	//    同理，也为 InboundService 注入
-	inboundService.SetTelegramService(tgBotService)
-
-	// 还需要 OutboundService
-	outboundService := service.OutboundService{}
-
-	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 s
-	// Call NewServer
-	server := web.NewServer(&serverService, &settingService, &xrayService, &inboundService, &outboundService)
-	// 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
-	if tgBotService != nil {
-		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
-		// 同时，也确保了 Web 层的回调处理能使用到这个完整的 Bot 实例
-		server.SetTelegramService(tgBotService)
-	}
-
-	global.SetWebServer(server)
-	err = server.Start()
-	if err != nil {
+	// 启动 Web 服务器
+	if err := runtime.StartWebServer(); err != nil {
 		log.Fatalf("Error starting web server: %v", err)
-		return
 	}
 
 	// 启动日志转发器
-	if logForwarder != nil {
-		if err := logForwarder.Start(); err != nil {
-			logger.Warningf("启动日志转发器失败: %v", err)
-		}
-	}
-	// 初始化 JobManager
-	jobManager := job.NewManager()
+	runtime.StartLogForwarder()
 
-	var subServer *sub.Server
-	subServer = sub.NewServer(&inboundService, &settingService)
-	global.SetSubServer(subServer)
-	err = subServer.Start()
-	if err != nil {
+	// 启动订阅服务器
+	if err := runtime.StartSubServer(); err != nil {
 		log.Fatalf("Error starting sub server: %v", err)
-		return
 	}
 
-	// 在面板服务启动后，启动设备限制的后台任务
-	// 使用受 mutex 保护的外部 tgBotService（已完整初始化，含依赖注入）
-	tgMu.RLock()
-	tgSvc := tgBotService
-	tgMu.RUnlock()
-
-	checkJob := job.NewCheckDeviceLimitJob(&inboundService, &xrayService, tgSvc, settingService)
 	// 注册并启动后台任务
-	jobManager.Register(checkJob)
+	runtime.StartJobs()
 
-	// 初始化 CertMonitorJob (提前初始化以支持 SIGUSR2 信号触发)
-	monitorJob := job.NewCertMonitorJob(settingService, tgSvc)
-	jobManager.Register(monitorJob)
-
-	// 初始化 XrayTrafficJob
-	trafficJob := job.NewXrayTrafficJob(&xrayService, &inboundService, &outboundService)
-	jobManager.Register(trafficJob)
-
-	// 初始化 CheckXrayRunningJob
-	xrayRunningJob := job.NewCheckXrayRunningJob(&xrayService)
-	jobManager.Register(xrayRunningJob)
-
-	// 初始化 ClearLogsJob
-	clearLogsJob := job.NewClearLogsJob()
-	jobManager.Register(clearLogsJob)
-
-	// 初始化 XrayRestartJob (Config Watcher)
-	restartJob := job.NewXrayRestartJob(&xrayService)
-	jobManager.Register(restartJob)
-
-	jobManager.StartAll()
-
+	// 信号处理循环
 	sigCh := make(chan os.Signal, 1)
-	// Trap shutdown signals
 	setupSignalHandler(sigCh)
+
 	for {
 		sig := <-sigCh
 
 		// 处理自定义信号 (如 SIGUSR2)
-		if handleCustomSignal(sig, monitorJob) {
+		if handleCustomSignal(sig, runtime.MonitorJob) {
 			continue
 		}
 
 		switch sig {
 		case syscall.SIGHUP:
 			logger.Info("Received SIGHUP signal. Restarting servers...")
-
-			// 停止所有后台任务
-			jobManager.StopAll()
-
-			// 停止日志转发器
-			if logForwarder != nil {
-				if err := logForwarder.Stop(); err != nil {
-					logger.Warningf("停止日志转发器失败: %v", err)
-				}
+			if err := runtime.Restart(); err != nil {
+				log.Fatalf("Error restarting: %v", err)
 			}
-
-			err := server.Stop()
-			if err != nil {
-				logger.Debug("Error stopping web server:", err)
-			}
-			err = subServer.Stop()
-			if err != nil {
-				logger.Debug("Error stopping sub server:", err)
-			}
-
-			// 重新检查并初始化 TG Bot 服务
-			tgEnable, err := settingService.GetTgbotEnabled()
-			if err != nil {
-				logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
-			}
-
-			tgMu.Lock()
-			if tgEnable {
-				// 如果启用，确保服务实例已创建
-				if tgBotService == nil {
-					// 必须使用 NewTgBot 创建完整实例，包含所有依赖
-					tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
-					tgBotService = tgBot
-
-					// 重要：必须重新注入到其他服务中，否则它们持有的仍是 nil
-					serverService.SetTelegramService(tgBotService)
-					inboundService.SetTelegramService(tgBotService)
-				}
-
-				// 重新创建日志转发器 (如果之前没有)
-				if logForwarder == nil {
-					logForwarder = service.NewLogForwarder(&settingService, tgBotService)
-				}
-			} else {
-				// 如果已禁用，清理实例
-				tgBotService = nil
-				logForwarder = nil
-				// 同时清理其他服务中的引用
-				serverService.SetTelegramService(nil)
-				inboundService.SetTelegramService(nil)
-			}
-			tgMu.Unlock()
-
-			server = web.NewServer(&serverService, &settingService, &xrayService, &inboundService, &outboundService)
-			// 重新注入 tgBotService
-			tgMu.RLock()
-			if tgBotService != nil {
-				server.SetTelegramService(tgBotService)
-			}
-			tgMu.RUnlock()
-			global.SetWebServer(server)
-			err = server.Start()
-			if err != nil {
-				log.Fatalf("Error restarting web server: %v", err)
-				return
-			}
-			log.Println("Web server restarted successfully.")
-
-			// 重新启动日志转发器
-			if logForwarder != nil {
-				if err := logForwarder.Start(); err != nil {
-					logger.Warningf("重新启动日志转发器失败: %v", err)
-				}
-			}
-
-			subServer = sub.NewServer(&inboundService, &settingService)
-			global.SetSubServer(subServer)
-			err = subServer.Start()
-			if err != nil {
-				log.Fatalf("Error restarting sub server: %v", err)
-				return
-			}
-			log.Println("Sub server restarted successfully.")
-
-			// 重启后台任务
-			jobManager.StartAll()
 
 		default:
-			// 停止所有后台任务
-			jobManager.StopAll()
-
-			// 停止日志转发器
-			if logForwarder != nil {
-				if err := logForwarder.Stop(); err != nil {
-					logger.Warningf("停止日志转发器失败: %v", err)
-				}
-			}
-			_ = server.Stop()
-			_ = subServer.Stop()
+			runtime.StopAll()
 			log.Println("Shutting down servers.")
 			return
 		}
