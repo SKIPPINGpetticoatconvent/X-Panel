@@ -32,8 +32,10 @@ func NewSUBController(
 	jsonMux string,
 	jsonRules string,
 	subTitle string,
+	inboundService InboundProvider,
+	settingService SettingProvider,
 ) *SUBController {
-	sub := NewSubService(showInfo, rModel)
+	sub := NewSubService(showInfo, rModel, inboundService, settingService)
 	a := &SUBController{
 		subTitle:       subTitle,
 		subPath:        subPath,

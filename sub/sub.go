@@ -13,7 +13,6 @@ import (
 	"x-ui/util/common"
 	"x-ui/web/middleware"
 	"x-ui/web/network"
-	"x-ui/web/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,17 +22,20 @@ type Server struct {
 	listener   net.Listener
 
 	sub            *SUBController
-	settingService service.SettingService
+	inboundService InboundProvider
+	settingService SettingProvider
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewServer() *Server {
+func NewServer(inboundService InboundProvider, settingService SettingProvider) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
-		ctx:    ctx,
-		cancel: cancel,
+		inboundService: inboundService,
+		settingService: settingService,
+		ctx:            ctx,
+		cancel:         cancel,
 	}
 }
 
@@ -116,7 +118,8 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 
 	s.sub = NewSUBController(
 		g, LinksPath, JsonPath, Encrypt, ShowInfo, RemarkModel, SubUpdates,
-		SubJsonFragment, SubJsonNoises, SubJsonMux, SubJsonRules, SubTitle)
+		SubJsonFragment, SubJsonNoises, SubJsonMux, SubJsonRules, SubTitle,
+		s.inboundService, s.settingService)
 
 	return engine, nil
 }

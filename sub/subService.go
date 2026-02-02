@@ -13,25 +13,51 @@ import (
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/util/random"
-	"x-ui/web/service"
 	"x-ui/xray"
 
 	json "github.com/goccy/go-json"
 )
+
+type InboundProvider interface {
+	GetClients(inbound *model.Inbound) ([]model.Client, error)
+}
+
+type SettingProvider interface {
+	GetDatepicker() (string, error)
+	GetSubDomain() (string, error)
+	GetSubPath() (string, error)
+	GetSubJsonPath() (string, error)
+	GetSubEncrypt() (bool, error)
+	GetSubShowInfo() (bool, error)
+	GetRemarkModel() (string, error)
+	GetSubUpdates() (string, error)
+	GetSubJsonFragment() (string, error)
+	GetSubJsonNoises() (string, error)
+	GetSubJsonMux() (string, error)
+	GetSubJsonRules() (string, error)
+	GetSubTitle() (string, error)
+	GetSubEnable() (bool, error)
+	GetSubCertFile() (string, error)
+	GetSubKeyFile() (string, error)
+	GetSubListen() (string, error)
+	GetSubPort() (int, error)
+}
 
 type SubService struct {
 	address        string
 	showInfo       bool
 	remarkModel    string
 	datepicker     string
-	inboundService service.InboundService
-	settingService service.SettingService
+	inboundService InboundProvider
+	settingService SettingProvider
 }
 
-func NewSubService(showInfo bool, remarkModel string) *SubService {
+func NewSubService(showInfo bool, remarkModel string, inboundService InboundProvider, settingService SettingProvider) *SubService {
 	return &SubService{
-		showInfo:    showInfo,
-		remarkModel: remarkModel,
+		showInfo:       showInfo,
+		remarkModel:    remarkModel,
+		inboundService: inboundService,
+		settingService: settingService,
 	}
 }
 
