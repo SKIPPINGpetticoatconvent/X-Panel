@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"x-ui/database/model"
@@ -33,6 +34,7 @@ type TelegramService interface {
 	GetDomain() (string, error)
 }
 
+// 全局状态实例（向后兼容，逐步迁移到 Tgbot.state）
 var (
 	bot         *telego.Bot
 	botHandler  *th.BotHandler
@@ -60,7 +62,10 @@ var (
 	client_Method       string
 )
 
-var userStates = make(map[int64]string)
+var (
+	userStates   = make(map[int64]string)
+	userStatesMu sync.RWMutex
+)
 
 type LoginStatus byte
 
@@ -76,6 +81,10 @@ type Tgbot struct {
 	serverService  *ServerService
 	xrayService    *XrayService
 	lastStatus     *Status
+
+	// state 封装了 Bot 的运行时状态（新架构）
+	// 目前保持向后兼容，逐步将全局变量迁移到此处
+	state *BotState
 }
 
 // 【修改后】: GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
@@ -131,9 +140,15 @@ func NewTgBot(
 		serverService:  serverService,
 		xrayService:    xrayService,
 		lastStatus:     lastStatus,
+		state:          NewBotState(),
 	}
 
 	return t
+}
+
+// GetState 返回 Bot 的状态实例
+func (t *Tgbot) GetState() *BotState {
+	return t.state
 }
 
 /*
@@ -326,4 +341,24 @@ func (t *Tgbot) NewBot(token string, proxyUrl string, apiServerUrl string) (*tel
 
 func (t *Tgbot) IsRunning() bool {
 	return isRunning
+}
+
+// 线程安全的用户状态管理函数
+func getUserState(userId int64) (string, bool) {
+	userStatesMu.RLock()
+	defer userStatesMu.RUnlock()
+	state, exists := userStates[userId]
+	return state, exists
+}
+
+func setUserState(userId int64, state string) {
+	userStatesMu.Lock()
+	defer userStatesMu.Unlock()
+	userStates[userId] = state
+}
+
+func deleteUserState(userId int64) {
+	userStatesMu.Lock()
+	defer userStatesMu.Unlock()
+	delete(userStates, userId)
 }
