@@ -171,7 +171,13 @@ func runWebServer() {
 		}
 	}()
 
-	var monitorJob *job.CertMonitorJob
+	// 初始化 CertMonitorJob (提前初始化以支持 SIGUSR2 信号触发)
+	tgMu.RLock()
+	tgSvc := tgBotService
+	tgMu.RUnlock()
+	certSettingService := service.SettingService{}
+	monitorJob := job.NewCertMonitorJob(certSettingService, tgSvc)
+
 	// 启动 SSL 证书监控任务 (每6小时检查一次)
 	go func() {
 		// 等待系统完全启动
@@ -179,14 +185,6 @@ func runWebServer() {
 
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
-
-		// 使用受 mutex 保护的外部 tgBotService（已完整初始化，含依赖注入）
-		tgMu.RLock()
-		tgSvc := tgBotService
-		tgMu.RUnlock()
-
-		certSettingService := service.SettingService{}
-		monitorJob = job.NewCertMonitorJob(certSettingService, tgSvc)
 
 		// 启动时立即运行一次检查
 		monitorJob.Run()
