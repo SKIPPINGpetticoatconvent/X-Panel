@@ -49,7 +49,7 @@ var (
 
 // CheckDeviceLimitJob 重构后的设备限制任务，使用 LogStreamer 实现实时监控
 type CheckDeviceLimitJob struct {
-	inboundService service.InboundService
+	inboundService *service.InboundService
 	xrayService    *service.XrayService
 	settingService service.SettingService
 	// 中文注释: 新增 xrayApi 字段，用于持有 Xray API 客户端实例
@@ -83,10 +83,11 @@ func RandomUUID() string {
 
 // NewCheckDeviceLimitJob 中文注释: 创建一个新的任务实例
 // 〔中文注释〕：增加一个 service.TelegramService 类型的参数。
-func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService, settingService service.SettingService) *CheckDeviceLimitJob {
+func NewCheckDeviceLimitJob(inboundService *service.InboundService, xrayService *service.XrayService, telegramService service.TelegramService, settingService service.SettingService) *CheckDeviceLimitJob {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &CheckDeviceLimitJob{
+		inboundService: inboundService,
 		xrayService:    xrayService,
 		settingService: settingService,
 		// 中文注释: 初始化 xrayApi 字段

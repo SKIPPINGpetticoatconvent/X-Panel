@@ -87,13 +87,20 @@ func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (
 
 func (s *InboundService) getParsedSettings(inboundId int, settingsStr string) map[string]any {
 	s.cacheMutex.RLock()
+	if s.settingsCache != nil {
+		cached, exists := s.settingsCache[inboundId]
+		if exists {
+			s.cacheMutex.RUnlock()
+			return cached
+		}
+	}
+	s.cacheMutex.RUnlock()
+
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+
 	if s.settingsCache == nil {
 		s.settingsCache = make(map[int]map[string]any)
-	}
-	cached, exists := s.settingsCache[inboundId]
-	s.cacheMutex.RUnlock()
-	if exists {
-		return cached
 	}
 
 	var settings map[string]any
@@ -102,9 +109,7 @@ func (s *InboundService) getParsedSettings(inboundId int, settingsStr string) ma
 		return nil
 	}
 
-	s.cacheMutex.Lock()
 	s.settingsCache[inboundId] = settings
-	s.cacheMutex.Unlock()
 
 	return settings
 }

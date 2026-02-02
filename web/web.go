@@ -119,7 +119,7 @@ type Server struct {
 	xrayService     *service.XrayService
 	inboundService  *service.InboundService
 	outboundService *service.OutboundService
-	settingService  service.SettingService
+	settingService  *service.SettingService
 	tgbotService    service.TelegramService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService *service.ServerService
@@ -137,12 +137,13 @@ func (s *Server) SetTelegramService(tgService service.TelegramService) {
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-func NewServer(serverService *service.ServerService, xrayService *service.XrayService, inboundService *service.InboundService, outboundService *service.OutboundService) *Server {
+func NewServer(serverService *service.ServerService, settingService *service.SettingService, xrayService *service.XrayService, inboundService *service.InboundService, outboundService *service.OutboundService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		ctx:             ctx,
 		cancel:          cancel,
 		serverService:   serverService,
+		settingService:  settingService,
 		xrayService:     xrayService,
 		inboundService:  inboundService,
 		outboundService: outboundService,
@@ -248,7 +249,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	})
 
 	// init i18n
-	err = locale.InitLocalizer(i18nFS, &s.settingService)
+	err = locale.InitLocalizer(i18nFS, s.settingService)
 	if err != nil {
 		return nil, err
 	}

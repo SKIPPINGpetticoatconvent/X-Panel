@@ -12,7 +12,7 @@ import (
 	"syscall"
 	_ "unsafe"
 
-	// 中文注释: 新增了 time 和 x-ui/job 的导入，这是运行定时任务所必需的包
+	// 中文注释: 新增了 x-ui/job 的导入，这是运行定时任务所必需的包
 
 	"x-ui/config"
 	"x-ui/database"
@@ -113,10 +113,9 @@ func runWebServer() {
 	// 还需要 OutboundService
 	outboundService := service.OutboundService{}
 
-	var server *web.Server
-
-	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
-	server = web.NewServer(&serverService, &xrayService, &inboundService, &outboundService)
+	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 s
+	// Call NewServer
+	server := web.NewServer(&serverService, &settingService, &xrayService, &inboundService, &outboundService)
 	// 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
 	if tgBotService != nil {
 		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
@@ -155,14 +154,12 @@ func runWebServer() {
 	tgSvc := tgBotService
 	tgMu.RUnlock()
 
-	checkSettingService := service.SettingService{}
-	checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgSvc, checkSettingService)
+	checkJob := job.NewCheckDeviceLimitJob(&inboundService, &xrayService, tgSvc, settingService)
 	// 注册并启动后台任务
 	jobManager.Register(checkJob)
 
 	// 初始化 CertMonitorJob (提前初始化以支持 SIGUSR2 信号触发)
-	certSettingService := service.SettingService{}
-	monitorJob := job.NewCertMonitorJob(certSettingService, tgSvc)
+	monitorJob := job.NewCertMonitorJob(settingService, tgSvc)
 	jobManager.Register(monitorJob)
 
 	// 初始化 XrayTrafficJob
@@ -250,7 +247,7 @@ func runWebServer() {
 			}
 			tgMu.Unlock()
 
-			server = web.NewServer(&serverService, &xrayService, &inboundService, &outboundService)
+			server = web.NewServer(&serverService, &settingService, &xrayService, &inboundService, &outboundService)
 			// 重新注入 tgBotService
 			tgMu.RLock()
 			if tgBotService != nil {
