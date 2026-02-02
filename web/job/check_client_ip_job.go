@@ -252,6 +252,10 @@ func (j *CheckDeviceLimitJob) cleanupExpiredIPs() {
 
 // checkAllClientsLimit 中文注释: 核心功能，检查所有用户，对超限的执行封禁，对恢复的执行解封
 func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
+	if j.xrayService == nil {
+		logger.Warning("[DeviceLimit] XrayServices not ready, skipping cycle.")
+		return
+	}
 	db := database.GetDB()
 	var inbounds []*model.Inbound
 	// 中文注释: 这里仅查询启用了设备限制(device_limit > 0)并且自身是开启状态的入站规则
@@ -353,11 +357,18 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	if err != nil || client == nil {
 		return
 	}
+
+	if j.xrayService == nil {
+		return
+	}
+
 	logger.Infof("〔设备限制〕超限：用户 %s. 限制: %d, 当前活跃: %d. 执行封禁掐网。", email, info.Limit, activeIPCount)
 
 	// 〔中文注释〕: 以下是发送 Telegram 通知的核心代码，
 	// 它会调用我们注入的 telegramService 的 SendMessage 方法。
+	j.wg.Add(1)
 	go func() {
+		defer j.wg.Done()
 		// 〔中文注释〕: 在调用前，先判断服务实例是否为 nil，增加代码健壮性。
 		if j.telegramService == nil {
 			return
