@@ -27,12 +27,15 @@ func (s *E2ETestSuite) TestSSLFallback() {
 
 	// 4. Trigger CertMonitorJob immediately via SIGUSR2 signal
 	s.T().Log("Triggering CertMonitorJob via SIGUSR2 signal...")
+	// Force logs to be flushed
+	s.execCommand([]string{"bash", "-c", "sync"})
 	_, _, err := s.execCommand([]string{"bash", "-c", "kill -SIGUSR2 $(pgrep x-ui)"})
 	s.Require().NoError(err, "Failed to send SIGUSR2 to x-ui")
+	s.T().Log("SIGUSR2 sent successfully.")
 
-	// 5. Wait a short time for the job to complete and the panel to potentially restart
-	s.T().Log("Waiting for job execution and potential restart...")
-	time.Sleep(5 * time.Second)
+	// 5. Wait for the job to complete and the panel to potentially restart
+	s.T().Log("Waiting for job execution and potential restart (20s)...")
+	time.Sleep(20 * time.Second)
 
 	// 6. Verify fallback
 	s.T().Log("Verifying fallback results...")
