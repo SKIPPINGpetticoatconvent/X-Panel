@@ -145,7 +145,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [TestInstallation, TestCertApplication, TestSSLFallback]
+        test:
+          [
+            TestInstallation,
+            TestCertApplication,
+            TestSSLFallback,
+            TestSIGHUPRestart,
+          ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
