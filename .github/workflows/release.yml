@@ -129,31 +129,11 @@ jobs:
           cd ..
           rm -rf release_temp x-ui
 
-      - name: Cache E2E Docker Image
-        id: cache-e2e-image
-        uses: actions/cache@v4
-        with:
-          path: xpanel-e2e-image.tar
-          key: e2e-image-${{ runner.os }}-${{ hashFiles('tests/e2e/docker/Dockerfile.ubuntu22') }}
-
-      - name: Build Docker image and export
-        if: steps.cache-e2e-image.outputs.cache-hit != 'true'
-        run: |
-          docker build -t xpanel-e2e-image -f tests/e2e/docker/Dockerfile.ubuntu22 .
-          docker save xpanel-e2e-image -o xpanel-e2e-image.tar
-
       - name: Upload E2E tarball
         uses: actions/upload-artifact@v4
         with:
           name: e2e-tarball
           path: x-ui-linux-amd64.tar.gz
-          retention-days: 1
-
-      - name: Upload E2E Docker image
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-image
-          path: xpanel-e2e-image.tar
           retention-days: 1
 
   e2e-test:
@@ -165,28 +145,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [install, ip_cert, domain_cert, ssl_fallback]
+        test: [TestInstallation, TestCertApplication, TestSSLFallback]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
       - name: Download E2E tarball
         uses: actions/download-artifact@v4
         with:
           name: e2e-tarball
 
-      - name: Download E2E Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: e2e-image
-
-      - name: Load Docker image
-        run: docker load -i xpanel-e2e-image.tar
-
       - name: Run E2E test (${{ matrix.test }})
         run: |
-          chmod +x tests/e2e/runner.sh
-          ./tests/e2e/runner.sh --mode local --test ${{ matrix.test }} --skip-build --skip-docker-build --keep-artifact
+          # Testcontainers will handle image building automatically using Dockerfile.ubuntu22
+          # DOCKER_HOST is automatically set by the GitHub runner environment
+          go test -v -timeout 15m ./tests/e2e/... -run TestE2E/${{ matrix.test }}
 
   # ===============================================================
   # Linux 平台的构建任务
