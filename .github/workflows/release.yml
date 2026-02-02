@@ -171,8 +171,8 @@ jobs:
           tags: xpanel-e2e-image:latest
           push: false
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=e2e-cache
+          cache-to: type=gha,mode=max,scope=e2e-cache
 
       - name: Run E2E test (${{ matrix.test }})
         run: |
