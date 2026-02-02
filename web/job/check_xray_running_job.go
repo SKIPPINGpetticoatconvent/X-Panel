@@ -6,13 +6,15 @@ import (
 )
 
 type CheckXrayRunningJob struct {
-	xrayService service.XrayService
+	xrayService *service.XrayService
 
 	checkTime int
 }
 
-func NewCheckXrayRunningJob() *CheckXrayRunningJob {
-	return new(CheckXrayRunningJob)
+func NewCheckXrayRunningJob(xrayService *service.XrayService) *CheckXrayRunningJob {
+	return &CheckXrayRunningJob{
+		xrayService: xrayService,
+	}
 }
 
 func (j *CheckXrayRunningJob) Run() {

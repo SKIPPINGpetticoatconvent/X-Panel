@@ -299,7 +299,7 @@ func (s *Server) startTask() {
 		logger.Warning("start xray failed:", err)
 	}
 	// Check whether xray is running every second
-	_, _ = s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob())
+	_, _ = s.cron.AddJob("@every 1s", job.NewCheckXrayRunningJob(s.xrayService))
 
 	// Check if xray needs to be restarted every 30 seconds
 	_, _ = s.cron.AddFunc("@daily", func() {
