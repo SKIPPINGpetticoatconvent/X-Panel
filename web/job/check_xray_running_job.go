@@ -18,6 +18,9 @@ func NewCheckXrayRunningJob(xrayService *service.XrayService) *CheckXrayRunningJ
 }
 
 func (j *CheckXrayRunningJob) Run() {
+	if j.xrayService == nil {
+		return
+	}
 	if !j.xrayService.DidXrayCrash() {
 		j.checkTime = 0
 	} else {
