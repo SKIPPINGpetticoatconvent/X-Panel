@@ -343,20 +343,6 @@ func (t *Tgbot) IsRunning() bool {
 	return isRunning
 }
 
-// 线程安全的用户状态管理函数
-func getUserState(userId int64) (string, bool) {
-	userStatesMu.RLock()
-	defer userStatesMu.RUnlock()
-	state, exists := userStates[userId]
-	return state, exists
-}
-
-func setUserState(userId int64, state string) {
-	userStatesMu.Lock()
-	defer userStatesMu.Unlock()
-	userStates[userId] = state
-}
-
 func deleteUserState(userId int64) {
 	userStatesMu.Lock()
 	defer userStatesMu.Unlock()
