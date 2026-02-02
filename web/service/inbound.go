@@ -330,8 +330,20 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 			if isOneClick && s.tgService != nil && s.tgService.IsRunning() {
 				// 〔中文注释〕: 使用 goroutine 异步发送通知，避免阻塞正常的 API 返回
 				go func(ib *model.Inbound) {
+					defer func() {
+						if r := recover(); r != nil {
+							logger.Errorf("Recovered from panic in async TG notify: %v", r)
+						}
+					}()
+
 					// 等待5秒，确保事务已经完全提交
 					time.Sleep(5 * time.Second)
+
+					// [NEW] 二次检查，防止 Sleep 期间服务已销毁
+					if s.tgService == nil || !s.tgService.IsRunning() {
+						return
+					}
+
 					logger.Infof("检测到一键配置创建成功 (备注: %s)，准备发送 TG 通知...", ib.Remark)
 
 					// 【修改位置】: 将 global.TgBot 替换为 s.tgService
