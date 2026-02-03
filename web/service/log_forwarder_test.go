@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	logging "github.com/op/go-logging"
+	"x-ui/logger"
 )
 
 // mockTelegramService 用于测试的 Telegram 服务模拟
@@ -34,23 +34,23 @@ func (m *mockSettingServiceForForwarder) GetTgLogLevel() (string, error) {
 
 func TestLogForwarder_ShouldSkipLog(t *testing.T) {
 	lf := &LogForwarder{
-		forwardLevel: logging.WARNING,
+		forwardLevel: logger.WARNING,
 	}
 
 	tests := []struct {
 		name    string
 		message string
-		level   logging.Level
+		level   logger.Level
 		want    bool
 	}{
-		{"低于转发级别", "normal info", logging.INFO, true},
-		{"满足转发级别", "something failed", logging.WARNING, false},
-		{"高于转发级别", "critical error", logging.ERROR, false},
-		{"包含 Telegram 关键词", "Telegram bot connected", logging.ERROR, true},
-		{"包含 bot 关键词", "Bot started", logging.ERROR, true},
-		{"包含日志转发关键词", "LogForwarder started", logging.ERROR, true},
-		{"包含 checkpoint 关键词", "checkpoint completed", logging.ERROR, true},
-		{"包含 database 关键词", "database connection", logging.ERROR, true},
+		{"低于转发级别", "normal info", logger.INFO, true},
+		{"满足转发级别", "something failed", logger.WARNING, false},
+		{"高于转发级别", "critical error", logger.ERROR, false},
+		{"包含 Telegram 关键词", "Telegram bot connected", logger.ERROR, true},
+		{"包含 bot 关键词", "Bot started", logger.ERROR, true},
+		{"包含日志转发关键词", "LogForwarder started", logger.ERROR, true},
+		{"包含 checkpoint 关键词", "checkpoint completed", logger.ERROR, true},
+		{"包含 database 关键词", "database connection", logger.ERROR, true},
 	}
 
 	for _, tt := range tests {
@@ -100,27 +100,27 @@ func TestLogForwarder_FormatLogMessage(t *testing.T) {
 	}{
 		{
 			"ERROR 级别",
-			&LogMessage{Level: logging.ERROR, Message: "test error"},
+			&LogMessage{Level: logger.ERROR, Message: "test error"},
 			false,
 		},
 		{
 			"WARNING 级别",
-			&LogMessage{Level: logging.WARNING, Message: "test warning"},
+			&LogMessage{Level: logger.WARNING, Message: "test warning"},
 			false,
 		},
 		{
 			"DEBUG 级别",
-			&LogMessage{Level: logging.DEBUG, Message: "test debug"},
+			&LogMessage{Level: logger.DEBUG, Message: "test debug"},
 			false,
 		},
 		{
 			"INFO 级别-重要",
-			&LogMessage{Level: logging.INFO, Message: "Server started"},
+			&LogMessage{Level: logger.INFO, Message: "Server started"},
 			false,
 		},
 		{
 			"INFO 级别-不重要",
-			&LogMessage{Level: logging.INFO, Message: "normal processing"},
+			&LogMessage{Level: logger.INFO, Message: "normal processing"},
 			true,
 		},
 	}
@@ -147,12 +147,12 @@ func TestLogForwarder_IsEnabled_Default(t *testing.T) {
 
 func TestLogForwarder_SetForwardLevel(t *testing.T) {
 	lf := &LogForwarder{
-		forwardLevel: logging.WARNING,
+		forwardLevel: logger.WARNING,
 	}
 
-	lf.SetForwardLevel(logging.ERROR)
+	lf.SetForwardLevel(logger.ERROR)
 
-	if lf.forwardLevel != logging.ERROR {
-		t.Errorf("forwardLevel = %v, want %v", lf.forwardLevel, logging.ERROR)
+	if lf.forwardLevel != logger.ERROR {
+		t.Errorf("forwardLevel = %v, want %v", lf.forwardLevel, logger.ERROR)
 	}
 }
