@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
@@ -137,17 +136,7 @@ func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, err
 }
 
 func (s *InboundService) getAllEmails() ([]string, error) {
-	db := database.GetDB()
-	var emails []string
-	err := db.Raw(`
-		SELECT JSON_EXTRACT(client.value, '$.email')
-		FROM inbounds,
-			JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client
-		`).Scan(&emails).Error
-	if err != nil {
-		return nil, err
-	}
-	return emails, nil
+	return s.getInboundRepo().GetAllEmails()
 }
 
 func (s *InboundService) contains(slice []string, str string) bool {
@@ -305,7 +294,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	// =================================================================
 
 	// 开始数据库事务
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 	defer func() {
 		if err == nil {
@@ -395,7 +384,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 }
 
 func (s *InboundService) DelInbound(id int) (bool, error) {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 
 	var tag string
 	needRestart := false
@@ -443,7 +432,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 
 	tag := oldInbound.Tag
 
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 
 	defer func() {
@@ -691,7 +680,7 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 
 	oldInbound.Settings = string(newSettings)
 
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 
 	defer func() {
@@ -794,7 +783,7 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 
 	oldInbound.Settings = string(newSettings)
 
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 
 	err = s.DelClientIPs(db, email)
 	if err != nil {
@@ -941,7 +930,7 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 	}
 
 	oldInbound.Settings = string(newSettings)
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 
 	defer func() {
@@ -1031,7 +1020,7 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 
 func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
 	var err error
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 
 	defer func() {
@@ -1423,7 +1412,7 @@ func (s *InboundService) GetInboundTags() (string, error) {
 }
 
 func (s *InboundService) MigrationRemoveOrphanedTraffics() {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	db.Exec(`
 		DELETE FROM client_traffics
 		WHERE email NOT IN (
@@ -1937,18 +1926,11 @@ func (s *InboundService) ResetAllClientTraffics(id int) error {
 }
 
 func (s *InboundService) ResetAllTraffics() error {
-	db := database.GetDB()
-
-	result := db.Model(model.Inbound{}).
-		Where("user_id > ?", 0).
-		Updates(map[string]any{"up": 0, "down": 0})
-
-	err := result.Error
-	return err
+	return s.getInboundRepo().ResetAllTraffics()
 }
 
 func (s *InboundService) DelDepletedClients(id int) (err error) {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 	defer func() {
 		if err == nil {
@@ -2026,7 +2008,7 @@ func (s *InboundService) DelDepletedClients(id int) (err error) {
 }
 
 func (s *InboundService) GetClientTrafficTgBot(tgId int64) ([]*xray.ClientTraffic, error) {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	var inbounds []*model.Inbound
 
 	// Retrieve inbounds where settings contain the given tgId
@@ -2083,7 +2065,7 @@ func (s *InboundService) UpdateClientTrafficByEmail(email string, upload int64, 
 }
 
 func (s *InboundService) GetClientTrafficByID(id string) ([]xray.ClientTraffic, error) {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	var traffics []xray.ClientTraffic
 
 	err := db.Model(xray.ClientTraffic{}).Where(`email IN(
@@ -2101,7 +2083,7 @@ func (s *InboundService) GetClientTrafficByID(id string) ([]xray.ClientTraffic, 
 }
 
 func (s *InboundService) SearchClientTraffic(query string) (traffic *xray.ClientTraffic, err error) {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	inbound := &model.Inbound{}
 	traffic = &xray.ClientTraffic{}
 
@@ -2169,7 +2151,7 @@ func (s *InboundService) SearchInbounds(query string) ([]*model.Inbound, error) 
 }
 
 func (s *InboundService) MigrationRequirements() {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 	tx := db.Begin()
 	var err error
 	defer func() {
@@ -2372,7 +2354,7 @@ func (s *InboundService) GetClientsLastOnline() (map[string]int64, error) {
 }
 
 func (s *InboundService) FilterAndSortClientEmails(emails []string) ([]string, []string, error) {
-	db := database.GetDB()
+	db := s.getInboundRepo().GetDB()
 
 	// Step 1: Get ClientTraffic records for emails in the input list
 	var clients []xray.ClientTraffic

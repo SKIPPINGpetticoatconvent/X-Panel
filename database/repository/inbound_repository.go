@@ -23,7 +23,11 @@ type InboundRepository interface {
 	Search(query string) ([]*model.Inbound, error)
 	GetAllTags() ([]string, error)
 	GetAllIDs() ([]int, error)
+	GetAllEmails() ([]string, error)
 	CheckPortExist(listen string, port int, ignoreId int) (bool, error)
+
+	// 批量操作
+	ResetAllTraffics() error
 
 	// 事务支持
 	WithTx(tx *gorm.DB) InboundRepository
@@ -135,6 +139,27 @@ func (r *inboundRepository) GetAllIDs() ([]int, error) {
 		return nil, err
 	}
 	return ids, nil
+}
+
+// GetAllEmails 获取所有客户端的 Email（从 JSON settings 中提取）
+func (r *inboundRepository) GetAllEmails() ([]string, error) {
+	var emails []string
+	err := r.db.Raw(`
+		SELECT JSON_EXTRACT(client.value, '$.email')
+		FROM inbounds,
+			JSON_EACH(JSON_EXTRACT(inbounds.settings, '$.clients')) AS client
+		`).Scan(&emails).Error
+	if err != nil {
+		return nil, err
+	}
+	return emails, nil
+}
+
+// ResetAllTraffics 重置所有 Inbound 的流量统计
+func (r *inboundRepository) ResetAllTraffics() error {
+	return r.db.Model(model.Inbound{}).
+		Where("user_id > ?", 0).
+		Updates(map[string]interface{}{"up": 0, "down": 0}).Error
 }
 
 // CheckPortExist 检查端口是否已存在
