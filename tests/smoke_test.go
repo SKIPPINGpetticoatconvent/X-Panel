@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"x-ui/bootstrap"
+	"x-ui/config"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -14,6 +15,9 @@ func TestSmokeLogin(t *testing.T) {
 	os.Setenv("XUI_DB_FOLDER", t.TempDir())
 	os.Setenv("XUI_LOG_FOLDER", t.TempDir())
 	os.Setenv("XUI_LOG_LEVEL", "debug")
+
+	// 刷新 Viper 配置以应用环境变量
+	config.RefreshEnvConfig()
 
 	// 2. 初始化应用 (含 DB 迁移和 Wire 注入)
 	app, err := bootstrap.Initialize()
