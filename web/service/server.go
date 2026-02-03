@@ -319,8 +319,8 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 	status.AppStats.Mem = rtm.Sys
 	//nolint:gosec
 	status.AppStats.Threads = uint32(runtime.NumGoroutine())
-	if p != nil && p.IsRunning() {
-		status.AppStats.Uptime = p.GetUptime()
+	if s.xrayService != nil && s.xrayService.IsXrayRunning() {
+		status.AppStats.Uptime = s.xrayService.GetProcessUptime()
 	} else {
 		status.AppStats.Uptime = 0
 	}

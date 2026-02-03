@@ -2061,7 +2061,7 @@ func (t *Tgbot) prepareServerUsageInfo() string {
 
 	// get latest status of server
 	t.lastStatus = t.serverService.GetStatus(t.lastStatus)
-	onlines := p.GetOnlineClients()
+	onlines := t.xrayService.GetOnlineClients()
 
 	// get ip address
 	netInterfaces, err := net.Interfaces()
@@ -2434,8 +2434,8 @@ func (t *Tgbot) clientInfoMsg(
 	}
 
 	status := t.I18nBot("tgbot.offline")
-	if p.IsRunning() {
-		for _, online := range p.GetOnlineClients() {
+	if t.xrayService != nil && t.xrayService.IsXrayRunning() {
+		for _, online := range t.xrayService.GetOnlineClients() {
 			if online == traffic.Email {
 				status = t.I18nBot("tgbot.online")
 				break
@@ -2871,11 +2871,11 @@ func (t *Tgbot) getExhausted(chatId int64) {
 }
 
 func (t *Tgbot) onlineClients(chatId int64, messageID ...int) {
-	if !p.IsRunning() {
+	if t.xrayService == nil || !t.xrayService.IsXrayRunning() {
 		return
 	}
 
-	onlines := p.GetOnlineClients()
+	onlines := t.xrayService.GetOnlineClients()
 	onlinesCount := len(onlines)
 	output := t.I18nBot("tgbot.messages.onlinesCount", "Count=="+fmt.Sprint(onlinesCount))
 	keyboard := tu.InlineKeyboard(tu.InlineKeyboardRow(

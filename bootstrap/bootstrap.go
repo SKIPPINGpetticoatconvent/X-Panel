@@ -86,6 +86,7 @@ func (app *App) WireServices(tgBotService service.TelegramService) {
 	app.ServerService.SetXrayService(app.XrayService)
 	app.ServerService.SetInboundService(app.InboundService)
 	app.XrayService.SetInboundService(app.InboundService)
+	app.InboundService.SetXrayService(app.XrayService)
 
 	// 注入 Telegram 服务
 	app.ServerService.SetTelegramService(tgBotService)
