@@ -9,8 +9,6 @@ import (
 
 	"x-ui/logger"
 	"x-ui/util/common"
-
-	logging "github.com/op/go-logging"
 )
 
 // LogForwarder 日志转发器，将日志转发到 Telegram Bot
@@ -18,7 +16,7 @@ type LogForwarder struct {
 	settingService  *SettingService
 	telegramService TelegramService
 	isEnabled       bool
-	forwardLevel    logging.Level // 日志转发级别 (ERROR, WARNING, INFO, DEBUG)
+	forwardLevel    logger.Level // 日志转发级别 (ERROR, WARNING, INFO, DEBUG)
 	logBuffer       chan *LogMessage
 	bufferSize      int
 	workerCount     int
@@ -32,7 +30,7 @@ type LogForwarder struct {
 
 // LogMessage 表示要转发的日志消息
 type LogMessage struct {
-	Level     logging.Level
+	Level     logger.Level
 	Message   string
 	Formatted string
 	Timestamp time.Time
@@ -43,7 +41,7 @@ func NewLogForwarder(settingService *SettingService, telegramService TelegramSer
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// 获取配置的日志级别，默认 WARNING
-	forwardLevel := logging.WARNING
+	forwardLevel := logger.WARNING
 	if levelStr, err := settingService.GetTgLogLevel(); err == nil {
 		forwardLevel = common.ParseLogLevel(levelStr)
 	}
@@ -150,7 +148,7 @@ func (lf *LogForwarder) IsEnabled() bool {
 }
 
 // OnLog 实现 LogListener 接口，接收日志消息
-func (lf *LogForwarder) OnLog(level logging.Level, message string, formattedLog string) {
+func (lf *LogForwarder) OnLog(level logger.Level, message string, formattedLog string) {
 	lf.mu.RLock()
 	enabled := lf.isEnabled
 	lf.mu.RUnlock()
@@ -185,9 +183,9 @@ func (lf *LogForwarder) OnLog(level logging.Level, message string, formattedLog 
 
 // shouldSkipLog 判断是否应该跳过转发此日志
 // 根据配置的级别转发日志
-func (lf *LogForwarder) shouldSkipLog(message, formattedLog string, level logging.Level) bool {
+func (lf *LogForwarder) shouldSkipLog(message, formattedLog string, level logger.Level) bool {
 	// 检查级别是否满足转发条件
-	if level > lf.forwardLevel {
+	if level < lf.forwardLevel {
 		return true
 	}
 
@@ -292,16 +290,16 @@ func (lf *LogForwarder) flushLogs(batch []*LogMessage) {
 func (lf *LogForwarder) formatLogMessage(logMsg *LogMessage) string {
 	// 根据级别格式化消息，使用清晰的格式和 HTML 标记
 	switch logMsg.Level {
-	case logging.ERROR:
+	case logger.ERROR:
 		return fmt.Sprintf("🚨 <b>ERROR</b>\n<code>%s</code>", logMsg.Message)
-	case logging.WARNING:
+	case logger.WARNING:
 		return fmt.Sprintf("⚠️ <b>WARNING</b>\n<code>%s</code>", logMsg.Message)
-	case logging.INFO:
+	case logger.INFO:
 		// INFO 级别只转发重要的消息
 		if lf.isImportantInfo(logMsg.Message) {
 			return fmt.Sprintf("ℹ️ <b>INFO</b>\n<code>%s</code>", logMsg.Message)
 		}
-	case logging.DEBUG:
+	case logger.DEBUG:
 		// DEBUG 级别使用简洁格式
 		return fmt.Sprintf("🐛 <b>DEBUG</b>\n<code>%s</code>", logMsg.Message)
 	}
@@ -337,7 +335,7 @@ func (lf *LogForwarder) isImportantInfo(message string) bool {
 }
 
 // SetForwardLevel 设置日志转发级别
-func (lf *LogForwarder) SetForwardLevel(level logging.Level) {
+func (lf *LogForwarder) SetForwardLevel(level logger.Level) {
 	lf.mu.Lock()
 	defer lf.mu.Unlock()
 	lf.forwardLevel = level
@@ -353,7 +351,7 @@ func (lf *LogForwarder) UpdateConfig() {
 	}
 
 	// 获取新的级别
-	newLevel := logging.WARNING
+	newLevel := logger.WARNING
 	if levelStr, err := lf.settingService.GetTgLogLevel(); err == nil {
 		newLevel = common.ParseLogLevel(levelStr)
 	}

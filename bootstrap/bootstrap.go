@@ -11,7 +11,6 @@ import (
 	"x-ui/xray"
 
 	"github.com/joho/godotenv"
-	"github.com/op/go-logging"
 )
 
 // App 封装应用运行时所需的所有服务实例
@@ -90,18 +89,18 @@ func InitLogger(settingService *service.SettingService) {
 		localLogEnabled = false
 	}
 
-	var level logging.Level
+	var level logger.Level
 	switch config.GetLogLevel() {
 	case config.Debug:
-		level = logging.DEBUG
+		level = logger.DEBUG
 	case config.Info:
-		level = logging.INFO
+		level = logger.INFO
 	case config.Notice:
-		level = logging.NOTICE
+		level = logger.NOTICE
 	case config.Warning:
-		level = logging.WARNING
+		level = logger.WARNING
 	case config.Error:
-		level = logging.ERROR
+		level = logger.ERROR
 	default:
 		log.Fatalf("Unknown log level: %v", config.GetLogLevel())
 	}

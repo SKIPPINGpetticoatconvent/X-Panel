@@ -3,8 +3,6 @@ package logger
 import (
 	"sync"
 	"testing"
-
-	logging "github.com/op/go-logging"
 )
 
 func TestGetLogs_Empty(t *testing.T) {
@@ -21,14 +19,11 @@ func TestGetLogs_FilterByLevel(t *testing.T) {
 	logBuffer = nil
 	logBufferMu.Unlock()
 
-	addToBuffer("DEBUG", "debug msg")
-	addToBuffer("INFO", "info msg")
-	addToBuffer("WARNING", "warning msg")
-	addToBuffer("ERROR", "error msg")
+	addToBuffer(DEBUG, "debug msg")
+	addToBuffer(INFO, "info msg")
+	addToBuffer(WARNING, "warning msg")
+	addToBuffer(ERROR, "error msg")
 
-	// GetLogs 使用 go-logging 的级别比较: level >= logLevel
-	// go-logging 中 CRITICAL=0, ERROR=1..3, WARNING=4, NOTICE=5, INFO=6, DEBUG=7
-	// 因此 >= ERROR 的数值实际上包含所有级别 (因为 WARNING > ERROR > CRITICAL)
 	// 取所有级别
 	allLogs := GetLogs(10, "DEBUG")
 	if len(allLogs) == 0 {
@@ -48,11 +43,9 @@ func TestGetLogs_LimitCount(t *testing.T) {
 	logBufferMu.Unlock()
 
 	for range 10 {
-		addToBuffer("INFO", "msg")
+		addToBuffer(INFO, "msg")
 	}
 
-	// GetLogs 过滤条件是 logBuffer[i].level >= logLevel
-	// 用 INFO 级别获取，确保匹配
 	logs := GetLogs(3, "INFO")
 	if len(logs) > 3 {
 		t.Errorf("Expected at most 3 logs, got %d", len(logs))
@@ -66,7 +59,7 @@ func TestAddToBuffer_MaxSize(t *testing.T) {
 
 	// 添加超过 maxSize (200) 条日志
 	for range 210 {
-		addToBuffer("INFO", "overflow test")
+		addToBuffer(INFO, "overflow test")
 	}
 
 	logBufferMu.RLock()
@@ -79,7 +72,7 @@ func TestAddToBuffer_MaxSize(t *testing.T) {
 }
 
 func TestListenerBackend_AddRemoveListener(t *testing.T) {
-	backend := NewListenerBackend(nil)
+	backend := NewListenerBackend()
 
 	listener := &mockListener{}
 	backend.AddListener(listener)
@@ -99,7 +92,7 @@ func TestListenerBackend_AddRemoveListener(t *testing.T) {
 }
 
 func TestListenerBackend_RemoveNonexistent(t *testing.T) {
-	backend := NewListenerBackend(nil)
+	backend := NewListenerBackend()
 	listener1 := &mockListener{}
 	listener2 := &mockListener{}
 
@@ -141,11 +134,54 @@ func TestConcurrentAddToBuffer(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			addToBuffer("INFO", "concurrent test")
+			addToBuffer(INFO, "concurrent test")
 		}()
 	}
 	wg.Wait()
 	// 只要不 panic 或 data race 即通过
+}
+
+func TestLevelParsing(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected Level
+	}{
+		{"DEBUG", DEBUG},
+		{"debug", DEBUG},
+		{"INFO", INFO},
+		{"info", INFO},
+		{"WARNING", WARNING},
+		{"warn", WARNING},
+		{"ERROR", ERROR},
+		{"error", ERROR},
+		{"unknown", WARNING}, // 默认
+	}
+
+	for _, tc := range tests {
+		got := ParseLevel(tc.input)
+		if got != tc.expected {
+			t.Errorf("ParseLevel(%q) = %v, want %v", tc.input, got, tc.expected)
+		}
+	}
+}
+
+func TestLevelString(t *testing.T) {
+	tests := []struct {
+		level    Level
+		expected string
+	}{
+		{DEBUG, "DEBUG"},
+		{INFO, "INFO"},
+		{WARNING, "WARNING"},
+		{ERROR, "ERROR"},
+	}
+
+	for _, tc := range tests {
+		got := tc.level.String()
+		if got != tc.expected {
+			t.Errorf("Level(%d).String() = %q, want %q", tc.level, got, tc.expected)
+		}
+	}
 }
 
 // mockListener 用于测试的模拟日志监听器
@@ -154,7 +190,7 @@ type mockListener struct {
 	messages []string
 }
 
-func (m *mockListener) OnLog(level logging.Level, message string, formattedLog string) {
+func (m *mockListener) OnLog(level Level, message string, formattedLog string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.messages = append(m.messages, message)
