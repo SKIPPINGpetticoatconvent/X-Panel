@@ -11,6 +11,7 @@ import (
 
 	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/xray"
@@ -19,10 +20,13 @@ import (
 )
 
 type InboundService struct {
-	xrayApi       xray.XrayAPI
-	tgService     TelegramService
-	settingsCache map[int]map[string]any
-	cacheMutex    sync.RWMutex
+	xrayApi           xray.XrayAPI
+	tgService         TelegramService
+	settingsCache     map[int]map[string]any
+	cacheMutex        sync.RWMutex
+	inboundRepo       repository.InboundRepository
+	clientTrafficRepo repository.ClientTrafficRepository
+	clientIPRepo      repository.ClientIPRepository
 }
 
 // 用于从外部注入 XrayAPI 实例
@@ -35,54 +39,40 @@ func (s *InboundService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
 }
 
-func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
-	db := database.GetDB()
-	var inbounds []*model.Inbound
-	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("user_id = ?", userId).Find(&inbounds).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
+// getInboundRepo 延迟初始化并返回 InboundRepository
+func (s *InboundService) getInboundRepo() repository.InboundRepository {
+	if s.inboundRepo == nil {
+		s.inboundRepo = repository.NewInboundRepository()
 	}
-	return inbounds, nil
+	return s.inboundRepo
+}
+
+// getClientTrafficRepo 延迟初始化并返回 ClientTrafficRepository
+func (s *InboundService) getClientTrafficRepo() repository.ClientTrafficRepository {
+	if s.clientTrafficRepo == nil {
+		s.clientTrafficRepo = repository.NewClientTrafficRepository()
+	}
+	return s.clientTrafficRepo
+}
+
+// getClientIPRepo 延迟初始化并返回 ClientIPRepository
+func (s *InboundService) getClientIPRepo() repository.ClientIPRepository {
+	if s.clientIPRepo == nil {
+		s.clientIPRepo = repository.NewClientIPRepository()
+	}
+	return s.clientIPRepo
+}
+
+func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
+	return s.getInboundRepo().FindByUserID(userId)
 }
 
 func (s *InboundService) GetAllInbounds() ([]*model.Inbound, error) {
-	db := database.GetDB()
-	var inbounds []*model.Inbound
-	err := db.Model(model.Inbound{}).Preload("ClientStats").Find(&inbounds).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-	return inbounds, nil
+	return s.getInboundRepo().FindAll()
 }
 
 func (s *InboundService) checkPortExist(listen string, port int, ignoreId int) (bool, error) {
-	db := database.GetDB()
-	if listen == "" || listen == "0.0.0.0" || listen == "::" || listen == "::0" {
-		db = db.Model(model.Inbound{}).Where("port = ?", port)
-	} else {
-		db = db.Model(model.Inbound{}).
-			Where("port = ?", port).
-			Where(
-				db.Model(model.Inbound{}).Where(
-					"listen = ?", listen,
-				).Or(
-					"listen = \"\"",
-				).Or(
-					"listen = \"0.0.0.0\"",
-				).Or(
-					"listen = \"::\"",
-				).Or(
-					"listen = \"::0\""))
-	}
-	if ignoreId > 0 {
-		db = db.Where("id != ?", ignoreId)
-	}
-	var count int64
-	err := db.Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
+	return s.getInboundRepo().CheckPortExist(listen, port, ignoreId)
 }
 
 func (s *InboundService) getParsedSettings(inboundId int, settingsStr string) map[string]any {
@@ -435,13 +425,7 @@ func (s *InboundService) DelInbound(id int) (bool, error) {
 }
 
 func (s *InboundService) GetInbound(id int) (*model.Inbound, error) {
-	db := database.GetDB()
-	inbound := &model.Inbound{}
-	err := db.Model(model.Inbound{}).First(inbound, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return inbound, nil
+	return s.getInboundRepo().FindByID(id)
 }
 
 func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
@@ -1431,10 +1415,8 @@ func (s *InboundService) disableInvalidClients(tx *gorm.DB) (bool, int64, error)
 }
 
 func (s *InboundService) GetInboundTags() (string, error) {
-	db := database.GetDB()
-	var inboundTags []string
-	err := db.Model(model.Inbound{}).Select("tag").Find(&inboundTags).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	inboundTags, err := s.getInboundRepo().GetAllTags()
+	if err != nil {
 		return "", err
 	}
 	tags, _ := json.Marshal(inboundTags)
@@ -2237,13 +2219,7 @@ func (s *InboundService) ClearClientIps(clientEmail string) error {
 }
 
 func (s *InboundService) SearchInbounds(query string) ([]*model.Inbound, error) {
-	db := database.GetDB()
-	var inbounds []*model.Inbound
-	err := db.Model(model.Inbound{}).Preload("ClientStats").Where("remark like ?", "%"+query+"%").Find(&inbounds).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-	return inbounds, nil
+	return s.getInboundRepo().Search(query)
 }
 
 func (s *InboundService) MigrationRequirements() {
