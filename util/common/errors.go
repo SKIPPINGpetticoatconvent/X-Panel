@@ -1,6 +1,96 @@
 package common
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+// =================================================================
+// 错误码常量
+// =================================================================
+
+const (
+	ErrCodeNotFound     = "NOT_FOUND"
+	ErrCodeInvalidInput = "INVALID_INPUT"
+	ErrCodeUnauthorized = "UNAUTHORIZED"
+	ErrCodeInternal     = "INTERNAL"
+	ErrCodeConflict     = "CONFLICT"
+	ErrCodeExternal     = "EXTERNAL"
+)
+
+// =================================================================
+// ServiceError 服务层错误包装
+// =================================================================
+
+type ServiceError struct {
+	Op      string         // 操作名称，如 "InboundService.GetInbound"
+	Code    string         // 错误码，如 "NOT_FOUND"
+	Err     error          // 原始错误
+	Context map[string]any // 上下文信息
+}
+
+func (e *ServiceError) Error() string {
+	var sb strings.Builder
+	if e.Op != "" {
+		sb.WriteString("[")
+		sb.WriteString(e.Op)
+		sb.WriteString("] ")
+	}
+	if e.Code != "" {
+		sb.WriteString("(")
+		sb.WriteString(e.Code)
+		sb.WriteString(") ")
+	}
+	if e.Err != nil {
+		sb.WriteString(e.Err.Error())
+	}
+	return sb.String()
+}
+
+func (e *ServiceError) Unwrap() error {
+	return e.Err
+}
+
+// NewServiceError 创建服务层错误
+func NewServiceError(op string, err error) *ServiceError {
+	return &ServiceError{
+		Op:  op,
+		Err: err,
+	}
+}
+
+// WithCode 添加错误码
+func (e *ServiceError) WithCode(code string) *ServiceError {
+	e.Code = code
+	return e
+}
+
+// WithContext 添加上下文信息
+func (e *ServiceError) WithContext(key string, val any) *ServiceError {
+	if e.Context == nil {
+		e.Context = make(map[string]any)
+	}
+	e.Context[key] = val
+	return e
+}
+
+// Wrap 快速包装错误
+func Wrap(op string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return NewServiceError(op, err)
+}
+
+// Wrapf 带格式化消息包装错误
+func Wrapf(op string, err error, format string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+	msg := fmt.Sprintf(format, args...)
+	return NewServiceError(op, fmt.Errorf("%s: %w", msg, err))
+}
 
 // =================================================================
 // 通用错误定义

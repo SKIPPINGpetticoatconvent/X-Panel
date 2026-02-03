@@ -35,6 +35,44 @@ func (t *Tgbot) SetHostname() {
 	hostname = host
 }
 
+// =================================================================
+// 统一错误处理
+// =================================================================
+
+// handleError 统一错误处理，记录日志并返回 i18n 错误消息
+func (t *Tgbot) handleError(op string, err error, i18nKey string) error {
+	if err == nil {
+		return nil
+	}
+	logger.Warningf("[Tgbot.%s] %v", op, err)
+	return common.NewServiceError("Tgbot."+op, common.NewError(t.I18nBot(i18nKey)))
+}
+
+// handleErrorf 带格式化的统一错误处理
+func (t *Tgbot) handleErrorf(op string, err error, format string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+	logger.Warningf("[Tgbot.%s] %v", op, err)
+	msg := fmt.Sprintf(format, args...)
+	return common.NewServiceError("Tgbot."+op, common.NewError(msg))
+}
+
+// logError 仅记录错误日志，不返回错误
+func (t *Tgbot) logError(op string, err error) {
+	if err != nil {
+		logger.Warningf("[Tgbot.%s] %v", op, err)
+	}
+}
+
+// sendError 发送错误消息给用户
+func (t *Tgbot) sendError(chatId int64, op string, err error) {
+	if err != nil {
+		logger.Warningf("[Tgbot.%s] %v", op, err)
+		t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.wentWrong"))
+	}
+}
+
 func (t *Tgbot) Stop() {
 	if botHandler != nil {
 		_ = botHandler.Stop()

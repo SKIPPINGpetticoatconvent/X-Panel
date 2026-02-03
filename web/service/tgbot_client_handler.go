@@ -287,9 +287,7 @@ func (t *Tgbot) clientInfoMsg(
 func (t *Tgbot) getClientUsage(chatId int64, tgUserID int64, email ...string) {
 	traffics, err := t.inboundService.GetClientTrafficTgBot(tgUserID)
 	if err != nil {
-		logger.Warning(err)
-		msg := t.I18nBot("tgbot.wentWrong")
-		t.SendMsgToTgbot(chatId, msg)
+		t.sendError(chatId, "getClientUsage", err)
 		return
 	}
 
@@ -354,9 +352,7 @@ func (t *Tgbot) searchClientIps(chatId int64, email string, messageID ...int) {
 func (t *Tgbot) clientTelegramUserInfo(chatId int64, email string, messageID ...int) {
 	traffic, client, err := t.inboundService.GetClientByEmail(email)
 	if err != nil {
-		logger.Warning(err)
-		msg := t.I18nBot("tgbot.wentWrong")
-		t.SendMsgToTgbot(chatId, msg)
+		t.sendError(chatId, "clientTelegramUserInfo", err)
 		return
 	}
 	if client == nil {
@@ -406,9 +402,7 @@ func (t *Tgbot) clientTelegramUserInfo(chatId int64, email string, messageID ...
 func (t *Tgbot) searchClient(chatId int64, email string, messageID ...int) {
 	traffic, err := t.inboundService.GetClientTrafficByEmail(email)
 	if err != nil {
-		logger.Warning(err)
-		msg := t.I18nBot("tgbot.wentWrong")
-		t.SendMsgToTgbot(chatId, msg)
+		t.sendError(chatId, "searchClient", err)
 		return
 	}
 	if traffic == nil {

@@ -21,7 +21,7 @@ func (t *Tgbot) getInboundUsages() string {
 	// get traffic
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
-		logger.Warning("GetAllInbounds run failed:", err)
+		t.logError("getInboundUsages", err)
 		info += t.I18nBot("tgbot.answers.getInboundsFailed")
 	} else {
 		// NOTE:If there no any sessions here,need to notify here
@@ -45,13 +45,11 @@ func (t *Tgbot) getInboundUsages() string {
 func (t *Tgbot) getInbounds() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
-		logger.Warning("GetAllInbounds run failed:", err)
-		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, t.handleError("getInbounds", err, "tgbot.answers.getInboundsFailed")
 	}
 
 	if len(inbounds) == 0 {
-		logger.Warning("No inbounds found")
-		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, t.handleError("getInbounds", common.ErrInboundNotFound, "tgbot.answers.getInboundsFailed")
 	}
 
 	var buttons []telego.InlineKeyboardButton
@@ -76,13 +74,11 @@ func (t *Tgbot) getInbounds() (*telego.InlineKeyboardMarkup, error) {
 func (t *Tgbot) getInboundsAddClient() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
-		logger.Warning("GetAllInbounds run failed:", err)
-		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, t.handleError("getInboundsAddClient", err, "tgbot.answers.getInboundsFailed")
 	}
 
 	if len(inbounds) == 0 {
-		logger.Warning("No inbounds found")
-		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, t.handleError("getInboundsAddClient", common.ErrInboundNotFound, "tgbot.answers.getInboundsFailed")
 	}
 
 	excludedProtocols := map[model.Protocol]bool{
@@ -118,23 +114,20 @@ func (t *Tgbot) getInboundsAddClient() (*telego.InlineKeyboardMarkup, error) {
 func (t *Tgbot) getInboundClients(chatId int64, id int) (*telego.InlineKeyboardMarkup, error) {
 	inbound, err := t.inboundService.GetInbound(id)
 	if err != nil {
-		logger.Warning("getIboundClients run failed:", err)
-		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, t.handleError("getInboundClients", err, "tgbot.answers.getInboundsFailed")
 	}
 	clients, err := t.inboundService.GetClients(inbound)
 	var buttons []telego.InlineKeyboardButton
 
 	if err != nil {
-		logger.Warning("GetInboundClients run failed:", err)
-		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
-	} else {
-		if len(clients) > 0 {
-			for _, client := range clients {
-				buttons = append(buttons, tu.InlineKeyboardButton(client.Email).WithCallbackData(t.encodeQuery("client_get_usage "+client.Email)))
-			}
-		} else {
-			return nil, common.NewError(t.I18nBot("tgbot.answers.getClientsFailed"))
+		return nil, t.handleError("getInboundClients", err, "tgbot.answers.getInboundsFailed")
+	}
+	if len(clients) > 0 {
+		for _, client := range clients {
+			buttons = append(buttons, tu.InlineKeyboardButton(client.Email).WithCallbackData(t.encodeQuery("client_get_usage "+client.Email)))
 		}
+	} else {
+		return nil, t.handleError("getInboundClients", common.ErrClientNotFound, "tgbot.answers.getClientsFailed")
 	}
 	cols := 0
 	if len(buttons) < 6 {
@@ -156,9 +149,7 @@ func (t *Tgbot) getInboundClients(chatId int64, id int) (*telego.InlineKeyboardM
 func (t *Tgbot) searchInbound(chatId int64, remark string) {
 	inbounds, err := t.inboundService.SearchInbounds(remark)
 	if err != nil {
-		logger.Warning(err)
-		msg := t.I18nBot("tgbot.wentWrong")
-		t.SendMsgToTgbot(chatId, msg)
+		t.sendError(chatId, "searchInbound", err)
 		return
 	}
 	if len(inbounds) == 0 {
