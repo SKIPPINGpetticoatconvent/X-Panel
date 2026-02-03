@@ -5,6 +5,7 @@ import (
 
 	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/util/crypto"
 
@@ -14,30 +15,23 @@ import (
 
 type UserService struct {
 	settingService SettingService
+	userRepo       repository.UserRepository
+}
+
+// getUserRepo 延迟初始化并返回 UserRepository
+func (s *UserService) getUserRepo() repository.UserRepository {
+	if s.userRepo == nil {
+		s.userRepo = repository.NewUserRepository()
+	}
+	return s.userRepo
 }
 
 func (s *UserService) GetFirstUser() (*model.User, error) {
-	db := database.GetDB()
-
-	user := &model.User{}
-	err := db.Model(model.User{}).
-		First(user).
-		Error
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
+	return s.getUserRepo().FindFirst()
 }
 
 func (s *UserService) CheckUser(username string, password string, twoFactorCode string) *model.User {
-	db := database.GetDB()
-
-	user := &model.User{}
-
-	err := db.Model(model.User{}).
-		Where("username = ?", username).
-		First(user).
-		Error
+	user, err := s.getUserRepo().FindByUsername(username)
 	if err == gorm.ErrRecordNotFound {
 		return nil
 	} else if err != nil {
@@ -71,7 +65,6 @@ func (s *UserService) CheckUser(username string, password string, twoFactorCode 
 }
 
 func (s *UserService) UpdateUser(id int, username string, password string) error {
-	db := database.GetDB()
 	hashedPassword, err := crypto.HashPasswordAsBcrypt(password)
 	if err != nil {
 		return err
@@ -87,7 +80,7 @@ func (s *UserService) UpdateUser(id int, username string, password string) error
 		_ = s.settingService.SetTwoFactorToken("")
 	}
 
-	return db.Model(model.User{}).
+	return s.getUserRepo().GetDB().Model(model.User{}).
 		Where("id = ?", id).
 		Updates(map[string]any{"username": username, "password": hashedPassword}).
 		Error
@@ -105,17 +98,17 @@ func (s *UserService) UpdateFirstUser(username string, password string) error {
 		return er
 	}
 
-	db := database.GetDB()
-	user := &model.User{}
-	err := db.Model(model.User{}).First(user).Error
+	user, err := s.getUserRepo().FindFirst()
 	if database.IsNotFound(err) {
-		user.Username = username
-		user.Password = hashedPassword
-		return db.Model(model.User{}).Create(user).Error
+		user = &model.User{
+			Username: username,
+			Password: hashedPassword,
+		}
+		return s.getUserRepo().Create(user)
 	} else if err != nil {
 		return err
 	}
 	user.Username = username
 	user.Password = hashedPassword
-	return db.Save(user).Error
+	return s.getUserRepo().Update(user)
 }

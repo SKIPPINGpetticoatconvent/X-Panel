@@ -1,19 +1,29 @@
 package service
 
 import (
-	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/xray"
 
 	"gorm.io/gorm"
 )
 
-type OutboundService struct{}
+type OutboundService struct {
+	outboundRepo repository.OutboundRepository
+}
+
+// getOutboundRepo 延迟初始化并返回 OutboundRepository
+func (s *OutboundService) getOutboundRepo() repository.OutboundRepository {
+	if s.outboundRepo == nil {
+		s.outboundRepo = repository.NewOutboundRepository()
+	}
+	return s.outboundRepo
+}
 
 func (s *OutboundService) AddTraffic(traffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
 	var err error
-	db := database.GetDB()
+	db := s.getOutboundRepo().GetDB()
 	tx := db.Begin()
 
 	defer func() {
@@ -65,36 +75,17 @@ func (s *OutboundService) addOutboundTraffic(tx *gorm.DB, traffics []*xray.Traff
 }
 
 func (s *OutboundService) GetOutboundsTraffic() ([]*model.OutboundTraffics, error) {
-	db := database.GetDB()
-	var traffics []*model.OutboundTraffics
-
-	err := db.Model(model.OutboundTraffics{}).Find(&traffics).Error
+	traffics, err := s.getOutboundRepo().FindAll()
 	if err != nil {
 		logger.Warning("Error retrieving OutboundTraffics: ", err)
 		return nil, err
 	}
-
 	return traffics, nil
 }
 
 func (s *OutboundService) ResetOutboundTraffic(tag string) error {
-	db := database.GetDB()
-
-	whereText := "tag "
 	if tag == "-alltags-" {
-		whereText += " <> ?"
-	} else {
-		whereText += " = ?"
+		return s.getOutboundRepo().ResetAllTraffics()
 	}
-
-	result := db.Model(model.OutboundTraffics{}).
-		Where(whereText, tag).
-		Updates(map[string]any{"up": 0, "down": 0, "total": 0})
-
-	err := result.Error
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.getOutboundRepo().ResetTraffic(tag)
 }

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/util/random"
@@ -132,7 +132,7 @@ func (s *SubService) GetSubs(subId string, host string) ([]string, string, error
 }
 
 func (s *SubService) getInboundsBySubId(subId string) ([]*model.Inbound, error) {
-	db := database.GetDB()
+	db := repository.NewInboundRepository().GetDB()
 	var inbounds []*model.Inbound
 	err := db.Model(model.Inbound{}).Preload("ClientStats").Where(`id in (
 		SELECT DISTINCT inbounds.id
@@ -158,7 +158,7 @@ func (s *SubService) getClientTraffics(traffics []xray.ClientTraffic, email stri
 }
 
 func (s *SubService) getFallbackMaster(dest string, streamSettings string) (string, int, string, error) {
-	db := database.GetDB()
+	db := repository.NewInboundRepository().GetDB()
 	var inbound *model.Inbound
 	err := db.Model(model.Inbound{}).
 		Where("JSON_TYPE(settings, '$.fallbacks') = 'array'").

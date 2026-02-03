@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/web/service"
 	"x-ui/xray"
@@ -261,7 +261,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 		logger.Warning("[DeviceLimit] XrayServices not ready, skipping cycle.")
 		return
 	}
-	db := database.GetDB()
+	db := repository.NewInboundRepository().GetDB()
 	var inbounds []*model.Inbound
 	// 这里仅查询启用了设备限制(device_limit > 0)并且自身是开启状态的入站规则
 	db.Where("device_limit > 0 AND enable = ?", true).Find(&inbounds)
@@ -473,6 +473,24 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 type CheckClientIpJob struct {
 	lastClear     int64
 	disAllowedIps []string
+	inboundRepo   repository.InboundRepository
+	clientIPRepo  repository.ClientIPRepository
+}
+
+// getInboundRepo 延迟初始化并返回 InboundRepository
+func (j *CheckClientIpJob) getInboundRepo() repository.InboundRepository {
+	if j.inboundRepo == nil {
+		j.inboundRepo = repository.NewInboundRepository()
+	}
+	return j.inboundRepo
+}
+
+// getClientIPRepo 延迟初始化并返回 ClientIPRepository
+func (j *CheckClientIpJob) getClientIPRepo() repository.ClientIPRepository {
+	if j.clientIPRepo == nil {
+		j.clientIPRepo = repository.NewClientIPRepository()
+	}
+	return j.clientIPRepo
 }
 
 var job *CheckClientIpJob
@@ -540,10 +558,7 @@ func (j *CheckClientIpJob) clearAccessLog() {
 }
 
 func (j *CheckClientIpJob) hasLimitIp() bool {
-	db := database.GetDB()
-	var inbounds []*model.Inbound
-
-	err := db.Model(model.Inbound{}).Find(&inbounds).Error
+	inbounds, err := j.getInboundRepo().FindAll()
 	if err != nil {
 		return false
 	}
@@ -657,39 +672,19 @@ func (j *CheckClientIpJob) checkError(e error) {
 }
 
 func (j *CheckClientIpJob) getInboundClientIps(clientEmail string) (*model.InboundClientIps, error) {
-	db := database.GetDB()
-	InboundClientIps := &model.InboundClientIps{}
-	err := db.Model(model.InboundClientIps{}).Where("client_email = ?", clientEmail).First(InboundClientIps).Error
-	if err != nil {
-		return nil, err
-	}
-	return InboundClientIps, nil
+	return j.getClientIPRepo().FindByEmail(clientEmail)
 }
 
 func (j *CheckClientIpJob) addInboundClientIps(clientEmail string, ips []string) error {
-	inboundClientIps := &model.InboundClientIps{}
 	jsonIps, err := json.Marshal(ips)
 	j.checkError(err)
 
-	inboundClientIps.ClientEmail = clientEmail
-	inboundClientIps.Ips = string(jsonIps)
-
-	db := database.GetDB()
-	tx := db.Begin()
-
-	defer func() {
-		if err == nil {
-			tx.Commit()
-		} else {
-			tx.Rollback()
-		}
-	}()
-
-	err = tx.Save(inboundClientIps).Error
-	if err != nil {
-		return err
+	inboundClientIps := &model.InboundClientIps{
+		ClientEmail: clientEmail,
+		Ips:         string(jsonIps),
 	}
-	return nil
+
+	return j.getClientIPRepo().Create(inboundClientIps)
 }
 
 func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.InboundClientIps, clientEmail string, ips []string) bool {
@@ -751,8 +746,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 		logger.Debug("disAllowedIps:", j.disAllowedIps)
 	}
 
-	db := database.GetDB()
-	err = db.Save(inboundClientIps).Error
+	err = j.getClientIPRepo().Update(inboundClientIps)
 	if err != nil {
 		logger.Error("failed to save inboundClientIps:", err)
 		return false
@@ -762,13 +756,12 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 }
 
 func (j *CheckClientIpJob) getInboundByEmail(clientEmail string) (*model.Inbound, error) {
-	db := database.GetDB()
-	inbound := &model.Inbound{}
-
-	err := db.Model(&model.Inbound{}).Where("settings LIKE ?", "%"+clientEmail+"%").First(inbound).Error
+	inbounds, err := j.getInboundRepo().Search(clientEmail)
 	if err != nil {
 		return nil, err
 	}
-
-	return inbound, nil
+	if len(inbounds) == 0 {
+		return nil, nil
+	}
+	return inbounds[0], nil
 }

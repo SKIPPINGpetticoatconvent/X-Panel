@@ -13,6 +13,7 @@ import (
 
 	"x-ui/database"
 	"x-ui/database/model"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/util/random"
@@ -77,7 +78,17 @@ var defaultValueMap = map[string]string{
 	"warp":                "",
 }
 
-type SettingService struct{}
+type SettingService struct {
+	settingRepo repository.SettingRepository
+}
+
+// getSettingRepo 延迟初始化并返回 SettingRepository
+func (s *SettingService) getSettingRepo() repository.SettingRepository {
+	if s.settingRepo == nil {
+		s.settingRepo = repository.NewSettingRepository()
+	}
+	return s.settingRepo
+}
 
 func (s *SettingService) GetDefaultJsonConfig() (any, error) {
 	var jsonData any
@@ -89,9 +100,7 @@ func (s *SettingService) GetDefaultJsonConfig() (any, error) {
 }
 
 func (s *SettingService) GetAllSetting() (*entity.AllSetting, error) {
-	db := database.GetDB()
-	settings := make([]*model.Setting, 0)
-	err := db.Model(model.Setting{}).Not("key = ?", "xrayTemplateConfig").Find(&settings).Error
+	settings, err := s.getSettingRepo().FindAllExcept("xrayTemplateConfig")
 	if err != nil {
 		return nil, err
 	}
@@ -164,39 +173,30 @@ func (s *SettingService) GetAllSetting() (*entity.AllSetting, error) {
 }
 
 func (s *SettingService) ResetSettings() error {
-	db := database.GetDB()
-	err := db.Where("1 = 1").Delete(model.Setting{}).Error
+	err := s.getSettingRepo().DeleteAll()
 	if err != nil {
 		return err
 	}
-	return db.Model(model.User{}).
-		Where("1 = 1").Error
+	return nil
 }
 
 func (s *SettingService) getSetting(key string) (*model.Setting, error) {
-	db := database.GetDB()
-	setting := &model.Setting{}
-	err := db.Model(model.Setting{}).Where("key = ?", key).First(setting).Error
-	if err != nil {
-		return nil, err
-	}
-	return setting, nil
+	return s.getSettingRepo().FindByKey(key)
 }
 
 func (s *SettingService) saveSetting(key string, value string) error {
 	setting, err := s.getSetting(key)
-	db := database.GetDB()
 	if database.IsNotFound(err) {
-		return db.Create(&model.Setting{
+		return s.getSettingRepo().Create(&model.Setting{
 			Key:   key,
 			Value: value,
-		}).Error
+		})
 	} else if err != nil {
 		return err
 	}
 	setting.Key = key
 	setting.Value = value
-	return db.Save(setting).Error
+	return s.getSettingRepo().Update(setting)
 }
 
 func (s *SettingService) getString(key string) (string, error) {
