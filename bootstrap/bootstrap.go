@@ -5,6 +5,7 @@ import (
 
 	"x-ui/config"
 	"x-ui/database"
+	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/web/service"
 	"x-ui/xray"
@@ -27,13 +28,27 @@ type App struct {
 
 // NewApp 创建并初始化应用实例
 func NewApp() *App {
+	// 创建 Repository 实例
+	settingRepo := repository.NewSettingRepository()
+	userRepo := repository.NewUserRepository()
+	inboundRepo := repository.NewInboundRepository()
+	clientTrafficRepo := repository.NewClientTrafficRepository()
+	clientIPRepo := repository.NewClientIPRepository()
+	outboundRepo := repository.NewOutboundRepository()
+
+	// 使用构造函数创建 Service，注入 Repository 依赖
+	settingService := service.NewSettingService(settingRepo)
+	userService := service.NewUserService(userRepo, settingService)
+	inboundService := service.NewInboundService(inboundRepo, clientTrafficRepo, clientIPRepo)
+	outboundService := service.NewOutboundService(outboundRepo)
+
 	return &App{
-		SettingService:  &service.SettingService{},
+		SettingService:  settingService,
 		ServerService:   &service.ServerService{},
 		XrayService:     &service.XrayService{},
-		InboundService:  &service.InboundService{},
-		OutboundService: &service.OutboundService{},
-		UserService:     &service.UserService{},
+		InboundService:  inboundService,
+		OutboundService: outboundService,
+		UserService:     userService,
 		LastStatus:      &service.Status{},
 		XrayAPI:         &xray.XrayAPI{},
 	}

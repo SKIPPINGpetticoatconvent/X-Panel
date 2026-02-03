@@ -13,7 +13,14 @@ type OutboundService struct {
 	outboundRepo repository.OutboundRepository
 }
 
-// getOutboundRepo 延迟初始化并返回 OutboundRepository
+// NewOutboundService 创建 OutboundService 实例，通过构造函数注入 Repository
+func NewOutboundService(outboundRepo repository.OutboundRepository) *OutboundService {
+	return &OutboundService{
+		outboundRepo: outboundRepo,
+	}
+}
+
+// getOutboundRepo 返回 OutboundRepository，支持延迟初始化以保持向后兼容
 func (s *OutboundService) getOutboundRepo() repository.OutboundRepository {
 	if s.outboundRepo == nil {
 		s.outboundRepo = repository.NewOutboundRepository()

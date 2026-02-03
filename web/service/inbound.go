@@ -30,22 +30,36 @@ type InboundService struct {
 	clientIPRepo      repository.ClientIPRepository
 }
 
+// NewInboundService 创建 InboundService 实例，通过构造函数注入 Repository
+func NewInboundService(
+	inboundRepo repository.InboundRepository,
+	clientTrafficRepo repository.ClientTrafficRepository,
+	clientIPRepo repository.ClientIPRepository,
+) *InboundService {
+	return &InboundService{
+		inboundRepo:       inboundRepo,
+		clientTrafficRepo: clientTrafficRepo,
+		clientIPRepo:      clientIPRepo,
+		settingsCache:     make(map[int]map[string]any),
+	}
+}
+
 // SetXrayService 用于从外部注入 XrayService 实例
 func (s *InboundService) SetXrayService(xrayService *XrayService) {
 	s.xrayService = xrayService
 }
 
-// 用于从外部注入 XrayAPI 实例
+// SetXrayAPI 用于从外部注入 XrayAPI 实例
 func (s *InboundService) SetXrayAPI(api xray.XrayAPI) {
 	s.xrayApi = api
 }
 
-// 用于从外部注入 TelegramService 实例
+// SetTelegramService 用于从外部注入 TelegramService 实例
 func (s *InboundService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
 }
 
-// getInboundRepo 延迟初始化并返回 InboundRepository
+// getInboundRepo 返回 InboundRepository，支持延迟初始化以保持向后兼容
 func (s *InboundService) getInboundRepo() repository.InboundRepository {
 	if s.inboundRepo == nil {
 		s.inboundRepo = repository.NewInboundRepository()
@@ -53,7 +67,7 @@ func (s *InboundService) getInboundRepo() repository.InboundRepository {
 	return s.inboundRepo
 }
 
-// getClientTrafficRepo 延迟初始化并返回 ClientTrafficRepository
+// getClientTrafficRepo 返回 ClientTrafficRepository，支持延迟初始化以保持向后兼容
 func (s *InboundService) getClientTrafficRepo() repository.ClientTrafficRepository {
 	if s.clientTrafficRepo == nil {
 		s.clientTrafficRepo = repository.NewClientTrafficRepository()
@@ -61,7 +75,7 @@ func (s *InboundService) getClientTrafficRepo() repository.ClientTrafficReposito
 	return s.clientTrafficRepo
 }
 
-// getClientIPRepo 延迟初始化并返回 ClientIPRepository
+// getClientIPRepo 返回 ClientIPRepository，支持延迟初始化以保持向后兼容
 func (s *InboundService) getClientIPRepo() repository.ClientIPRepository {
 	if s.clientIPRepo == nil {
 		s.clientIPRepo = repository.NewClientIPRepository()

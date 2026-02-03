@@ -13,11 +13,19 @@ import (
 )
 
 type UserService struct {
-	settingService SettingService
+	settingService *SettingService
 	userRepo       repository.UserRepository
 }
 
-// getUserRepo 延迟初始化并返回 UserRepository
+// NewUserService 创建 UserService 实例，通过构造函数注入依赖
+func NewUserService(userRepo repository.UserRepository, settingService *SettingService) *UserService {
+	return &UserService{
+		userRepo:       userRepo,
+		settingService: settingService,
+	}
+}
+
+// getUserRepo 返回 UserRepository，支持延迟初始化以保持向后兼容
 func (s *UserService) getUserRepo() repository.UserRepository {
 	if s.userRepo == nil {
 		s.userRepo = repository.NewUserRepository()

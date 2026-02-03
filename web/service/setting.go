@@ -81,7 +81,14 @@ type SettingService struct {
 	settingRepo repository.SettingRepository
 }
 
-// getSettingRepo 延迟初始化并返回 SettingRepository
+// NewSettingService 创建 SettingService 实例，通过构造函数注入 Repository
+func NewSettingService(settingRepo repository.SettingRepository) *SettingService {
+	return &SettingService{
+		settingRepo: settingRepo,
+	}
+}
+
+// getSettingRepo 返回 SettingRepository，支持延迟初始化以保持向后兼容
 func (s *SettingService) getSettingRepo() repository.SettingRepository {
 	if s.settingRepo == nil {
 		s.settingRepo = repository.NewSettingRepository()
