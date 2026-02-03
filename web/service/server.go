@@ -100,6 +100,14 @@ type ServerService struct {
 	geoIPService *GeoIPService
 }
 
+// NewServerService 创建 ServerService 实例
+func NewServerService() *ServerService {
+	return &ServerService{
+		geoIPService: NewGeoIPService(),
+		sniSelector:  NewSNISelector(nil),
+	}
+}
+
 // 用于从外部注入 TelegramService 实例
 func (s *ServerService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService

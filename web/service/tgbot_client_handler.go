@@ -10,6 +10,7 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/random"
 	"x-ui/xray"
 
 	"github.com/google/uuid"
@@ -542,18 +543,18 @@ func (t *Tgbot) addClient(chatId int64, msg string, messageID ...int) {
 func (t *Tgbot) initClientDefaults() {
 	client_Id = uuid.New().String()
 	client_Flow = ""
-	client_Email = t.randomLowerAndNum(8)
+	client_Email = random.LowerNumSeq(8)
 	client_LimitIP = 0
 	client_TotalGB = 0
 	client_ExpiryTime = 0
 	client_Enable = true
 	client_TgID = ""
-	client_SubID = t.randomLowerAndNum(16)
+	client_SubID = random.LowerNumSeq(16)
 	client_Comment = ""
 	client_Reset = 0
 	client_Security = "auto"
-	client_ShPassword = t.randomShadowSocksPassword()
-	client_TrPassword = t.randomLowerAndNum(10)
+	client_ShPassword = random.Base64Bytes(32)
+	client_TrPassword = random.LowerNumSeq(10)
 	client_Method = ""
 }
 

@@ -12,6 +12,11 @@ type XraySettingService struct {
 	SettingService
 }
 
+// NewXraySettingService 创建 XraySettingService 实例
+func NewXraySettingService(settingService *SettingService) *XraySettingService {
+	return &XraySettingService{SettingService: *settingService}
+}
+
 func (s *XraySettingService) SaveXraySetting(newXraySettings string) error {
 	if err := s.CheckXrayConfig(newXraySettings); err != nil {
 		return err

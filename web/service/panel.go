@@ -10,6 +10,11 @@ import (
 
 type PanelService struct{}
 
+// NewPanelService 创建 PanelService 实例
+func NewPanelService() *PanelService {
+	return &PanelService{}
+}
+
 func (s *PanelService) RestartPanel(delay time.Duration) error {
 	p, err := os.FindProcess(syscall.Getpid())
 	if err != nil {

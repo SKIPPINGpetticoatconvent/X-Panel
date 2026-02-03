@@ -16,6 +16,11 @@ type WarpService struct {
 	SettingService
 }
 
+// NewWarpService 创建 WarpService 实例
+func NewWarpService(settingService *SettingService) *WarpService {
+	return &WarpService{SettingService: *settingService}
+}
+
 func (s *WarpService) GetWarpData() (string, error) {
 	warp, err := s.GetWarp()
 	if err != nil {

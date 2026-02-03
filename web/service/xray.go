@@ -27,6 +27,11 @@ type XrayService struct {
 	result            string
 }
 
+// NewXrayService 创建 XrayService 实例
+func NewXrayService() *XrayService {
+	return &XrayService{}
+}
+
 // SetInboundService 用于从外部注入 InboundService 实例
 func (s *XrayService) SetInboundService(inbound *InboundService) {
 	s.inboundService = inbound

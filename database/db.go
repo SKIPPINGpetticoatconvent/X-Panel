@@ -221,6 +221,37 @@ func Checkpoint() error {
 	return nil
 }
 
+// WithTx 执行带事务的操作，自动处理 Commit/Rollback
+// 如果 fn 返回 nil，事务将被提交；如果返回 error，事务将被回滚
+func WithTx(fn func(tx *gorm.DB) error) error {
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if err := fn(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
+}
+
+// WithTxResult 执行带事务的操作并返回结果，自动处理 Commit/Rollback
+func WithTxResult[T any](fn func(tx *gorm.DB) (T, error)) (T, error) {
+	var zero T
+	tx := db.Begin()
+	if tx.Error != nil {
+		return zero, tx.Error
+	}
+
+	result, err := fn(tx)
+	if err != nil {
+		tx.Rollback()
+		return zero, err
+	}
+	return result, tx.Commit().Error
+}
+
 // migrateTlsInbounds performs a one-time database migration for all inbound records,
 // applying TLS configuration changes (remove allowInsecure, migrate verifyPeerCertInNames,
 // migrate pinnedPeerCertSha256 separator) directly in the database.

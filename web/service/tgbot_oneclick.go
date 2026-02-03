@@ -13,6 +13,7 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/random"
 
 	"github.com/skip2/go-qrcode"
 
@@ -91,9 +92,9 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	keyPair := keyPairMsg.(map[string]any)
 	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
 	uuid := uuidMsg["uuid"]
-	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	remark := random.Seq(8)
 
-	port := 10000 + common.RandomInt(55535-10000+1)
+	port := 10000 + random.Num(55535-10000+1)
 
 	ufwWarning := ""
 
@@ -112,7 +113,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 		if t.serverService != nil {
 			randomDest = t.serverService.GetNewSNI()
 		} else {
-			randomDest = realityDests[common.RandomInt(len(realityDests))]
+			randomDest = realityDests[random.Num(len(realityDests))]
 		}
 	}
 
@@ -228,9 +229,9 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) {
 	}
 
 	uuid := uuidMsg["uuid"]
-	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	remark := random.Seq(8)
 	allowedPorts := []int{2053, 2083, 2087, 2096, 8443}
-	port := allowedPorts[common.RandomInt(len(allowedPorts))]
+	port := allowedPorts[random.Num(len(allowedPorts))]
 
 	ufwWarning := ""
 
@@ -240,7 +241,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) {
 	}
 
 	tag := fmt.Sprintf("inbound-%d", port)
-	path := "/" + t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+	path := "/" + random.SeqWithCharset(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 	certPath := fmt.Sprintf("/root/cert/%s/fullchain.pem", domain)
 	keyPath := fmt.Sprintf("/root/cert/%s/privkey.pem", domain)
 
@@ -328,10 +329,10 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	keyPair := keyPairMsg.(map[string]any)
 	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
 	uuid := uuidMsg["uuid"]
-	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	remark := random.Seq(8)
 
-	port := 10000 + common.RandomInt(55535-10000+1)
-	path := "/" + t.randomString(8, "abcdefghijklmnopqrstuvwxyz")
+	port := 10000 + random.Num(55535-10000+1)
+	path := "/" + random.SeqWithCharset(8, "abcdefghijklmnopqrstuvwxyz")
 
 	var ufwWarning string
 	if err := t.openPortWithFirewalld(port); err != nil {
@@ -349,7 +350,7 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 		if t.serverService != nil {
 			randomDest = t.serverService.GetNewSNI()
 		} else {
-			randomDest = realityDests[common.RandomInt(len(realityDests))]
+			randomDest = realityDests[random.Num(len(realityDests))]
 		}
 	}
 
@@ -547,7 +548,7 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	if len(shortIdsInterface) == 0 {
 		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
-	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+	sid := shortIdsInterface[random.Num(len(shortIdsInterface))].(string)
 
 	domain, err := t.getDomain()
 	if err != nil {
@@ -585,7 +586,7 @@ func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client mod
 	if len(shortIdsInterface) == 0 {
 		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
-	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+	sid := shortIdsInterface[random.Num(len(shortIdsInterface))].(string)
 
 	domain, err := t.getDomain()
 	if err != nil {
@@ -685,7 +686,7 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 	if len(shortIdsInterface) == 0 {
 		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
-	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+	sid := shortIdsInterface[random.Num(len(shortIdsInterface))].(string)
 
 	xhttpSettings, _ := streamSettings["xhttpSettings"].(map[string]interface{})
 	path := xhttpSettings["path"].(string)
@@ -724,7 +725,7 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 	if len(shortIdsInterface) == 0 {
 		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
-	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+	sid := shortIdsInterface[random.Num(len(shortIdsInterface))].(string)
 
 	xhttpSettings, _ := streamSettings["xhttpSettings"].(map[string]interface{})
 	path := xhttpSettings["path"].(string)
@@ -780,7 +781,7 @@ func (t *Tgbot) generateShortIds() []string {
 	lengths := []int{2, 4, 6, 8, 10, 12, 14, 16}
 	shortIds := make([]string, len(lengths))
 	for i, length := range lengths {
-		shortIds[i] = t.randomString(length, chars)
+		shortIds[i] = random.SeqWithCharset(length, chars)
 	}
 	return shortIds
 }

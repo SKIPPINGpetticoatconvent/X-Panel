@@ -1,12 +1,9 @@
 package service
 
 import (
-	"context"
-	"crypto/rand" // 新增：用于 tls.Config
-	"encoding/base64"
+	"context"       // 新增：用于 tls.Config
 	"encoding/json" // 新增：用于 json.Marshal / Unmarshal
-	"fmt"
-	"math/big" // 新增：用于 http.Client / Transport
+	"fmt"           // 新增：用于 http.Client / Transport
 	"os"
 	"os/exec" // 新增：用于 exec.Command（getDomain 等）
 
@@ -46,16 +43,6 @@ func (t *Tgbot) handleError(op string, err error, i18nKey string) error {
 	}
 	logger.Warningf("[Tgbot.%s] %v", op, err)
 	return common.NewServiceError("Tgbot."+op, common.NewError(t.I18nBot(i18nKey)))
-}
-
-// handleErrorf 带格式化的统一错误处理
-func (t *Tgbot) handleErrorf(op string, err error, format string, args ...any) error {
-	if err == nil {
-		return nil
-	}
-	logger.Warningf("[Tgbot.%s] %v", op, err)
-	msg := fmt.Sprintf(format, args...)
-	return common.NewServiceError("Tgbot."+op, common.NewError(msg))
 }
 
 // logError 仅记录错误日志，不返回错误
@@ -102,34 +89,6 @@ func (t *Tgbot) decodeQuery(query string) (string, error) {
 	}
 
 	return decoded, nil
-}
-
-func (t *Tgbot) randomLowerAndNum(length int) string {
-	charset := "abcdefghijklmnopqrstuvwxyz0123456789"
-	bytes := make([]byte, length)
-	for i := range bytes {
-		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		bytes[i] = charset[randomIndex.Int64()]
-	}
-	return string(bytes)
-}
-
-func (t *Tgbot) randomShadowSocksPassword() string {
-	array := make([]byte, 32)
-	_, err := rand.Read(array)
-	if err != nil {
-		return t.randomLowerAndNum(32)
-	}
-	return base64.StdEncoding.EncodeToString(array)
-}
-
-func (t *Tgbot) randomString(length int, charset string) string {
-	bytes := make([]byte, length)
-	for i := range bytes {
-		randomIndex, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		bytes[i] = charset[randomIndex.Int64()]
-	}
-	return string(bytes)
 }
 
 // 保存链接历史到数据库

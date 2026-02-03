@@ -12,7 +12,6 @@ import (
 	"x-ui/logger"
 	"x-ui/util/common"
 
-	"github.com/google/uuid"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
@@ -917,22 +916,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					t.sendCallbackAnswerTgBot(callbackQuery.ID, "📝 正在打开日志设置...")
 					t.showLogSettings(chatId)
 				case "add_client_to":
-					// assign default values to clients variables
-					client_Id = uuid.New().String()
-					client_Flow = ""
-					client_Email = t.randomLowerAndNum(8)
-					client_LimitIP = 0
-					client_TotalGB = 0
-					client_ExpiryTime = 0
-					client_Enable = true
-					client_TgID = ""
-					client_SubID = t.randomLowerAndNum(16)
-					client_Comment = ""
-					client_Reset = 0
-					client_Security = "auto"
-					client_ShPassword = t.randomShadowSocksPassword()
-					client_TrPassword = t.randomLowerAndNum(10)
-					client_Method = ""
+					t.initClientDefaults()
 
 					inboundId := dataArray[1]
 					inboundIdInt, err := strconv.Atoi(inboundId)
@@ -1035,22 +1019,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.showMenuAdvanced(chatId, callbackQuery.Message.GetMessageID())
 
 	case "add_client":
-		// assign default values to clients variables
-		client_Id = uuid.New().String()
-		client_Flow = ""
-		client_Email = t.randomLowerAndNum(8)
-		client_LimitIP = 0
-		client_TotalGB = 0
-		client_ExpiryTime = 0
-		client_Enable = true
-		client_TgID = ""
-		client_SubID = t.randomLowerAndNum(16)
-		client_Comment = ""
-		client_Reset = 0
-		client_Security = "auto"
-		client_ShPassword = t.randomShadowSocksPassword()
-		client_TrPassword = t.randomLowerAndNum(10)
-		client_Method = ""
+		t.initClientDefaults()
 
 		inbounds, err := t.getInboundsAddClient()
 		if err != nil {
