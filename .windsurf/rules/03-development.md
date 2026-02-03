@@ -5,6 +5,12 @@ description: X-Panel 开发规范
 
 # 3. 开发规范 (Development Standards)
 
+> **⚡ 技能引用**: 
+> - Go 开发模式详情请使用 `/golang-patterns` skill
+> - 项目架构说明请使用 `/xpanel-architecture` skill
+> - 数据库操作请使用 `/xpanel-gorm-database` skill
+> - Gin 中间件请使用 `/xpanel-gin-middleware` skill
+
 ## 3.1 Go 语言规范
 
 - 提交前必须执行 `gofmt` 或 `goimports` 格式化。
