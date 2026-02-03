@@ -2,14 +2,13 @@ package service
 
 import (
 	"context"
-	"encoding/json" // 新增：用于 json.Marshal / Unmarshal
-	"errors"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
-	"os/exec"       // 新增：用于 exec.Command（getDomain 等）
-	"path/filepath" // 新增：用于 filepath.Base / Dir（getDomain 用到）
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -19,14 +18,12 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
-
 	"x-ui/xray"
-
-	"github.com/skip2/go-qrcode"
 
 	"github.com/google/uuid"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"github.com/skip2/go-qrcode"
 )
 
 // checkBBRSupport 检查内核版本和 BBR 模块支持
@@ -38,24 +35,24 @@ func (t *Tgbot) checkBBRSupport() (string, bool, error) {
 	kernelCmd := exec.CommandContext(ctx, "uname", "-r")
 	kernelOutput, err := kernelCmd.Output()
 	if err != nil {
-		return "", false, fmt.Errorf("获取内核版本失败: %v", err)
+		return "", false, common.NewErrorf("获取内核版本失败: %v", err)
 	}
 	kernelVersion := strings.TrimSpace(string(kernelOutput))
 
 	// 解析内核版本号
 	kernelParts := strings.Split(kernelVersion, ".")
 	if len(kernelParts) < 2 {
-		return kernelVersion, false, fmt.Errorf("无法解析内核版本: %s", kernelVersion)
+		return kernelVersion, false, common.NewErrorf("无法解析内核版本: %s", kernelVersion)
 	}
 
 	majorVersion, err := strconv.Atoi(kernelParts[0])
 	if err != nil {
-		return kernelVersion, false, fmt.Errorf("解析主版本号失败: %v", err)
+		return kernelVersion, false, common.NewErrorf("解析主版本号失败: %v", err)
 	}
 
 	minorVersion, err := strconv.Atoi(strings.Split(kernelParts[1], "-")[0])
 	if err != nil {
-		return kernelVersion, false, fmt.Errorf("解析次版本号失败: %v", err)
+		return kernelVersion, false, common.NewErrorf("解析次版本号失败: %v", err)
 	}
 
 	// 检查内核版本是否支持 BBR (需要 4.9+)
@@ -72,7 +69,7 @@ func (t *Tgbot) checkBBRSupport() (string, bool, error) {
 	modprobeCmd := exec.CommandContext(modprobeCtx, "bash", "-c", "modprobe tcp_bbr 2>/dev/null && echo 'supported' || echo 'not_supported'")
 	modprobeOutput, err := modprobeCmd.Output()
 	if err != nil {
-		return kernelVersion, false, fmt.Errorf("检查 BBR 模块失败: %v", err)
+		return kernelVersion, false, common.NewErrorf("检查 BBR 模块失败: %v", err)
 	}
 
 	bbrAvailable := strings.TrimSpace(string(modprobeOutput)) == "supported"
@@ -1741,7 +1738,7 @@ func (t *Tgbot) BuildInboundClientDataMessage(inbound_remark string, protocol mo
 		message = t.I18nBot("tgbot.messages.inbound_client_data_pass", "InboundRemark=="+inbound_remark, "ClientPass=="+client_ShPassword, "ClientEmail=="+client_Email, "ClientTraffic=="+traffic_value, "ClientExp=="+expiryTime, "IpLimit=="+ip_limit, "ClientComment=="+client_Comment)
 
 	default:
-		return "", errors.New("unknown protocol")
+		return "", common.ErrInvalidProtocol
 	}
 
 	return message, nil
@@ -1819,7 +1816,7 @@ func (t *Tgbot) BuildJSONForProtocol(protocol model.Protocol) (string, error) {
         }`, client_Method, client_ShPassword, client_Email, client_LimitIP, client_TotalGB, client_ExpiryTime, client_Enable, client_TgID, client_SubID, client_Comment, client_Reset)
 
 	default:
-		return "", errors.New("unknown protocol")
+		return "", common.ErrInvalidProtocol
 	}
 
 	return jsonString, nil
@@ -1829,13 +1826,13 @@ func (t *Tgbot) SubmitAddClient() (bool, error) {
 	inbound, err := t.inboundService.GetInbound(receiver_inbound_ID)
 	if err != nil {
 		logger.Warning("getIboundClients run failed:", err)
-		return false, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return false, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	}
 
 	jsonString, err := t.BuildJSONForProtocol(inbound.Protocol)
 	if err != nil {
 		logger.Warning("BuildJSONForProtocol run failed:", err)
-		return false, errors.New("failed to build JSON for protocol")
+		return false, common.NewError("failed to build JSON for protocol")
 	}
 
 	newInbound := &model.Inbound{
@@ -2192,12 +2189,12 @@ func (t *Tgbot) getInbounds() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
 		logger.Warning("GetAllInbounds run failed:", err)
-		return nil, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	}
 
 	if len(inbounds) == 0 {
 		logger.Warning("No inbounds found")
-		return nil, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	}
 
 	var buttons []telego.InlineKeyboardButton
@@ -2223,12 +2220,12 @@ func (t *Tgbot) getInboundsAddClient() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
 		logger.Warning("GetAllInbounds run failed:", err)
-		return nil, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	}
 
 	if len(inbounds) == 0 {
 		logger.Warning("No inbounds found")
-		return nil, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	}
 
 	excludedProtocols := map[model.Protocol]bool{
@@ -2265,21 +2262,21 @@ func (t *Tgbot) getInboundClients(chatId int64, id int) (*telego.InlineKeyboardM
 	inbound, err := t.inboundService.GetInbound(id)
 	if err != nil {
 		logger.Warning("getIboundClients run failed:", err)
-		return nil, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	}
 	clients, err := t.inboundService.GetClients(inbound)
 	var buttons []telego.InlineKeyboardButton
 
 	if err != nil {
 		logger.Warning("GetInboundClients run failed:", err)
-		return nil, errors.New(t.I18nBot("tgbot.answers.getInboundsFailed"))
+		return nil, common.NewError(t.I18nBot("tgbot.answers.getInboundsFailed"))
 	} else {
 		if len(clients) > 0 {
 			for _, client := range clients {
 				buttons = append(buttons, tu.InlineKeyboardButton(client.Email).WithCallbackData(t.encodeQuery("client_get_usage "+client.Email)))
 			}
 		} else {
-			return nil, errors.New(t.I18nBot("tgbot.answers.getClientsFailed"))
+			return nil, common.NewError(t.I18nBot("tgbot.answers.getClientsFailed"))
 		}
 	}
 	cols := 0
@@ -2314,7 +2311,7 @@ func (t *Tgbot) copyInboundClients(chatId int64, inboundId int) error {
 	}
 
 	if len(clients) == 0 {
-		return errors.New("该入站没有客户端")
+		return common.NewError("该入站没有客户端")
 	}
 
 	var sb strings.Builder
@@ -2364,7 +2361,7 @@ func (t *Tgbot) copyInboundClients(chatId int64, inboundId int) error {
 	if sb.Len() > 0 {
 		t.sendLongMessage(chatId, sb.String())
 	} else {
-		return errors.New("未生成任何有效链接")
+		return common.NewError("未生成任何有效链接")
 	}
 
 	return nil
@@ -3075,7 +3072,7 @@ func (t *Tgbot) deleteMessageTgBot(chatId int64, messageID int) {
 func (t *Tgbot) SendMessage(msg string) error {
 	if !t.IsRunning() {
 		// 如果 Bot 未运行，返回错误，防止程序出错。
-		return errors.New("telegram bot is not running")
+		return common.ErrTelegramNotRunning
 	}
 	// 调用现有方法将消息发送给所有已配置的管理员。
 	t.SendMsgToTgbotAdmins(msg)
@@ -3145,7 +3142,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		t.SendMsgToTgbot(chatId, "此协议组合的功能还在开发中 ............暂不可用...")
 		return // 直接返回，不执行任何创建操作
 	default:
-		err = errors.New("未知的配置类型")
+		err = common.NewError("未知的配置类型")
 	}
 
 	if err != nil {
@@ -3338,7 +3335,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	authsVal, found := encMsgMap["auths"]
 
 	if !found {
-		return nil, "", errors.New("VLESS 加密配置 auths 格式不正确: 未能在响应中找到 'auths' 数组")
+		return nil, "", common.NewError("VLESS 加密配置 auths 格式不正确: 未能在响应中找到 'auths' 数组")
 	}
 
 	// 将 auths 的值断言为正确的类型 []map[string]string
@@ -3360,7 +3357,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	}
 
 	if decryption == "" || encryption == "" {
-		return nil, "", errors.New("未能在 auths 数组中找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
+		return nil, "", common.NewError("未能在 auths 数组中找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
 	}
 
 	domain, err := t.getDomain()
@@ -3626,7 +3623,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 			return fmt.Errorf("未知的入站 security 类型: %s", security)
 		}
 	} else {
-		return errors.New("无法解析 streamSettings 中的 security 字段")
+		return common.NewError("无法解析 streamSettings 中的 security 字段")
 	}
 
 	if err != nil {
@@ -3703,18 +3700,18 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	// publicKey 在 realitySettings 下的 settings 子对象中
 	settingsMap, ok := realitySettings["settings"].(map[string]interface{})
 	if !ok {
-		return "", errors.New("realitySettings中缺少settings子对象")
+		return "", common.NewError("realitySettings中缺少settings子对象")
 	}
 	publicKey, ok := settingsMap["publicKey"].(string)
 	if !ok {
 		// 再次检查，以防结构有变，但主要依赖 settingsMap
-		return "", errors.New("publicKey字段缺失或格式错误 (可能在settings子对象中)")
+		return "", common.NewError("publicKey字段缺失或格式错误")
 	}
 
 	shortIdsInterface := realitySettings["shortIds"].([]interface{})
 	// 确保 shortIdsInterface 不为空，否则可能 panic
 	if len(shortIdsInterface) == 0 {
-		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
 	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
 
@@ -3748,18 +3745,18 @@ func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client mod
 	// publicKey 在 realitySettings 下的 settings 子对象中
 	settingsMap, ok := realitySettings["settings"].(map[string]interface{})
 	if !ok {
-		return "", errors.New("realitySettings中缺少settings子对象")
+		return "", common.NewError("realitySettings中缺少settings子对象")
 	}
 	publicKey, ok := settingsMap["publicKey"].(string)
 	if !ok {
 		// 再次检查，以防结构有变，但主要依赖 settingsMap
-		return "", errors.New("publicKey字段缺失或格式错误 (可能在settings子对象中)")
+		return "", common.NewError("publicKey字段缺失或格式错误")
 	}
 
 	shortIdsInterface := realitySettings["shortIds"].([]interface{})
 	// 确保 shortIdsInterface 不为空，否则可能 panic
 	if len(shortIdsInterface) == 0 {
-		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
 	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
 
@@ -3867,7 +3864,7 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 
 	shortIdsInterface, _ := realitySettings["shortIds"].([]interface{})
 	if len(shortIdsInterface) == 0 {
-		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
 	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
 
@@ -3909,7 +3906,7 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 
 	shortIdsInterface, _ := realitySettings["shortIds"].([]interface{})
 	if len(shortIdsInterface) == 0 {
-		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+		return "", common.NewError("无法生成 Reality 链接: Short IDs 列表为空")
 	}
 	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
 
@@ -3979,7 +3976,7 @@ func (t *Tgbot) getDomain() (string, error) {
 	cmd := exec.Command("/usr/local/x-ui/x-ui", "setting", "-getCert", "true")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.New("执行命令获取证书路径失败，请确保已为面板配置 SSL 证书")
+		return "", common.NewError("执行命令获取证书路径失败，请确保已为面板配置 SSL 证书")
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -3992,12 +3989,12 @@ func (t *Tgbot) getDomain() (string, error) {
 	}
 
 	if certLine == "" {
-		return "", errors.New("无法从 x-ui 命令输出中找到证书路径")
+		return "", common.NewError("无法从 x-ui 命令输出中找到证书路径")
 	}
 
 	certPath := strings.TrimSpace(strings.TrimPrefix(certLine, "cert:"))
 	if certPath == "" {
-		return "", errors.New("证书路径为空，请确保已为面板配置 SSL 证书")
+		return "", common.NewError("证书路径为空，请确保已为面板配置 SSL 证书")
 	}
 
 	domain := filepath.Base(filepath.Dir(certPath))

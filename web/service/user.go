@@ -1,12 +1,11 @@
 package service
 
 import (
-	"errors"
-
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
+	"x-ui/util/common"
 	"x-ui/util/crypto"
 
 	"github.com/xlzd/gotp"
@@ -88,9 +87,9 @@ func (s *UserService) UpdateUser(id int, username string, password string) error
 
 func (s *UserService) UpdateFirstUser(username string, password string) error {
 	if username == "" {
-		return errors.New("username can not be empty")
+		return common.NewError("username can not be empty")
 	} else if password == "" {
-		return errors.New("password can not be empty")
+		return common.NewError("password can not be empty")
 	}
 	hashedPassword, er := crypto.HashPasswordAsBcrypt(password)
 

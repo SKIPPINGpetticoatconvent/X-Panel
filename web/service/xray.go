@@ -2,12 +2,12 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"runtime"
 	"strconv"
 	"sync"
 
 	"x-ui/logger"
+	"x-ui/util/common"
 	json_util "x-ui/util/json_util"
 	"x-ui/xray"
 
@@ -417,7 +417,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 
 func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
 	if !s.IsXrayRunning() {
-		err := errors.New("xray is not running")
+		err := common.ErrXrayNotRunning
 		logger.Debug("Attempted to fetch Xray traffic, but Xray is not running:", err)
 		return nil, nil, err
 	}
@@ -478,7 +478,7 @@ func (s *XrayService) StopXray() error {
 	if s.IsXrayRunning() {
 		return p.Stop()
 	}
-	return errors.New("xray is not running")
+	return common.ErrXrayNotRunning
 }
 
 func (s *XrayService) SetToNeedRestart() {

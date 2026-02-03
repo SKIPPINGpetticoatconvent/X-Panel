@@ -3,7 +3,6 @@ package service
 import (
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -113,7 +112,7 @@ func (s *SettingService) GetAllSetting() (*entity.AllSetting, error) {
 		defer func() {
 			panicErr := recover()
 			if panicErr != nil {
-				err = errors.New(fmt.Sprint(panicErr))
+				err = common.NewError(fmt.Sprint(panicErr))
 			}
 		}()
 
