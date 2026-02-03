@@ -1,0 +1,36 @@
+#!/bin/bash
+# Commit message hook for X-Panel
+# 验证 commit message 是否符合 Conventional Commits 规范
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Conventional Commits 正则
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,}"
+
+# 允许 merge commits
+if echo "$COMMIT_MSG" | grep -qE "^Merge "; then
+    exit 0
+fi
+
+# 允许 fixup/squash commits
+if echo "$COMMIT_MSG" | grep -qE "^(fixup|squash)! "; then
+    exit 0
+fi
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+    echo "❌ Invalid commit message format!"
+    echo ""
+    echo "Expected: <type>(<scope>): <description>"
+    echo ""
+    echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+    echo ""
+    echo "Examples:"
+    echo "  feat: add user authentication"
+    echo "  fix(api): resolve login timeout issue"
+    echo "  docs: update README"
+    echo ""
+    exit 1
+fi
+
+exit 0

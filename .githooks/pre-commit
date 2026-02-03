@@ -1,0 +1,52 @@
+#!/bin/bash
+# Pre-commit hook for X-Panel
+# 提交前自动检查 Go 代码质量
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# 获取暂存的 Go 文件
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+
+if [ -z "$STAGED_GO_FILES" ]; then
+    echo "✅ No Go files staged, skipping checks."
+    exit 0
+fi
+
+# 1. gofmt 检查
+echo "📝 Checking gofmt..."
+UNFORMATTED=$(gofmt -l $STAGED_GO_FILES 2>/dev/null || true)
+if [ -n "$UNFORMATTED" ]; then
+    echo "❌ The following files need formatting:"
+    echo "$UNFORMATTED"
+    echo ""
+    echo "Run: gofmt -w <file>"
+    exit 1
+fi
+echo "   ✓ gofmt passed"
+
+# 2. go vet 检查
+echo "🔬 Running go vet..."
+if ! go vet ./... 2>/dev/null; then
+    echo "❌ go vet failed"
+    exit 1
+fi
+echo "   ✓ go vet passed"
+
+# 3. golangci-lint 快速检查 (仅 staged 文件)
+if command -v golangci-lint &> /dev/null; then
+    echo "🧹 Running golangci-lint..."
+    if ! golangci-lint run --new-from-rev=HEAD~1 --timeout=2m 2>/dev/null; then
+        echo "⚠️  golangci-lint found issues (non-blocking)"
+        # 不阻止提交，只是警告
+    else
+        echo "   ✓ golangci-lint passed"
+    fi
+else
+    echo "⚠️  golangci-lint not installed, skipping..."
+fi
+
+echo ""
+echo "✅ All pre-commit checks passed!"
+exit 0

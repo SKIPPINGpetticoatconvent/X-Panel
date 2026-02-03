@@ -1,4 +1,4 @@
-.PHONY: build test e2e clean all
+.PHONY: build test e2e clean all hooks changelog lint fmt
 
 # 项目基础信息
 BINARY_NAME=x-ui
@@ -36,3 +36,32 @@ clean:
 	rm -f $(BINARY_NAME)
 	rm -f x-ui-linux-amd64.tar.gz
 	docker rm -f xpanel-e2e-test >/dev/null 2>&1 || true
+
+# 安装 git hooks
+hooks:
+	@echo "Installing git hooks..."
+	git config core.hooksPath .githooks
+	@echo "✅ Git hooks installed. Using .githooks directory."
+
+# 生成 CHANGELOG
+changelog:
+	@echo "Generating CHANGELOG..."
+	@if command -v git-cliff >/dev/null 2>&1; then \
+		git-cliff -o CHANGELOG.md; \
+		echo "✅ CHANGELOG.md generated."; \
+	else \
+		echo "❌ git-cliff not installed. Install with: cargo install git-cliff"; \
+		exit 1; \
+	fi
+
+# 运行 lint 检查
+lint:
+	@echo "Running linters..."
+	golangci-lint run --timeout=10m
+	@echo "✅ Lint passed."
+
+# 格式化代码
+fmt:
+	@echo "Formatting code..."
+	gofmt -w .
+	@echo "✅ Code formatted."
