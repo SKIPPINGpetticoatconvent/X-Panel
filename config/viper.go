@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -25,10 +24,8 @@ func initStaticConfig() {
 	// 设置默认值
 	setStaticDefaults()
 
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("配置文件未找到，使用环境变量和默认值: %v", err)
-	}
+	// 读取配置文件（配置文件是可选的，不存在时静默使用默认值）
+	_ = viper.ReadInConfig()
 }
 
 // RefreshEnvConfig 刷新环境变量配置（用于测试）

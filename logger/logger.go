@@ -164,9 +164,8 @@ func InitLogger(level Level, enabled bool) {
 
 	if localLogEnabled {
 		Info("本地文件日志已启用")
-	} else {
-		Info("本地文件日志已禁用，仅使用控制台输出")
 	}
+	// 禁用文件日志是默认行为，无需在控制台提示
 }
 
 // Debug logs at DEBUG level

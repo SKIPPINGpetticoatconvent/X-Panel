@@ -24,7 +24,7 @@ type IndexController struct {
 
 	settingService service.SettingService
 	userService    service.UserService
-	tgbot          service.Tgbot
+	tgbot          *service.Tgbot
 }
 
 func NewIndexController(g *gin.RouterGroup) *IndexController {
@@ -82,7 +82,9 @@ func (a *IndexController) login(c *gin.Context) {
 		limiter.RecordFailure(ip)
 
 		logger.Warningf("wrong username: \"%s\", password: \"%s\", IP: \"%s\"", safeUser, safePass, ip)
-		a.tgbot.UserLoginNotify(safeUser, safePass, ip, timeStr, 0)
+		if a.tgbot != nil {
+			a.tgbot.UserLoginNotify(safeUser, safePass, ip, timeStr, 0)
+		}
 		pureJsonMsg(c, http.StatusOK, false, I18nWeb(c, "pages.login.toasts.wrongUsernameOrPassword"))
 		return
 	}
@@ -91,7 +93,9 @@ func (a *IndexController) login(c *gin.Context) {
 	limiter.Reset(ip)
 
 	logger.Infof("%s logged in successfully, Ip Address: %s\n", safeUser, ip)
-	a.tgbot.UserLoginNotify(safeUser, ``, ip, timeStr, 1)
+	if a.tgbot != nil {
+		a.tgbot.UserLoginNotify(safeUser, ``, ip, timeStr, 1)
+	}
 
 	sessionMaxAge, err := a.settingService.GetSessionMaxAge()
 	if err != nil {
