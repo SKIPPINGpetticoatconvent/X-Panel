@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 //go:embed version
@@ -38,7 +40,7 @@ func GetLogLevel() LogLevel {
 	if IsDebug() {
 		return Debug
 	}
-	logLevel := os.Getenv("XUI_LOG_LEVEL")
+	logLevel := viper.GetString("app.log_level")
 	if logLevel == "" {
 		return Info
 	}
@@ -46,15 +48,15 @@ func GetLogLevel() LogLevel {
 }
 
 func IsDebug() bool {
-	return os.Getenv("XUI_DEBUG") == "true"
+	return viper.GetBool("app.debug")
 }
 
 func GetBinFolderPath() string {
-	binFolderPath := os.Getenv("XUI_BIN_FOLDER")
-	if binFolderPath == "" {
-		binFolderPath = "bin"
+	path := viper.GetString("paths.bin_folder")
+	if path == "" {
+		return "bin"
 	}
-	return binFolderPath
+	return path
 }
 
 func getBaseDir() string {
@@ -75,9 +77,9 @@ func getBaseDir() string {
 }
 
 func GetDBFolderPath() string {
-	dbFolderPath := os.Getenv("XUI_DB_FOLDER")
-	if dbFolderPath != "" {
-		return dbFolderPath
+	path := viper.GetString("paths.db_folder")
+	if path != "" {
+		return path
 	}
 	if runtime.GOOS == "windows" {
 		return getBaseDir()
@@ -90,9 +92,9 @@ func GetDBPath() string {
 }
 
 func GetLogFolder() string {
-	logFolderPath := os.Getenv("XUI_LOG_FOLDER")
-	if logFolderPath != "" {
-		return logFolderPath
+	path := viper.GetString("paths.log_folder")
+	if path != "" {
+		return path
 	}
 	if runtime.GOOS == "windows" {
 		return filepath.Join(".", "log")
@@ -101,11 +103,11 @@ func GetLogFolder() string {
 }
 
 func GetSNIFolderPath() string {
-	sniFolderPath := os.Getenv("XUI_SNI_FOLDER")
-	if sniFolderPath == "" {
-		sniFolderPath = filepath.Join(getBaseDir(), "sni")
+	path := viper.GetString("paths.sni_folder")
+	if path != "" {
+		return path
 	}
-	return sniFolderPath
+	return filepath.Join(getBaseDir(), "sni")
 }
 
 func copyFile(src, dst string) error {
@@ -132,10 +134,14 @@ func copyFile(src, dst string) error {
 }
 
 func init() {
+	// 初始化 Viper 静态配置管理
+	initStaticConfig()
+
+	// 保持原有的 Windows 数据库迁移逻辑
 	if runtime.GOOS != "windows" {
 		return
 	}
-	if os.Getenv("XUI_DB_FOLDER") != "" {
+	if viper.GetString("paths.db_folder") != "" {
 		return
 	}
 	oldDBFolder := "/etc/x-ui"

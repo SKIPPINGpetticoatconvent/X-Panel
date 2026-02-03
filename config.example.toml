@@ -1,0 +1,19 @@
+# X-Panel 静态配置示例文件
+# 复制为 config.toml 并根据需要修改
+# 配置优先级：环境变量 > 配置文件 > 默认值
+
+[app]
+name = "x-ui"                    # 应用名称
+debug = false                    # 调试模式 (可通过 XUI_DEBUG 环境变量覆盖)
+log_level = "info"               # 日志级别: debug, info, notice, warning, error (可通过 XUI_LOG_LEVEL 环境变量覆盖)
+
+[paths]
+bin_folder = "bin"               # 二进制文件存储目录 (可通过 XUI_BIN_FOLDER 环境变量覆盖)
+db_folder = "/etc/x-ui"          # 数据库存储目录 (可通过 XUI_DB_FOLDER 环境变量覆盖)
+log_folder = "/var/log"          # 日志存储目录 (可通过 XUI_LOG_FOLDER 环境变量覆盖)
+sni_folder = "sni"               # SNI文件存储目录 (可通过 XUI_SNI_FOLDER 环境变量覆盖)
+
+[platform]
+# 注意：此配置为内部使用，表示自动根据操作系统调整路径
+# Linux: db_folder = "/etc/x-ui", log_folder = "/var/log"
+# Windows: db_folder = 当前目录, log_folder = "./log"

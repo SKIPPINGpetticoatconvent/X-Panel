@@ -44,16 +44,19 @@ func TestIsDebug(t *testing.T) {
 	defer func() { os.Setenv("XUI_DEBUG", orig) }()
 
 	os.Setenv("XUI_DEBUG", "true")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if !IsDebug() {
 		t.Error("IsDebug() should return true when XUI_DEBUG=true")
 	}
 
 	os.Setenv("XUI_DEBUG", "false")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if IsDebug() {
 		t.Error("IsDebug() should return false when XUI_DEBUG=false")
 	}
 
 	os.Unsetenv("XUI_DEBUG")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if IsDebug() {
 		t.Error("IsDebug() should return false when XUI_DEBUG is not set")
 	}
@@ -70,6 +73,7 @@ func TestGetLogLevel(t *testing.T) {
 	// debug 模式优先
 	os.Setenv("XUI_DEBUG", "true")
 	os.Unsetenv("XUI_LOG_LEVEL")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if GetLogLevel() != Debug {
 		t.Errorf("GetLogLevel() = %q, want %q when debug mode", GetLogLevel(), Debug)
 	}
@@ -77,12 +81,14 @@ func TestGetLogLevel(t *testing.T) {
 	// 非 debug 模式，使用环境变量
 	os.Setenv("XUI_DEBUG", "false")
 	os.Setenv("XUI_LOG_LEVEL", "warning")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if GetLogLevel() != Warning {
 		t.Errorf("GetLogLevel() = %q, want %q", GetLogLevel(), Warning)
 	}
 
 	// 非 debug，无环境变量，默认 info
 	os.Unsetenv("XUI_LOG_LEVEL")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if GetLogLevel() != Info {
 		t.Errorf("GetLogLevel() = %q, want %q (default)", GetLogLevel(), Info)
 	}
@@ -93,11 +99,13 @@ func TestGetBinFolderPath(t *testing.T) {
 	defer func() { os.Setenv("XUI_BIN_FOLDER", orig) }()
 
 	os.Setenv("XUI_BIN_FOLDER", "/custom/bin")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if got := GetBinFolderPath(); got != "/custom/bin" {
 		t.Errorf("GetBinFolderPath() = %q, want /custom/bin", got)
 	}
 
 	os.Unsetenv("XUI_BIN_FOLDER")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if got := GetBinFolderPath(); got != "bin" {
 		t.Errorf("GetBinFolderPath() = %q, want bin (default)", got)
 	}
@@ -108,6 +116,7 @@ func TestGetDBFolderPath(t *testing.T) {
 	defer func() { os.Setenv("XUI_DB_FOLDER", orig) }()
 
 	os.Setenv("XUI_DB_FOLDER", "/tmp/test-db")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if got := GetDBFolderPath(); got != "/tmp/test-db" {
 		t.Errorf("GetDBFolderPath() = %q, want /tmp/test-db", got)
 	}
@@ -118,6 +127,7 @@ func TestGetDBPath(t *testing.T) {
 	defer func() { os.Setenv("XUI_DB_FOLDER", orig) }()
 
 	os.Setenv("XUI_DB_FOLDER", "/tmp/test-db")
+	RefreshEnvConfig() // 刷新环境变量配置
 	got := GetDBPath()
 	name := GetName()
 	want := "/tmp/test-db/" + name + ".db"
@@ -131,6 +141,7 @@ func TestGetLogFolder(t *testing.T) {
 	defer func() { os.Setenv("XUI_LOG_FOLDER", orig) }()
 
 	os.Setenv("XUI_LOG_FOLDER", "/tmp/test-log")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if got := GetLogFolder(); got != "/tmp/test-log" {
 		t.Errorf("GetLogFolder() = %q, want /tmp/test-log", got)
 	}
@@ -141,6 +152,7 @@ func TestGetSNIFolderPath(t *testing.T) {
 	defer func() { os.Setenv("XUI_SNI_FOLDER", orig) }()
 
 	os.Setenv("XUI_SNI_FOLDER", "/tmp/test-sni")
+	RefreshEnvConfig() // 刷新环境变量配置
 	if got := GetSNIFolderPath(); got != "/tmp/test-sni" {
 		t.Errorf("GetSNIFolderPath() = %q, want /tmp/test-sni", got)
 	}
