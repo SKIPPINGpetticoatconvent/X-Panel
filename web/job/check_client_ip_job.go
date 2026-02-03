@@ -699,6 +699,10 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 		logger.Errorf("failed to fetch inbound settings for email %s: %s", clientEmail, err)
 		return false
 	}
+	if inbound == nil {
+		logger.Debugf("no inbound found for email %s", clientEmail)
+		return false
+	}
 
 	if inbound.Settings == "" {
 		logger.Debug("wrong data:", inbound)
