@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -21,7 +20,7 @@ import (
 func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, error) {
 	settings := s.getParsedSettings(inbound.Id, inbound.Settings)
 	if settings == nil {
-		return nil, fmt.Errorf("setting is null")
+		return nil, common.ErrInvalidInput
 	}
 
 	clientsInterface, ok := settings["clients"]
@@ -30,7 +29,7 @@ func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, err
 	}
 	clientsAny, ok := clientsInterface.([]any)
 	if !ok {
-		return nil, fmt.Errorf("clients is not an array")
+		return nil, common.ErrInvalidInput
 	}
 	clients := make([]model.Client, len(clientsAny))
 	for i, c := range clientsAny {

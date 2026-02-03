@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path"
 	"slices"
@@ -13,13 +12,14 @@ import (
 
 	"x-ui/config"
 	"x-ui/database/model"
+	"x-ui/logger"
 	"x-ui/util/crypto"
 	"x-ui/util/json_util"
 	"x-ui/xray"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 var db *gorm.DB
@@ -42,7 +42,7 @@ func initModels() error {
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
-			log.Printf("Error auto migrating model: %v", err)
+			logger.Errorf("Error auto migrating model: %v", err)
 			return err
 		}
 	}
@@ -52,13 +52,13 @@ func initModels() error {
 func initUser() error {
 	empty, err := isTableEmpty("users")
 	if err != nil {
-		log.Printf("Error checking if users table is empty: %v", err)
+		logger.Errorf("Error checking if users table is empty: %v", err)
 		return err
 	}
 	if empty {
 		hashedPassword, err := crypto.HashPasswordAsBcrypt(defaultPassword)
 		if err != nil {
-			log.Printf("Error hashing default password: %v", err)
+			logger.Errorf("Error hashing default password: %v", err)
 			return err
 		}
 
@@ -74,7 +74,7 @@ func initUser() error {
 func runSeeders(isUsersEmpty bool) error {
 	empty, err := isTableEmpty("history_of_seeders")
 	if err != nil {
-		log.Printf("Error checking if users table is empty: %v", err)
+		logger.Errorf("Error checking if users table is empty: %v", err)
 		return err
 	}
 
@@ -89,7 +89,7 @@ func runSeeders(isUsersEmpty bool) error {
 
 		if !slices.Contains(seedersHistory, "TlsConfigMigration") {
 			if err := migrateTlsInbounds(); err != nil {
-				log.Printf("TlsConfigMigration seeder failed: %v", err)
+				logger.Errorf("TlsConfigMigration seeder failed: %v", err)
 				return err
 			}
 			db.Create(&model.HistoryOfSeeders{SeederName: "TlsConfigMigration"})
@@ -97,7 +97,7 @@ func runSeeders(isUsersEmpty bool) error {
 
 		if !slices.Contains(seedersHistory, "XhttpFlowMigration") {
 			if err := migrateXhttpFlow(); err != nil {
-				log.Printf("XhttpFlowMigration seeder failed: %v", err)
+				logger.Errorf("XhttpFlowMigration seeder failed: %v", err)
 				return err
 			}
 			db.Create(&model.HistoryOfSeeders{SeederName: "XhttpFlowMigration"})
@@ -110,7 +110,7 @@ func runSeeders(isUsersEmpty bool) error {
 			for _, user := range users {
 				hashedPassword, err := crypto.HashPasswordAsBcrypt(user.Password)
 				if err != nil {
-					log.Printf("Error hashing password for user '%s': %v", user.Username, err)
+					logger.Errorf("Error hashing password for user '%s': %v", user.Username, err)
 					return err
 				}
 				db.Model(&user).Update("password", hashedPassword)
@@ -139,12 +139,12 @@ func InitDB(dbPath string) error {
 		return err
 	}
 
-	var gormLogger logger.Interface
+	var gormLogger gormlogger.Interface
 
 	if config.IsDebug() {
-		gormLogger = logger.Default
+		gormLogger = gormlogger.Default
 	} else {
-		gormLogger = logger.Discard
+		gormLogger = gormlogger.Discard
 	}
 
 	c := &gorm.Config{
@@ -265,7 +265,7 @@ func migrateXhttpFlow() error {
 				Update("settings", string(settingsRaw)).Error; err != nil {
 				return err
 			}
-			log.Printf("Migrated XHTTP Flow for inbound %d (%s)", inbound.Id, inbound.Remark)
+			logger.Infof("Migrated XHTTP Flow for inbound %d (%s)", inbound.Id, inbound.Remark)
 		}
 	}
 	return nil
@@ -278,7 +278,7 @@ func ValidateSQLiteDB(dbPath string) error {
 	if _, err := os.Stat(dbPath); err != nil { // file must exist
 		return err
 	}
-	gdb, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: logger.Discard})
+	gdb, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: gormlogger.Discard})
 	if err != nil {
 		return err
 	}
