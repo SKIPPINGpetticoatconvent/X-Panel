@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"x-ui/logger"
+	"x-ui/util/common"
 
 	logging "github.com/op/go-logging"
 )
@@ -44,18 +45,7 @@ func NewLogForwarder(settingService *SettingService, telegramService TelegramSer
 	// 获取配置的日志级别，默认 WARNING
 	forwardLevel := logging.WARNING
 	if levelStr, err := settingService.GetTgLogLevel(); err == nil {
-		switch levelStr {
-		case "error":
-			forwardLevel = logging.ERROR
-		case "warn":
-			forwardLevel = logging.WARNING
-		case "info":
-			forwardLevel = logging.INFO
-		case "debug":
-			forwardLevel = logging.DEBUG
-		default:
-			forwardLevel = logging.WARNING
-		}
+		forwardLevel = common.ParseLogLevel(levelStr)
 	}
 
 	// 针对低配机器（1CPU 1RAM）的优化配置
@@ -365,18 +355,7 @@ func (lf *LogForwarder) UpdateConfig() {
 	// 获取新的级别
 	newLevel := logging.WARNING
 	if levelStr, err := lf.settingService.GetTgLogLevel(); err == nil {
-		switch levelStr {
-		case "error":
-			newLevel = logging.ERROR
-		case "warn":
-			newLevel = logging.WARNING
-		case "info":
-			newLevel = logging.INFO
-		case "debug":
-			newLevel = logging.DEBUG
-		default:
-			newLevel = logging.WARNING
-		}
+		newLevel = common.ParseLogLevel(levelStr)
 	}
 
 	lf.mu.Lock()
