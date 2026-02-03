@@ -5,7 +5,6 @@ import (
 
 	"x-ui/config"
 	"x-ui/database"
-	_ "x-ui/database"
 	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/web/service"
