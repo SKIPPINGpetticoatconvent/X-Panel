@@ -302,19 +302,24 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 	status.PublicIP.IPv6 = s.cachedIPv6
 
 	// Xray status
-	if s.xrayService.IsXrayRunning() {
-		status.Xray.State = Running
-		status.Xray.ErrorMsg = ""
-	} else {
-		err := s.xrayService.GetXrayErr()
-		if err != nil {
-			status.Xray.State = Error
+	if s.xrayService != nil {
+		if s.xrayService.IsXrayRunning() {
+			status.Xray.State = Running
+			status.Xray.ErrorMsg = ""
 		} else {
-			status.Xray.State = Stop
+			err := s.xrayService.GetXrayErr()
+			if err != nil {
+				status.Xray.State = Error
+			} else {
+				status.Xray.State = Stop
+			}
+			status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
 		}
-		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
+		status.Xray.Version = s.xrayService.GetXrayVersion()
+	} else {
+		status.Xray.State = Stop
+		status.Xray.ErrorMsg = "Xray service not initialized"
 	}
-	status.Xray.Version = s.xrayService.GetXrayVersion()
 
 	// Application stats
 	var rtm runtime.MemStats

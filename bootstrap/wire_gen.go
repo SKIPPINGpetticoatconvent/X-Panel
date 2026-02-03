@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"x-ui/database"
 	"x-ui/database/repository"
+	"x-ui/web/service"
 )
 
 import (
@@ -19,10 +20,21 @@ import (
 
 func InitializeApp() (*App, error) {
 	db := database.GetDBProvider()
-	inboundRepository := repository.NewInboundRepository(db)
-	outboundRepository := repository.NewOutboundRepository(db)
 	settingRepository := repository.NewSettingRepository(db)
+	settingService := service.NewSettingService(settingRepository)
 	userRepository := repository.NewUserRepository(db)
-	app := NewApp(inboundRepository, outboundRepository, settingRepository, userRepository)
+	userService := service.NewUserService(userRepository, settingService)
+	outboundRepository := repository.NewOutboundRepository(db)
+	outboundService := service.NewOutboundService(outboundRepository)
+	inboundRepository := repository.NewInboundRepository(db)
+	clientTrafficRepository := repository.NewClientTrafficRepository(db)
+	clientIPRepository := repository.NewClientIPRepository(db)
+	xrayAPI := service.NewXrayAPI()
+	inboundService := service.NewInboundService(inboundRepository, clientTrafficRepository, clientIPRepository, xrayAPI)
+	xrayService := service.NewXrayService(settingService, xrayAPI)
+	serverService := service.NewServerService()
+	status := service.NewStatus()
+	tgbot := service.NewTgBot(inboundService, settingService, serverService, xrayService, status)
+	app := NewApp(settingService, userService, outboundService, inboundService, xrayService, serverService, tgbot, status, xrayAPI, inboundRepository, outboundRepository, settingRepository, userRepository)
 	return app, nil
 }

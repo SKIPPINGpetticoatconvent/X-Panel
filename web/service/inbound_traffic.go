@@ -500,7 +500,9 @@ func (s *InboundService) ResetClientTraffic(id int, clientEmail string) (bool, e
 		}
 		for _, client := range clients {
 			if client.Email == clientEmail && client.Enable {
-				_ = s.xrayApi.Init(s.xrayService.GetApiPort())
+				if s.xrayService != nil {
+					_ = s.xrayApi.Init(s.xrayService.GetApiPort())
+				}
 				cipher := ""
 				if string(inbound.Protocol) == "shadowsocks" {
 					var oldSettings map[string]any

@@ -33,11 +33,13 @@ func NewInboundService(
 	inboundRepo repository.InboundRepository,
 	clientTrafficRepo repository.ClientTrafficRepository,
 	clientIPRepo repository.ClientIPRepository,
+	xrayApi *xray.XrayAPI,
 ) *InboundService {
 	return &InboundService{
 		inboundRepo:       inboundRepo,
 		clientTrafficRepo: clientTrafficRepo,
 		clientIPRepo:      clientIPRepo,
+		xrayApi:           *xrayApi,
 		settingsCache:     make(map[int]map[string]any),
 	}
 }

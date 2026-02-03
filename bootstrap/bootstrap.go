@@ -25,6 +25,7 @@ type App struct {
 	UserService     *service.UserService
 	LastStatus      *service.Status
 	XrayAPI         *xray.XrayAPI
+	TgBot           *service.Tgbot
 
 	// Repositories
 	InboundRepo  repository.InboundRepository
@@ -35,26 +36,40 @@ type App struct {
 
 // NewApp 创建并初始化应用实例
 func NewApp(
+	settingService *service.SettingService,
+	userService *service.UserService,
+	outboundService *service.OutboundService,
+	inboundService *service.InboundService,
+	xrayService *service.XrayService,
+	serverService *service.ServerService,
+	tgBotService *service.Tgbot,
+	status *service.Status,
+	xrayAPI *xray.XrayAPI,
 	inboundRepo repository.InboundRepository,
 	outboundRepo repository.OutboundRepository,
 	settingRepo repository.SettingRepository,
 	userRepo repository.UserRepository,
 ) *App {
-	// 使用现有的 Service 初始化逻辑，但注入已有的 Repository
-	settingService := service.NewSettingService(settingRepo)
-	userService := service.NewUserService(userRepo, settingService)
-	inboundService := service.NewInboundService(inboundRepo, nil, nil) // 临时：后面再注入完整的
-	outboundService := service.NewOutboundService(outboundRepo)
+	// 补丁：手动解决循环依赖 (Wire 无法自动处理的闭环)
+	inboundService.SetXrayService(xrayService)
+	inboundService.SetTelegramService(tgBotService)
+	xrayService.SetInboundService(inboundService)
+	serverService.SetInboundService(inboundService)
+	serverService.SetXrayService(xrayService)
+	serverService.SetTelegramService(tgBotService)
+	tgBotService.SetInboundService(inboundService)
+	tgBotService.SetServerService(serverService)
 
 	return &App{
 		SettingService:  settingService,
-		ServerService:   &service.ServerService{},
-		XrayService:     &service.XrayService{},
+		ServerService:   serverService,
+		XrayService:     xrayService,
 		InboundService:  inboundService,
 		OutboundService: outboundService,
 		UserService:     userService,
-		LastStatus:      &service.Status{},
-		XrayAPI:         &xray.XrayAPI{},
+		LastStatus:      status,
+		XrayAPI:         xrayAPI,
+		TgBot:           tgBotService,
 
 		InboundRepo:  inboundRepo,
 		OutboundRepo: outboundRepo,
@@ -98,23 +113,6 @@ func InitLogger(settingService *service.SettingService) {
 // LoadEnv 加载环境变量
 func LoadEnv() {
 	_ = godotenv.Load()
-}
-
-// WireServices 执行服务间的依赖注入
-func (app *App) WireServices(tgBotService service.TelegramService) {
-	// 注入 XrayAPI
-	app.XrayService.SetXrayAPI(*app.XrayAPI)
-	app.InboundService.SetXrayAPI(*app.XrayAPI)
-
-	// 注入服务间依赖
-	app.ServerService.SetXrayService(app.XrayService)
-	app.ServerService.SetInboundService(app.InboundService)
-	app.XrayService.SetInboundService(app.InboundService)
-	app.InboundService.SetXrayService(app.XrayService)
-
-	// 注入 Telegram 服务
-	app.ServerService.SetTelegramService(tgBotService)
-	app.InboundService.SetTelegramService(tgBotService)
 }
 
 // Initialize 执行完整的应用初始化流程
