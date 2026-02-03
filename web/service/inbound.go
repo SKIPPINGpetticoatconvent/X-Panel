@@ -1873,17 +1873,7 @@ func (s *InboundService) ResetClientTrafficLimitByEmail(clientEmail string, tota
 }
 
 func (s *InboundService) ResetClientTrafficByEmail(clientEmail string) error {
-	db := database.GetDB()
-
-	result := db.Model(xray.ClientTraffic{}).
-		Where("email = ?", clientEmail).
-		Updates(map[string]any{"enable": true, "up": 0, "down": 0})
-
-	err := result.Error
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.getClientTrafficRepo().ResetByEmail(clientEmail)
 }
 
 func (s *InboundService) ResetClientTraffic(id int, clientEmail string) (bool, error) {
@@ -1949,21 +1939,7 @@ func (s *InboundService) ResetClientTraffic(id int, clientEmail string) (bool, e
 }
 
 func (s *InboundService) ResetAllClientTraffics(id int) error {
-	db := database.GetDB()
-
-	whereText := "inbound_id "
-	if id == -1 {
-		whereText += " > ?"
-	} else {
-		whereText += " = ?"
-	}
-
-	result := db.Model(xray.ClientTraffic{}).
-		Where(whereText, id).
-		Updates(map[string]any{"enable": true, "up": 0, "down": 0})
-
-	err := result.Error
-	return err
+	return s.getClientTrafficRepo().ResetByInboundID(id)
 }
 
 func (s *InboundService) ResetAllTraffics() error {
@@ -2095,19 +2071,12 @@ func (s *InboundService) GetClientTrafficTgBot(tgId int64) ([]*xray.ClientTraffi
 }
 
 func (s *InboundService) GetClientTrafficByEmail(email string) (traffic *xray.ClientTraffic, err error) {
-	db := database.GetDB()
-	var traffics []*xray.ClientTraffic
-
-	err = db.Model(xray.ClientTraffic{}).Where("email = ?", email).Find(&traffics).Error
+	traffic, err = s.getClientTrafficRepo().FindByEmail(email)
 	if err != nil {
 		logger.Warningf("Error retrieving ClientTraffic with email %s: %v", email, err)
 		return nil, err
 	}
-	if len(traffics) > 0 {
-		return traffics[0], nil
-	}
-
-	return nil, nil
+	return traffic, nil
 }
 
 func (s *InboundService) UpdateClientTrafficByEmail(email string, upload int64, download int64) error {
@@ -2196,26 +2165,15 @@ func (s *InboundService) SearchClientTraffic(query string) (traffic *xray.Client
 }
 
 func (s *InboundService) GetInboundClientIps(clientEmail string) (string, error) {
-	db := database.GetDB()
-	InboundClientIps := &model.InboundClientIps{}
-	err := db.Model(model.InboundClientIps{}).Where("client_email = ?", clientEmail).First(InboundClientIps).Error
+	clientIps, err := s.getClientIPRepo().FindByEmail(clientEmail)
 	if err != nil {
 		return "", err
 	}
-	return InboundClientIps.Ips, nil
+	return clientIps.Ips, nil
 }
 
 func (s *InboundService) ClearClientIps(clientEmail string) error {
-	db := database.GetDB()
-
-	result := db.Model(model.InboundClientIps{}).
-		Where("client_email = ?", clientEmail).
-		Update("ips", "")
-	err := result.Error
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.getClientIPRepo().ClearIPs(clientEmail)
 }
 
 func (s *InboundService) SearchInbounds(query string) ([]*model.Inbound, error) {
@@ -2422,17 +2380,7 @@ func (s *InboundService) GetOnlineClients() []string {
 }
 
 func (s *InboundService) GetClientsLastOnline() (map[string]int64, error) {
-	db := database.GetDB()
-	var rows []xray.ClientTraffic
-	err := db.Model(&xray.ClientTraffic{}).Select("email, last_online").Find(&rows).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-	result := make(map[string]int64, len(rows))
-	for _, r := range rows {
-		result[r.Email] = r.LastOnline
-	}
-	return result, nil
+	return s.getClientTrafficRepo().GetLastOnline()
 }
 
 func (s *InboundService) FilterAndSortClientEmails(emails []string) ([]string, []string, error) {
