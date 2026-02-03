@@ -43,14 +43,7 @@ func (r *Runtime) InitTelegramBot() error {
 	defer r.tgMu.Unlock()
 
 	if tgEnable {
-		tgBot := service.NewTgBot(
-			r.App.InboundService,
-			r.App.SettingService,
-			r.App.ServerService,
-			r.App.XrayService,
-			r.App.LastStatus,
-		)
-		r.TgBotService = tgBot
+		r.TgBotService = r.App.TgBot
 		r.LogForwarder = service.NewLogForwarder(r.App.SettingService, r.TgBotService)
 	}
 
@@ -150,9 +143,6 @@ func (r *Runtime) Restart() error {
 		log.Printf("刷新 Telegram Bot 设置失败: %v", err)
 	}
 
-	// 重新注入依赖
-	r.App.WireServices(r.GetTelegramService())
-
 	// 重启 Web 服务器
 	if err := r.StartWebServer(); err != nil {
 		return err
@@ -186,14 +176,7 @@ func (r *Runtime) refreshTelegramBot() error {
 
 	if tgEnable {
 		if r.TgBotService == nil {
-			tgBot := service.NewTgBot(
-				r.App.InboundService,
-				r.App.SettingService,
-				r.App.ServerService,
-				r.App.XrayService,
-				r.App.LastStatus,
-			)
-			r.TgBotService = tgBot
+			r.TgBotService = r.App.TgBot
 		}
 
 		if r.LogForwarder == nil {
@@ -202,8 +185,7 @@ func (r *Runtime) refreshTelegramBot() error {
 	} else {
 		r.TgBotService = nil
 		r.LogForwarder = nil
-		r.App.ServerService.SetTelegramService(nil)
-		r.App.InboundService.SetTelegramService(nil)
+		// 注意：这里由于 DI 指向了同一个实例，禁用的行为应由 Service 内部 IsRunning 状态控制
 	}
 
 	return nil

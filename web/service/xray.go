@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"runtime"
 	"strconv"
 	"sync"
@@ -16,7 +17,7 @@ import (
 
 type XrayService struct {
 	inboundService *InboundService
-	settingService SettingService
+	settingService *SettingService
 	xrayAPI        xray.XrayAPI
 
 	// 封装原全局变量到结构体中
@@ -28,8 +29,11 @@ type XrayService struct {
 }
 
 // NewXrayService 创建 XrayService 实例
-func NewXrayService() *XrayService {
-	return &XrayService{}
+func NewXrayService(settingService *SettingService, xrayAPI *xray.XrayAPI) *XrayService {
+	return &XrayService{
+		settingService: settingService,
+		xrayAPI:        *xrayAPI,
+	}
 }
 
 // SetInboundService 用于从外部注入 InboundService 实例
@@ -110,6 +114,9 @@ func RemoveIndex(s []any, index int) []any {
 }
 
 func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
+	if s.inboundService == nil {
+		return nil, errors.New("inbound service not initialized")
+	}
 	templateConfig, err := s.settingService.GetXrayConfigTemplate()
 	if err != nil {
 		return nil, err

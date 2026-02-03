@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"x-ui/database"
 	"x-ui/database/model"
 
 	"gorm.io/gorm"
@@ -25,9 +24,9 @@ type settingRepository struct {
 }
 
 // NewSettingRepository 创建新的 SettingRepository 实例
-func NewSettingRepository() SettingRepository {
+func NewSettingRepository(db *gorm.DB) SettingRepository {
 	return &settingRepository{
-		db: database.GetDB(),
+		db: db,
 	}
 }
 

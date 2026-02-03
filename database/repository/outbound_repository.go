@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"x-ui/database"
 	"x-ui/database/model"
 
 	"gorm.io/gorm"
@@ -25,9 +24,9 @@ type outboundRepository struct {
 }
 
 // NewOutboundRepository 创建新的 OutboundRepository 实例
-func NewOutboundRepository() OutboundRepository {
+func NewOutboundRepository(db *gorm.DB) OutboundRepository {
 	return &outboundRepository{
-		db: database.GetDB(),
+		db: db,
 	}
 }
 

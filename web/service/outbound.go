@@ -24,7 +24,7 @@ func NewOutboundService(outboundRepo repository.OutboundRepository) *OutboundSer
 // getOutboundRepo 返回 OutboundRepository，支持延迟初始化以保持向后兼容
 func (s *OutboundService) getOutboundRepo() repository.OutboundRepository {
 	if s.outboundRepo == nil {
-		s.outboundRepo = repository.NewOutboundRepository()
+		s.outboundRepo = repository.NewOutboundRepository(database.GetDB())
 	}
 	return s.outboundRepo
 }

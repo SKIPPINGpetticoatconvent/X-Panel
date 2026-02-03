@@ -29,9 +29,6 @@ func runWebServer() {
 		logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
 	}
 
-	// 执行依赖注入
-	app.WireServices(runtime.GetTelegramService())
-
 	// 启动 Web 服务器
 	if err := runtime.StartWebServer(); err != nil {
 		log.Fatalf("Error starting web server: %v", err)

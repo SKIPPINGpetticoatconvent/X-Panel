@@ -28,7 +28,7 @@ func NewUserService(userRepo repository.UserRepository, settingService *SettingS
 // getUserRepo 返回 UserRepository，支持延迟初始化以保持向后兼容
 func (s *UserService) getUserRepo() repository.UserRepository {
 	if s.userRepo == nil {
-		s.userRepo = repository.NewUserRepository()
+		s.userRepo = repository.NewUserRepository(database.GetDB())
 	}
 	return s.userRepo
 }

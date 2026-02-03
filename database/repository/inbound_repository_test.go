@@ -16,7 +16,7 @@ func setupTestDB(t *testing.T) {
 
 func TestInboundRepository_CRUD(t *testing.T) {
 	setupTestDB(t)
-	repo := NewInboundRepository()
+	repo := NewInboundRepository(database.GetDB())
 
 	// Create
 	inbound := &model.Inbound{
@@ -89,7 +89,7 @@ func TestInboundRepository_CRUD(t *testing.T) {
 
 func TestInboundRepository_CheckPortExist_WithListen(t *testing.T) {
 	setupTestDB(t)
-	repo := NewInboundRepository()
+	repo := NewInboundRepository(database.GetDB())
 
 	// Create inbound with specific listen address
 	inbound := &model.Inbound{
