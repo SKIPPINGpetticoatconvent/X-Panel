@@ -276,9 +276,8 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	// 开始：手动计算和分配 ID
 	// =================================================================
 	// 1. 查询数据库中所有已存在的入站规则的 ID
-	var existingIDs []int
-	//    使用 Pluck 方法可以更高效地只查询出 id 这一列，而不是整个对象
-	if err := database.GetDB().Model(&model.Inbound{}).Pluck("id", &existingIDs).Error; err != nil {
+	existingIDs, err := s.getInboundRepo().GetAllIDs()
+	if err != nil {
 		return inbound, false, err
 	}
 
@@ -1477,31 +1476,27 @@ func (s *InboundService) DelClientIPs(tx *gorm.DB, email string) error {
 }
 
 func (s *InboundService) GetClientInboundByTrafficID(trafficId int) (traffic *xray.ClientTraffic, inbound *model.Inbound, err error) {
-	db := database.GetDB()
-	var traffics []*xray.ClientTraffic
-	err = db.Model(xray.ClientTraffic{}).Where("id = ?", trafficId).Find(&traffics).Error
+	traffic, err = s.getClientTrafficRepo().FindByID(trafficId)
 	if err != nil {
 		logger.Warningf("Error retrieving ClientTraffic with trafficId %d: %v", trafficId, err)
 		return nil, nil, err
 	}
-	if len(traffics) > 0 {
-		inbound, err = s.GetInbound(traffics[0].InboundId)
-		return traffics[0], inbound, err
+	if traffic != nil {
+		inbound, err = s.GetInbound(traffic.InboundId)
+		return traffic, inbound, err
 	}
 	return nil, nil, nil
 }
 
 func (s *InboundService) GetClientInboundByEmail(email string) (traffic *xray.ClientTraffic, inbound *model.Inbound, err error) {
-	db := database.GetDB()
-	var traffics []*xray.ClientTraffic
-	err = db.Model(xray.ClientTraffic{}).Where("email = ?", email).Find(&traffics).Error
+	traffic, err = s.getClientTrafficRepo().FindByEmail(email)
 	if err != nil {
 		logger.Warningf("Error retrieving ClientTraffic with email %s: %v", email, err)
 		return nil, nil, err
 	}
-	if len(traffics) > 0 {
-		inbound, err = s.GetInbound(traffics[0].InboundId)
-		return traffics[0], inbound, err
+	if traffic != nil {
+		inbound, err = s.GetInbound(traffic.InboundId)
+		return traffic, inbound, err
 	}
 	return nil, nil, nil
 }
@@ -1929,8 +1924,7 @@ func (s *InboundService) ResetClientTraffic(id int, clientEmail string) (bool, e
 	traffic.Down = 0
 	traffic.Enable = true
 
-	db := database.GetDB()
-	err = db.Save(traffic).Error
+	err = s.getClientTrafficRepo().Update(traffic)
 	if err != nil {
 		return false, err
 	}
@@ -2080,13 +2074,7 @@ func (s *InboundService) GetClientTrafficByEmail(email string) (traffic *xray.Cl
 }
 
 func (s *InboundService) UpdateClientTrafficByEmail(email string, upload int64, download int64) error {
-	db := database.GetDB()
-
-	result := db.Model(xray.ClientTraffic{}).
-		Where("email = ?", email).
-		Updates(map[string]any{"up": upload, "down": download})
-
-	err := result.Error
+	err := s.getClientTrafficRepo().UpdateTraffic(email, upload, download)
 	if err != nil {
 		logger.Warningf("Error updating ClientTraffic with email %s: %v", email, err)
 		return err

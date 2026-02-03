@@ -168,6 +168,7 @@ func (r *inboundRepository) CheckPortExist(listen string, port int, ignoreId int
 
 // ClientTrafficRepository 定义 ClientTraffic 数据访问接口
 type ClientTrafficRepository interface {
+	FindByID(id int) (*xray.ClientTraffic, error)
 	FindByEmail(email string) (*xray.ClientTraffic, error)
 	FindByInboundID(inboundId int) ([]*xray.ClientTraffic, error)
 	FindByTgID(tgId int64) ([]*xray.ClientTraffic, error)
@@ -197,6 +198,19 @@ func NewClientTrafficRepository() ClientTrafficRepository {
 // WithTx 返回使用指定事务的新 Repository 实例
 func (r *clientTrafficRepository) WithTx(tx *gorm.DB) ClientTrafficRepository {
 	return &clientTrafficRepository{db: tx}
+}
+
+// FindByID 根据 ID 查找 ClientTraffic
+func (r *clientTrafficRepository) FindByID(id int) (*xray.ClientTraffic, error) {
+	var traffics []*xray.ClientTraffic
+	err := r.db.Model(xray.ClientTraffic{}).Where("id = ?", id).Find(&traffics).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(traffics) == 0 {
+		return nil, nil
+	}
+	return traffics[0], nil
 }
 
 // FindByEmail 根据 Email 查找 ClientTraffic
