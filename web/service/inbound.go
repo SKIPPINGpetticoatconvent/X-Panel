@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"x-ui/config"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
@@ -319,8 +320,8 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 						}
 					}()
 
-					// 等待5秒，确保事务已经完全提交
-					time.Sleep(5 * time.Second)
+					// 使用配置的延时，确保事务已经完全提交
+					time.Sleep(config.TelegramNotifyDelay)
 
 					// 二次检查，防止 Sleep 期间服务已销毁
 					if s.tgService == nil || !s.tgService.IsRunning() {

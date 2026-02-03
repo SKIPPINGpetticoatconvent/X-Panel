@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"x-ui/config"
 	"x-ui/logger"
 )
 
@@ -117,8 +118,8 @@ func (c *AutoHttpsConn) sendRedirect(request *http.Request) {
 		logger.Warning("Failed to send redirect response:", err)
 	}
 
-	// 延迟关闭连接，给客户端时间接收响应 - 增加延迟时间
-	time.Sleep(500 * time.Millisecond)
+	// 使用配置的延时，给客户端时间接收响应
+	time.Sleep(config.HTTPSRedirectDelay)
 	_ = c.Close()
 	logger.Info("HTTP request redirected to HTTPS")
 }

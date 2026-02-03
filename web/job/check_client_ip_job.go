@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"x-ui/config"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
@@ -34,10 +35,10 @@ var (
 	activeClientsLock sync.RWMutex
 )
 
-// ActiveClientIPs 容量上限，防止内存无限增长
-const (
-	maxIPsPerEmail = 100  // 单个用户最多跟踪的 IP 数
-	maxTotalEmails = 5000 // 最多跟踪的用户数
+// ActiveClientIPs 容量上限常量引用自 config 包
+var (
+	maxIPsPerEmail = config.MaxIPsPerEmail
+	maxTotalEmails = config.MaxTotalEmails
 )
 
 // ClientStatus 中文注释: 用于跟踪每个用户的状态（是否因为设备超限而被禁用）
@@ -179,7 +180,7 @@ func (j *CheckDeviceLimitJob) Stop() error {
 	select {
 	case <-done:
 		logger.Infof("设备限制任务已停止")
-	case <-time.After(10 * time.Second):
+	case <-time.After(config.DeviceLimitStopTimeout):
 		logger.Warning("设备限制任务停止超时")
 	}
 
@@ -202,8 +203,8 @@ func (j *CheckDeviceLimitJob) Run() {
 func (j *CheckDeviceLimitJob) limitCheckLoop() {
 	defer j.wg.Done()
 
-	// 每30秒检查一次设备限制（相比原来10秒，减少了不必要的检查）
-	ticker := time.NewTicker(30 * time.Second)
+	// 使用配置的检查间隔
+	ticker := time.NewTicker(config.DeviceLimitCheckInterval)
 	defer ticker.Stop()
 
 	// 启动时立即执行一次检查
@@ -240,7 +241,7 @@ func (j *CheckDeviceLimitJob) cleanupExpiredIPs() {
 
 	now := time.Now()
 	// 活跃判断窗口(TTL): 近3分钟内出现过就算"活跃"
-	const activeTTL = 3 * time.Minute
+	activeTTL := config.DeviceLimitActiveTTL
 	for email, ips := range ActiveClientIPs {
 		for ip, lastSeen := range ips {
 			// 如果一个IP超过3分钟没有新的连接日志，我们就认为它已经下线
@@ -398,10 +399,8 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	// 步骤一：先从 Xray-Core 中删除该用户。
 	_ = j.xrayApi.RemoveUser(info.Tag, email)
 
-	// =================================================================
-	// 增加 5000 毫秒延时，解决竞态条件问题
-	time.Sleep(5000 * time.Millisecond)
-	// =================================================================
+	// 使用配置的延时，解决竞态条件问题
+	time.Sleep(config.DeviceLimitOperationDelay)
 
 	// 创建一个带有随机UUID/Password的临时客户端配置用于"封禁"
 	tempClient := *client
@@ -447,10 +446,8 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *s
 	// 步骤一：先从 Xray-Core 中删除用于"封禁"的那个临时用户。
 	_ = j.xrayApi.RemoveUser(info.Tag, email)
 
-	// =================================================================
-	// 同样增加 5000 毫秒延时，确保解封操作的稳定性
-	time.Sleep(5000 * time.Millisecond)
-	// =================================================================
+	// 使用配置的延时，确保解封操作的稳定性
+	time.Sleep(config.DeviceLimitOperationDelay)
 
 	var clientMap map[string]interface{}
 	clientJson, _ := json.Marshal(client)

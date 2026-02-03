@@ -1400,8 +1400,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		// 在后台协程中执行重启，避免阻塞机器人
 		go func() {
 			err := t.serverService.RestartPanel()
-			// 等待20秒，让面板有足够的时间重启
-			time.Sleep(20 * time.Second)
+			// 使用配置的延时，让面板有足够的时间重启
+			time.Sleep(config.TelegramPanelRestartWait)
 			if err != nil {
 				// 如果执行出错，发送失败消息
 				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n\n错误信息已记录到日志，请检查命令或权限。\n\n<code>%v</code>", err))
@@ -2019,7 +2019,7 @@ func (t *Tgbot) SendMsgToTgbot(chatId int64, msg string, replyMarkup ...telego.R
 		if err != nil {
 			logger.Warning("Error sending telegram message :", err)
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(config.TelegramMessageDelay)
 	}
 }
 
