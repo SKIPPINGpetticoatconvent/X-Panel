@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/util/common"
@@ -136,17 +137,6 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 		return false, common.NewError("Duplicate email: ", existingEmails)
 	}
 
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
 	oldInbound, err := s.GetInbound(data.Id)
 	if err != nil {
 		return false, err
@@ -180,44 +170,44 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 	oldInbound.Settings = string(modifiedSettings)
 	s.invalidateSettingsCache(oldInbound.Id)
 
-	needRestart := false
+	return database.WithTxResult(func(tx *gorm.DB) (bool, error) {
+		needRestart := false
 
-	// Add client stats for new clients
-	for i := range clients {
-		err = s.AddClientStat(tx, oldInbound.Id, &clients[i])
-		if err != nil {
+		// Add client stats for new clients
+		for i := range clients {
+			if err := s.AddClientStat(tx, oldInbound.Id, &clients[i]); err != nil {
+				return false, err
+			}
+
+			// Add user using xray api
+			if s.IsXrayApiAvailable() {
+				cipher := ""
+				if string(oldInbound.Protocol) == "shadowsocks" {
+					cipher = oldSettings["method"].(string)
+				}
+				err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, map[string]any{
+					"email":    clients[i].Email,
+					"id":       clients[i].ID,
+					"security": clients[i].Security,
+					"flow":     clients[i].Flow,
+					"password": clients[i].Password,
+					"cipher":   cipher,
+				})
+				if err1 != nil {
+					logger.Debug("Error in adding client by xray api:", err1)
+					needRestart = true
+				}
+			} else {
+				needRestart = true
+			}
+		}
+
+		if err := tx.Save(oldInbound).Error; err != nil {
 			return false, err
 		}
 
-		// Add user using xray api
-		if s.IsXrayApiAvailable() {
-			cipher := ""
-			if string(oldInbound.Protocol) == "shadowsocks" {
-				cipher = oldSettings["method"].(string)
-			}
-			err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, map[string]any{
-				"email":    clients[i].Email,
-				"id":       clients[i].ID,
-				"security": clients[i].Security,
-				"flow":     clients[i].Flow,
-				"password": clients[i].Password,
-				"cipher":   cipher,
-			})
-			if err1 != nil {
-				logger.Debug("Error in adding client by xray api:", err1)
-				needRestart = true
-			}
-		} else {
-			needRestart = true
-		}
-	}
-
-	err = tx.Save(oldInbound).Error
-	if err != nil {
-		return false, err
-	}
-
-	return needRestart, err
+		return needRestart, nil
+	})
 }
 
 func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool, error) {
@@ -234,81 +224,69 @@ func (s *InboundService) DelInboundClient(inboundId int, clientId string) (bool,
 
 	oldClients := oldSettings["clients"].([]any)
 
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
+	return database.WithTxResult(func(tx *gorm.DB) (bool, error) {
+		needRestart := false
 
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
-	needRestart := false
-
-	var newClients []any
-	for _, client := range oldClients {
-		c := client.(map[string]any)
-		id := ""
-		switch oldInbound.Protocol {
-		case "trojan":
-			id = c["password"].(string)
-		case "shadowsocks":
-			id = c["email"].(string)
-		default:
-			id = c["id"].(string)
-		}
-		if id == clientId {
-			email := c["email"].(string)
-
-			// Remove client stat
-			err = s.DelClientStat(tx, email)
-			if err != nil {
-				return false, err
+		var newClients []any
+		for _, client := range oldClients {
+			c := client.(map[string]any)
+			id := ""
+			switch oldInbound.Protocol {
+			case "trojan":
+				id = c["password"].(string)
+			case "shadowsocks":
+				id = c["email"].(string)
+			default:
+				id = c["id"].(string)
 			}
+			if id == clientId {
+				email := c["email"].(string)
 
-			// Remove client IPs
-			err = s.DelClientIPs(tx, email)
-			if err != nil {
-				return false, err
-			}
+				// Remove client stat
+				if err := s.DelClientStat(tx, email); err != nil {
+					return false, err
+				}
 
-			// Remove client using xray api
-			if s.IsXrayApiAvailable() {
-				err1 := s.xrayApi.RemoveUser(oldInbound.Tag, email)
-				if err1 != nil {
-					logger.Debug("Error in removing client by xray api:", err1)
+				// Remove client IPs
+				if err := s.DelClientIPs(tx, email); err != nil {
+					return false, err
+				}
+
+				// Remove client using xray api
+				if s.IsXrayApiAvailable() {
+					err1 := s.xrayApi.RemoveUser(oldInbound.Tag, email)
+					if err1 != nil {
+						logger.Debug("Error in removing client by xray api:", err1)
+						needRestart = true
+					}
+				} else {
 					needRestart = true
 				}
 			} else {
-				needRestart = true
+				newClients = append(newClients, client)
 			}
-		} else {
-			newClients = append(newClients, client)
 		}
-	}
 
-	if len(newClients) == 0 {
-		return needRestart, common.NewError("Cannot delete all clients. Please delete the inbound instead.")
-	}
+		if len(newClients) == 0 {
+			return needRestart, common.NewError("Cannot delete all clients. Please delete the inbound instead.")
+		}
 
-	oldSettings["clients"] = newClients
+		oldSettings["clients"] = newClients
 
-	modifiedSettings, err := json.MarshalIndent(oldSettings, "", "  ")
-	if err != nil {
-		return false, err
-	}
+		modifiedSettings, err := json.MarshalIndent(oldSettings, "", "  ")
+		if err != nil {
+			return false, err
+		}
 
-	oldInbound.Settings = string(modifiedSettings)
-	s.invalidateSettingsCache(oldInbound.Id)
+		oldInbound.Settings = string(modifiedSettings)
+		s.invalidateSettingsCache(oldInbound.Id)
 
-	err = tx.Save(oldInbound).Error
-	if err != nil {
-		return false, err
-	}
+		if err := tx.Save(oldInbound).Error; err != nil {
+			return false, err
+		}
 
-	return needRestart, err
+		return needRestart, nil
+	})
 }
 
 func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId string) (bool, error) {
@@ -363,17 +341,6 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 		}
 	}
 
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
 	var oldSettings map[string]any
 	err = json.Unmarshal([]byte(oldInbound.Settings), &oldSettings)
 	if err != nil {
@@ -389,85 +356,84 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 	settingsClients := oldSettings["clients"].([]any)
 	newClients := newSettings["clients"].([]any)
 
-	needRestart := false
+	return database.WithTxResult(func(tx *gorm.DB) (bool, error) {
+		needRestart := false
 
-	for i, client := range settingsClients {
-		c := client.(map[string]any)
-		id := ""
-		switch data.Protocol {
-		case "trojan":
-			id = c["password"].(string)
-		case "shadowsocks":
-			id = c["email"].(string)
-		default:
-			id = c["id"].(string)
-		}
-		if id == clientId {
-			// Update client
-			if len(newClients) > 0 {
-				settingsClients[i] = newClients[0]
+		for i, client := range settingsClients {
+			c := client.(map[string]any)
+			id := ""
+			switch data.Protocol {
+			case "trojan":
+				id = c["password"].(string)
+			case "shadowsocks":
+				id = c["email"].(string)
+			default:
+				id = c["id"].(string)
+			}
+			if id == clientId {
+				// Update client
+				if len(newClients) > 0 {
+					settingsClients[i] = newClients[0]
 
-				// Update client stat
-				for _, newClient := range clients {
-					err = s.UpdateClientStat(tx, oldEmail, &newClient)
-					if err != nil {
-						return false, err
-					}
-
-					// Update client IPs if email changed
-					if oldEmail != newClient.Email {
-						err = s.UpdateClientIPs(tx, oldEmail, newClient.Email)
-						if err != nil {
+					// Update client stat
+					for _, newClient := range clients {
+						if err := s.UpdateClientStat(tx, oldEmail, &newClient); err != nil {
 							return false, err
 						}
-					}
 
-					// Update using xray api
-					if s.IsXrayApiAvailable() {
-						// Remove old user first
-						_ = s.xrayApi.RemoveUser(oldInbound.Tag, oldEmail)
-
-						// Add new user
-						cipher := ""
-						if string(oldInbound.Protocol) == "shadowsocks" {
-							cipher = oldSettings["method"].(string)
+						// Update client IPs if email changed
+						if oldEmail != newClient.Email {
+							if err := s.UpdateClientIPs(tx, oldEmail, newClient.Email); err != nil {
+								return false, err
+							}
 						}
-						err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, map[string]any{
-							"email":    newClient.Email,
-							"id":       newClient.ID,
-							"security": newClient.Security,
-							"flow":     newClient.Flow,
-							"password": newClient.Password,
-							"cipher":   cipher,
-						})
-						if err1 != nil {
-							logger.Debug("Error in updating client by xray api:", err1)
+
+						// Update using xray api
+						if s.IsXrayApiAvailable() {
+							// Remove old user first
+							_ = s.xrayApi.RemoveUser(oldInbound.Tag, oldEmail)
+
+							// Add new user
+							cipher := ""
+							if string(oldInbound.Protocol) == "shadowsocks" {
+								cipher = oldSettings["method"].(string)
+							}
+							err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, map[string]any{
+								"email":    newClient.Email,
+								"id":       newClient.ID,
+								"security": newClient.Security,
+								"flow":     newClient.Flow,
+								"password": newClient.Password,
+								"cipher":   cipher,
+							})
+							if err1 != nil {
+								logger.Debug("Error in updating client by xray api:", err1)
+								needRestart = true
+							}
+						} else {
 							needRestart = true
 						}
-					} else {
-						needRestart = true
 					}
 				}
+				break
 			}
-			break
 		}
-	}
 
-	oldSettings["clients"] = settingsClients
-	modifiedSettings, err := json.MarshalIndent(oldSettings, "", "  ")
-	if err != nil {
-		return false, err
-	}
+		oldSettings["clients"] = settingsClients
+		modifiedSettings, err := json.MarshalIndent(oldSettings, "", "  ")
+		if err != nil {
+			return false, err
+		}
 
-	oldInbound.Settings = string(modifiedSettings)
-	s.invalidateSettingsCache(oldInbound.Id)
+		oldInbound.Settings = string(modifiedSettings)
+		s.invalidateSettingsCache(oldInbound.Id)
 
-	err = tx.Save(oldInbound).Error
-	if err != nil {
-		return false, err
-	}
+		if err := tx.Save(oldInbound).Error; err != nil {
+			return false, err
+		}
 
-	return needRestart, err
+		return needRestart, nil
+	})
 }
 
 func (s *InboundService) updateClientTraffics(tx *gorm.DB, oldInbound *model.Inbound, newInbound *model.Inbound) error {
@@ -825,17 +791,7 @@ func (s *InboundService) ResetClientTrafficLimitByEmail(clientEmail string, tota
 	return needRestart, err
 }
 
-func (s *InboundService) DelDepletedClients(id int) (err error) {
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
-	defer func() {
-		if err == nil {
-			tx.Commit()
-		} else {
-			tx.Rollback()
-		}
-	}()
-
+func (s *InboundService) DelDepletedClients(id int) error {
 	whereText := "reset = 0 and inbound_id "
 	if id < 0 {
 		whereText += "> ?"
@@ -843,64 +799,61 @@ func (s *InboundService) DelDepletedClients(id int) (err error) {
 		whereText += "= ?"
 	}
 
-	depletedClients := []xray.ClientTraffic{}
-	err = db.Model(xray.ClientTraffic{}).Where(whereText+" and enable = ?", id, false).Select("inbound_id, GROUP_CONCAT(email) as email").Group("inbound_id").Find(&depletedClients).Error
-	if err != nil {
-		return err
-	}
-
-	for _, depletedClient := range depletedClients {
-		emails := strings.Split(depletedClient.Email, ",")
-		oldInbound, err := s.GetInbound(depletedClient.InboundId)
-		if err != nil {
-			return err
-		}
-		var oldSettings map[string]any
-		err = json.Unmarshal([]byte(oldInbound.Settings), &oldSettings)
+	return database.WithTx(func(tx *gorm.DB) error {
+		depletedClients := []xray.ClientTraffic{}
+		err := tx.Model(xray.ClientTraffic{}).Where(whereText+" and enable = ?", id, false).Select("inbound_id, GROUP_CONCAT(email) as email").Group("inbound_id").Find(&depletedClients).Error
 		if err != nil {
 			return err
 		}
 
-		oldClients := oldSettings["clients"].([]any)
-		var newClients []any
-		for _, client := range oldClients {
-			deplete := false
-			c := client.(map[string]any)
-			for _, email := range emails {
-				if email == c["email"].(string) {
-					deplete = true
-					break
+		for _, depletedClient := range depletedClients {
+			emails := strings.Split(depletedClient.Email, ",")
+			oldInbound, err := s.GetInbound(depletedClient.InboundId)
+			if err != nil {
+				return err
+			}
+			var oldSettings map[string]any
+			err = json.Unmarshal([]byte(oldInbound.Settings), &oldSettings)
+			if err != nil {
+				return err
+			}
+
+			oldClients := oldSettings["clients"].([]any)
+			var newClients []any
+			for _, client := range oldClients {
+				deplete := false
+				c := client.(map[string]any)
+				for _, email := range emails {
+					if email == c["email"].(string) {
+						deplete = true
+						break
+					}
+				}
+				if !deplete {
+					newClients = append(newClients, client)
 				}
 			}
-			if !deplete {
-				newClients = append(newClients, client)
+			if len(newClients) > 0 {
+				oldSettings["clients"] = newClients
+
+				newSettings, err := json.MarshalIndent(oldSettings, "", "  ")
+				if err != nil {
+					return err
+				}
+
+				oldInbound.Settings = string(newSettings)
+				err = tx.Save(oldInbound).Error
+				if err != nil {
+					return err
+				}
+			} else {
+				// Delete inbound if no client remains
+				_, _ = s.DelInbound(depletedClient.InboundId)
 			}
 		}
-		if len(newClients) > 0 {
-			oldSettings["clients"] = newClients
 
-			newSettings, err := json.MarshalIndent(oldSettings, "", "  ")
-			if err != nil {
-				return err
-			}
-
-			oldInbound.Settings = string(newSettings)
-			err = tx.Save(oldInbound).Error
-			if err != nil {
-				return err
-			}
-		} else {
-			// Delete inbound if no client remains
-			_, _ = s.DelInbound(depletedClient.InboundId)
-		}
-	}
-
-	err = tx.Where(whereText+" and enable = ?", id, false).Delete(xray.ClientTraffic{}).Error
-	if err != nil {
-		return err
-	}
-
-	return nil
+		return tx.Where(whereText+" and enable = ?", id, false).Delete(xray.ClientTraffic{}).Error
+	})
 }
 
 // =============================================================================

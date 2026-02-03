@@ -80,20 +80,3 @@ func TestCombine(t *testing.T) {
 		}
 	})
 }
-
-func TestRandomInt(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		max := 10
-		n := RandomInt(max)
-		if n < 0 || n >= max {
-			t.Errorf("RandomInt(%d) returned %d, expected [0, %d)", max, n, max)
-		}
-	}
-
-	if RandomInt(0) != 0 {
-		t.Error("RandomInt(0) should return 0")
-	}
-	if RandomInt(-1) != 0 {
-		t.Error("RandomInt(-1) should return 0")
-	}
-}

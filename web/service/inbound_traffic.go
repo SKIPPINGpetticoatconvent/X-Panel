@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/xray"
@@ -18,47 +19,36 @@ import (
 // =============================================================================
 
 func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
-	var err error
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
+	needRestart, err := database.WithTxResult(func(tx *gorm.DB) (bool, error) {
+		if err := s.addInboundTraffic(tx, inboundTraffics); err != nil {
+			return false, err
 		}
-	}()
+		if err := s.addClientTraffic(tx, clientTraffics); err != nil {
+			return false, err
+		}
 
-	err = s.addInboundTraffic(tx, inboundTraffics)
-	if err != nil {
-		return err, false
-	}
-	err = s.addClientTraffic(tx, clientTraffics)
-	if err != nil {
-		return err, false
-	}
+		needRestart0, count0, err := s.autoRenewClients(tx)
+		if err != nil {
+			logger.Warning("autoRenewClients error:", err)
+		} else if count0 > 0 {
+			logger.Debugf("autoRenewClients: %d", count0)
+		}
+		needRestart1, count1, err := s.disableInvalidInbounds(tx)
+		if err != nil {
+			logger.Warning("disableInvalidInbounds error:", err)
+		} else if count1 > 0 {
+			logger.Debugf("disableInvalidInbounds: %d", count1)
+		}
+		needRestart2, count2, err := s.disableInvalidClients(tx)
+		if err != nil {
+			logger.Warning("disableInvalidClients error:", err)
+		} else if count2 > 0 {
+			logger.Debugf("disableInvalidClients: %d", count2)
+		}
 
-	needRestart0, count0, err := s.autoRenewClients(tx)
-	if err != nil {
-		logger.Warning("autoRenewClients error:", err)
-	} else if count0 > 0 {
-		logger.Debugf("autoRenewClients: %d", count0)
-	}
-	needRestart1, count1, err := s.disableInvalidInbounds(tx)
-	if err != nil {
-		logger.Warning("disableInvalidInbounds error:", err)
-	} else if count1 > 0 {
-		logger.Debugf("disableInvalidInbounds: %d", count1)
-	}
-	needRestart2, count2, err := s.disableInvalidClients(tx)
-	if err != nil {
-		logger.Warning("disableInvalidClients error:", err)
-	} else if count2 > 0 {
-		logger.Debugf("disableInvalidClients: %d", count2)
-	}
-
-	return nil, (needRestart0 || needRestart1 || needRestart2)
+		return needRestart0 || needRestart1 || needRestart2, nil
+	})
+	return err, needRestart
 }
 
 func (s *InboundService) addInboundTraffic(tx *gorm.DB, traffics []*xray.Traffic) error {

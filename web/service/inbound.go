@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"x-ui/config"
+	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/xray"
+
+	"gorm.io/gorm"
 )
 
 type InboundService struct {
@@ -139,57 +142,53 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, err
 	}
 
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
+	type addResult struct {
+		inbound     *model.Inbound
+		needRestart bool
+	}
 
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
+	result, err := database.WithTxResult(func(tx *gorm.DB) (addResult, error) {
+		// Generate unique ID for new inbound
+		var maxId int
+		if err := tx.Model(model.Inbound{}).Select("COALESCE(MAX(id), 0)").Row().Scan(&maxId); err != nil {
+			return addResult{}, err
 		}
-	}()
+		inbound.Id = maxId + 1
 
-	// Generate unique ID for new inbound
-	var maxId int
-	err = tx.Model(model.Inbound{}).Select("COALESCE(MAX(id), 0)").Row().Scan(&maxId)
+		// Generate tag if empty
+		if inbound.Tag == "" {
+			inbound.Tag = fmt.Sprintf("inbound-%d", inbound.Id)
+		}
+
+		if err := tx.Create(inbound).Error; err != nil {
+			return addResult{}, err
+		}
+
+		// Add client stats
+		for i := range clients {
+			if err := s.AddClientStat(tx, inbound.Id, &clients[i]); err != nil {
+				return addResult{}, err
+			}
+		}
+
+		return addResult{inbound: inbound, needRestart: true}, nil
+	})
 	if err != nil {
 		return inbound, false, err
 	}
-	inbound.Id = maxId + 1
-
-	// Generate tag if empty
-	if inbound.Tag == "" {
-		inbound.Tag = fmt.Sprintf("inbound-%d", inbound.Id)
-	}
-
-	err = tx.Create(inbound).Error
-	if err != nil {
-		return inbound, false, err
-	}
-
-	// Add client stats
-	for i := range clients {
-		err = s.AddClientStat(tx, inbound.Id, &clients[i])
-		if err != nil {
-			return inbound, false, err
-		}
-	}
-
-	needRestart := true
 
 	// Send one-click config notification if TG service is available
 	if s.tgService != nil && s.tgService.IsRunning() {
 		go func() {
 			time.Sleep(2 * time.Second)
-			err := s.tgService.SendOneClickConfig(inbound, true, 0)
+			err := s.tgService.SendOneClickConfig(result.inbound, true, 0)
 			if err != nil {
 				logger.Debug("Error sending one-click config:", err)
 			}
 		}()
 	}
 
-	return inbound, needRestart, err
+	return result.inbound, result.needRestart, nil
 }
 
 func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
@@ -206,46 +205,13 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 		return inbound, false, err
 	}
 
-	db := s.getInboundRepo().GetDB()
-	tx := db.Begin()
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
-	// Update client traffics
-	err = s.updateClientTraffics(tx, oldInbound, inbound)
-	if err != nil {
-		return inbound, false, err
-	}
-
 	// Clear stream settings cache
 	s.invalidateSettingsCache(inbound.Id)
 
-	needRestart := false
-
-	// Check if restart is needed
-	oldTag := oldInbound.Tag
-	newTag := inbound.Tag
-	if oldTag != newTag {
-		needRestart = true
-	}
-
-	oldPort := oldInbound.Port
-	newPort := inbound.Port
-	if oldPort != newPort {
-		needRestart = true
-	}
-
-	oldEnable := oldInbound.Enable
-	newEnable := inbound.Enable
-	if oldEnable != newEnable {
-		needRestart = true
-	}
+	// Determine if restart is needed
+	needRestart := oldInbound.Tag != inbound.Tag ||
+		oldInbound.Port != inbound.Port ||
+		oldInbound.Enable != inbound.Enable
 
 	// Compare settings
 	var oldSettings, newSettings map[string]any
@@ -268,13 +234,20 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 		needRestart = true
 	}
 
-	// Save inbound
-	err = tx.Save(inbound).Error
+	err = database.WithTx(func(tx *gorm.DB) error {
+		// Update client traffics
+		if err := s.updateClientTraffics(tx, oldInbound, inbound); err != nil {
+			return err
+		}
+
+		// Save inbound
+		return tx.Save(inbound).Error
+	})
 	if err != nil {
 		return inbound, false, err
 	}
 
-	return inbound, needRestart, err
+	return inbound, needRestart, nil
 }
 
 func (s *InboundService) DelInbound(id int) (bool, error) {

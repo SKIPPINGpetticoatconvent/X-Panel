@@ -1,6 +1,7 @@
 package service
 
 import (
+	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
@@ -29,24 +30,10 @@ func (s *OutboundService) getOutboundRepo() repository.OutboundRepository {
 }
 
 func (s *OutboundService) AddTraffic(traffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (error, bool) {
-	var err error
-	db := s.getOutboundRepo().GetDB()
-	tx := db.Begin()
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
-	err = s.addOutboundTraffic(tx, traffics)
-	if err != nil {
-		return err, false
-	}
-
-	return nil, false
+	err := database.WithTx(func(tx *gorm.DB) error {
+		return s.addOutboundTraffic(tx, traffics)
+	})
+	return err, false
 }
 
 func (s *OutboundService) addOutboundTraffic(tx *gorm.DB, traffics []*xray.Traffic) error {
