@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"x-ui/config"
+	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/database/repository"
 	"x-ui/logger"
@@ -262,7 +263,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 		logger.Warning("[DeviceLimit] XrayServices not ready, skipping cycle.")
 		return
 	}
-	db := repository.NewInboundRepository().GetDB()
+	db := repository.NewInboundRepository(database.GetDB()).GetDB()
 	var inbounds []*model.Inbound
 	// 这里仅查询启用了设备限制(device_limit > 0)并且自身是开启状态的入站规则
 	db.Where("device_limit > 0 AND enable = ?", true).Find(&inbounds)
@@ -477,7 +478,7 @@ type CheckClientIpJob struct {
 // getInboundRepo 延迟初始化并返回 InboundRepository
 func (j *CheckClientIpJob) getInboundRepo() repository.InboundRepository {
 	if j.inboundRepo == nil {
-		j.inboundRepo = repository.NewInboundRepository()
+		j.inboundRepo = repository.NewInboundRepository(database.GetDB())
 	}
 	return j.inboundRepo
 }
@@ -485,7 +486,7 @@ func (j *CheckClientIpJob) getInboundRepo() repository.InboundRepository {
 // getClientIPRepo 延迟初始化并返回 ClientIPRepository
 func (j *CheckClientIpJob) getClientIPRepo() repository.ClientIPRepository {
 	if j.clientIPRepo == nil {
-		j.clientIPRepo = repository.NewClientIPRepository()
+		j.clientIPRepo = repository.NewClientIPRepository(database.GetDB())
 	}
 	return j.clientIPRepo
 }

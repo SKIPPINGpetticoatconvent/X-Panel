@@ -68,7 +68,7 @@ func (s *InboundService) SetTelegramService(tgService TelegramService) {
 // getInboundRepo 返回 InboundRepository，支持延迟初始化以保持向后兼容
 func (s *InboundService) getInboundRepo() repository.InboundRepository {
 	if s.inboundRepo == nil {
-		s.inboundRepo = repository.NewInboundRepository()
+		s.inboundRepo = repository.NewInboundRepository(database.GetDB())
 	}
 	return s.inboundRepo
 }
@@ -76,7 +76,7 @@ func (s *InboundService) getInboundRepo() repository.InboundRepository {
 // getClientTrafficRepo 返回 ClientTrafficRepository，支持延迟初始化以保持向后兼容
 func (s *InboundService) getClientTrafficRepo() repository.ClientTrafficRepository {
 	if s.clientTrafficRepo == nil {
-		s.clientTrafficRepo = repository.NewClientTrafficRepository()
+		s.clientTrafficRepo = repository.NewClientTrafficRepository(database.GetDB())
 	}
 	return s.clientTrafficRepo
 }
@@ -84,7 +84,7 @@ func (s *InboundService) getClientTrafficRepo() repository.ClientTrafficReposito
 // getClientIPRepo 返回 ClientIPRepository，支持延迟初始化以保持向后兼容
 func (s *InboundService) getClientIPRepo() repository.ClientIPRepository {
 	if s.clientIPRepo == nil {
-		s.clientIPRepo = repository.NewClientIPRepository()
+		s.clientIPRepo = repository.NewClientIPRepository(database.GetDB())
 	}
 	return s.clientIPRepo
 }

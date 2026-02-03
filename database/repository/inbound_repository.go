@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/xray"
 
@@ -40,9 +39,9 @@ type inboundRepository struct {
 }
 
 // NewInboundRepository 创建新的 InboundRepository 实例
-func NewInboundRepository() InboundRepository {
+func NewInboundRepository(db *gorm.DB) InboundRepository {
 	return &inboundRepository{
-		db: database.GetDB(),
+		db: db,
 	}
 }
 
@@ -214,9 +213,9 @@ type clientTrafficRepository struct {
 }
 
 // NewClientTrafficRepository 创建新的 ClientTrafficRepository 实例
-func NewClientTrafficRepository() ClientTrafficRepository {
+func NewClientTrafficRepository(db *gorm.DB) ClientTrafficRepository {
 	return &clientTrafficRepository{
-		db: database.GetDB(),
+		db: db,
 	}
 }
 
@@ -354,9 +353,9 @@ type clientIPRepository struct {
 }
 
 // NewClientIPRepository 创建新的 ClientIPRepository 实例
-func NewClientIPRepository() ClientIPRepository {
+func NewClientIPRepository(db *gorm.DB) ClientIPRepository {
 	return &clientIPRepository{
-		db: database.GetDB(),
+		db: db,
 	}
 }
 

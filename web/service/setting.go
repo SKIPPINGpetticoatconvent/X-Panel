@@ -91,7 +91,7 @@ func NewSettingService(settingRepo repository.SettingRepository) *SettingService
 // getSettingRepo 返回 SettingRepository，支持延迟初始化以保持向后兼容
 func (s *SettingService) getSettingRepo() repository.SettingRepository {
 	if s.settingRepo == nil {
-		s.settingRepo = repository.NewSettingRepository()
+		s.settingRepo = repository.NewSettingRepository(database.GetDB())
 	}
 	return s.settingRepo
 }

@@ -5,6 +5,7 @@ import (
 
 	"x-ui/config"
 	"x-ui/database"
+	_ "x-ui/database"
 	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/web/service"
@@ -24,22 +25,25 @@ type App struct {
 	UserService     *service.UserService
 	LastStatus      *service.Status
 	XrayAPI         *xray.XrayAPI
+
+	// Repositories
+	InboundRepo  repository.InboundRepository
+	OutboundRepo repository.OutboundRepository
+	SettingRepo  repository.SettingRepository
+	UserRepo     repository.UserRepository
 }
 
 // NewApp 创建并初始化应用实例
-func NewApp() *App {
-	// 创建 Repository 实例
-	settingRepo := repository.NewSettingRepository()
-	userRepo := repository.NewUserRepository()
-	inboundRepo := repository.NewInboundRepository()
-	clientTrafficRepo := repository.NewClientTrafficRepository()
-	clientIPRepo := repository.NewClientIPRepository()
-	outboundRepo := repository.NewOutboundRepository()
-
-	// 使用构造函数创建 Service，注入 Repository 依赖
+func NewApp(
+	inboundRepo repository.InboundRepository,
+	outboundRepo repository.OutboundRepository,
+	settingRepo repository.SettingRepository,
+	userRepo repository.UserRepository,
+) *App {
+	// 使用现有的 Service 初始化逻辑，但注入已有的 Repository
 	settingService := service.NewSettingService(settingRepo)
 	userService := service.NewUserService(userRepo, settingService)
-	inboundService := service.NewInboundService(inboundRepo, clientTrafficRepo, clientIPRepo)
+	inboundService := service.NewInboundService(inboundRepo, nil, nil) // 临时：后面再注入完整的
 	outboundService := service.NewOutboundService(outboundRepo)
 
 	return &App{
@@ -51,6 +55,11 @@ func NewApp() *App {
 		UserService:     userService,
 		LastStatus:      &service.Status{},
 		XrayAPI:         &xray.XrayAPI{},
+
+		InboundRepo:  inboundRepo,
+		OutboundRepo: outboundRepo,
+		SettingRepo:  settingRepo,
+		UserRepo:     userRepo,
 	}
 }
 
@@ -118,7 +127,10 @@ func Initialize() (*App, error) {
 		return nil, err
 	}
 
-	app := NewApp()
+	app, err := InitializeApp()
+	if err != nil {
+		return nil, err
+	}
 	InitLogger(app.SettingService)
 
 	return app, nil

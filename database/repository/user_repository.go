@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"x-ui/database"
 	"x-ui/database/model"
 
 	"gorm.io/gorm"
@@ -24,9 +23,9 @@ type userRepository struct {
 }
 
 // NewUserRepository 创建新的 UserRepository 实例
-func NewUserRepository() UserRepository {
+func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{
-		db: database.GetDB(),
+		db: db,
 	}
 }
 

@@ -24,6 +24,10 @@ import (
 
 var db *gorm.DB
 
+func GetDBProvider() *gorm.DB {
+	return GetDB()
+}
+
 const (
 	defaultUsername = "admin"
 	defaultPassword = "admin"
