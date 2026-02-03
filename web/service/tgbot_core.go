@@ -21,13 +21,13 @@ import (
 	"github.com/valyala/fasthttp/fasthttpproxy"
 )
 
-// 〔中文注释〕: 新增 TelegramService 接口，用于解耦 Job 和 Telegram Bot 的直接依赖。
+// 新增 TelegramService 接口，用于解耦 Job 和 Telegram Bot 的直接依赖。
 // 任何实现了 SendMessage(msg string) error 方法的结构体，都可以被认为是 TelegramService。
 type TelegramService interface {
 	SendMessage(msg string) error
 	IsRunning() bool
 	// 您可以根据 server.go 的需要，在这里继续扩展接口
-	// 〔中文注释〕: 将 SendOneClickConfig 方法添加到接口中，这样其他服务可以通过接口来调用它，
+	// 将 SendOneClickConfig 方法添加到接口中，这样其他服务可以通过接口来调用它，
 	// 实现了与具体实现 Tgbot 的解耦。
 	SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, chatId int64) error
 	// 新增 GetDomain 方法签名，以满足 server.go 的调用需求
@@ -87,7 +87,7 @@ type Tgbot struct {
 	state *BotState
 }
 
-// 【修改后】: GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
+// GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
 func (t *Tgbot) GetRealityDestinations() []string {
 	// 检查服务器地理位置，并使用对应的SNI域名列表
 	if t.serverService != nil {
@@ -114,7 +114,7 @@ func (t *Tgbot) GetRealityDestinations() []string {
 	}
 }
 
-// 【新增方法】: 用于从外部注入 ServerService 实例
+// 用于从外部注入 ServerService 实例
 func (t *Tgbot) SetServerService(s *ServerService) {
 	t.serverService = s
 }
@@ -124,7 +124,7 @@ func (t *Tgbot) SetInboundService(s *InboundService) {
 	t.inboundService = s
 }
 
-// 〔中文注释〕: 在这里添加新的构造函数
+// 在这里添加新的构造函数
 // NewTgBot 创建并返回一个完全初始化的 Tgbot 实例。
 // 这个函数确保了所有服务依赖项都被正确注入，避免了空指针问题。
 func NewTgBot(

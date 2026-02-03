@@ -49,7 +49,7 @@ func (a *IndexController) index(c *gin.Context) {
 }
 
 func (a *IndexController) login(c *gin.Context) {
-	// 【安全防护】: 获取 RateLimiter 实例并检查 IP 是否被封禁
+	// 获取 RateLimiter 实例并检查 IP 是否被封禁
 	limiter := service.GetLoginLimiter()
 	ip := getRemoteIp(c)
 	if limiter.IsBlocked(ip) {
@@ -78,7 +78,7 @@ func (a *IndexController) login(c *gin.Context) {
 	safePass := template.HTMLEscapeString(form.Password)
 
 	if user == nil {
-		// 【安全防护】: 记录失败次数
+		// 记录失败次数
 		limiter.RecordFailure(ip)
 
 		logger.Warningf("wrong username: \"%s\", password: \"%s\", IP: \"%s\"", safeUser, safePass, ip)
@@ -87,7 +87,7 @@ func (a *IndexController) login(c *gin.Context) {
 		return
 	}
 
-	// 【安全防护】: 登录成功，重置失败计数
+	// 登录成功，重置失败计数
 	limiter.Reset(ip)
 
 	logger.Infof("%s logged in successfully, Ip Address: %s\n", safeUser, ip)

@@ -139,7 +139,7 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 		return nil
 	}
 
-	// 〔中文注释〕: (修改点) 创建一个有5秒超时限制的上下文（Context）。
+	// (修改点) 创建一个有5秒超时限制的上下文（Context）。
 	// 这确保了如果 Xray-Core API 因为某些原因没有及时响应，
 	// 这个操作不会永久阻塞，而是在5秒后自动失败，从而提高程序的健壮性。
 	// 这与 RemoveUser 函数中的超时设置保持了一致。
@@ -148,7 +148,7 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 
 	client := *x.HandlerServiceClient
 
-	_, err := client.AlterInbound(ctx, &command.AlterInboundRequest{ // 〔中文注释〕: (修改点) 使用上面创建的带超时的 ctx
+	_, err := client.AlterInbound(ctx, &command.AlterInboundRequest{ // (修改点) 使用上面创建的带超时的 ctx
 		Tag: inboundTag,
 		Operation: serial.ToTypedMessage(&command.AddUserOperation{
 			User: &protocol.User{
@@ -157,7 +157,7 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 			},
 		}),
 	})
-	// 〔中文注释〕: (修改点) 增加更详细的错误日志，方便排查问题。
+	// (修改点) 增加更详细的错误日志，方便排查问题。
 	if err != nil {
 		emailStr, _ := user["email"].(string)
 		return fmt.Errorf("failed to add user '%s' to inbound '%s': %w", emailStr, inboundTag, err)

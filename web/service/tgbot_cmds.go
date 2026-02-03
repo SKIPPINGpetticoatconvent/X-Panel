@@ -35,7 +35,7 @@ func (t *Tgbot) OnReceive() {
 		return nil
 	}, th.AnyCommand())
 
-	// 【修复】: 注册 CallbackQuery Handler，确保按钮回调被正确处理
+	// 注册 CallbackQuery Handler，确保按钮回调被正确处理
 	botHandler.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
 		t.answerCallback(&query, checkAdmin(query.From.ID))
 		return nil
@@ -110,7 +110,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 		} else {
 			handleUnknownCommand()
 		}
-	// 【新增代码】: 处理 /oneclick 指令
+	// 处理 /oneclick 指令
 	case "oneclick":
 		onlyMessage = true
 		if isAdmin {
@@ -119,11 +119,11 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 			handleUnknownCommand()
 		}
 
-	// 〔中文注释〕: 【新增代码】: 处理 /restartx 指令，用于重启面板
+	// 处理 /restartx 指令，用于重启面板
 	case "restartx":
 		onlyMessage = true
 		if isAdmin {
-			// 〔中文注释〕: 发送重启确认消息
+			// 发送重启确认消息
 			confirmKeyboard := tu.InlineKeyboard(
 				tu.InlineKeyboardRow(
 					tu.InlineKeyboardButton("✅ 是，立即重启").WithCallbackData(t.encodeQuery("restart_panel_confirm")),
@@ -132,7 +132,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 					tu.InlineKeyboardButton("❌ 否，我再想想").WithCallbackData(t.encodeQuery("restart_panel_cancel")),
 				),
 			)
-			// 〔中文注释〕: 从您提供的需求中引用提示文本
+			// 从您提供的需求中引用提示文本
 			t.SendMsgToTgbot(chatId, "🤔 您“现在的操作”是要确定进行，\n\n重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 		} else {
 			handleUnknownCommand()

@@ -94,7 +94,7 @@ func (t *Tgbot) randomString(length int, charset string) string {
 	return string(bytes)
 }
 
-// 【新增辅助函数】: 保存链接历史到数据库
+// 保存链接历史到数据库
 func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 	history := &database.LinkHistory{
 		Type:      linkType,
@@ -114,7 +114,7 @@ func (t *Tgbot) GetDomain() (string, error) {
 
 // openPortWithFirewalld 检查/安装 firewalld，放行一系列默认端口，并放行指定的端口
 func (t *Tgbot) openPortWithFirewalld(port int) error {
-	// 【中文注释】: 将所有 Shell 逻辑整合为一个命令。
+	// 将所有 Shell 逻辑整合为一个命令。
 	// 新增了对默认端口列表 (22, 80, 443, 13688, 8443) 的放行逻辑。
 	shellCommand := fmt.Sprintf(`
 	# 定义需要放行的指定端口和一系列默认端口
@@ -197,14 +197,14 @@ func (t *Tgbot) openPortWithFirewalld(port int) error {
 }
 
 // =========================================================================================
-// 【数据结构和辅助函数：已移除新闻相关代码】
+// 数据结构和辅助函数
 // =========================================================================================
 
 // =========================================================================================
-// 【辅助函数：每日一语】 (最终修复：严格遵循官方文档 Token 机制，增强健壮性)
+// 辅助函数：每日一语
 // =========================================================================================
 
-// 【新增的辅助函数】: 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
+// 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
 func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message, error) {
 	// 必须使用 SendStickerParams 结构体，并传入 context
 	params := telego.SendStickerParams{
@@ -224,7 +224,7 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 	return msg, nil
 }
 
-// 【新增函数】: 发送 Xray 版本选项给用户
+// : 发送 Xray 版本选项给用户
 func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 	// 获取 Xray 版本列表
 	versions, err := t.serverService.GetXrayVersions()
@@ -257,7 +257,7 @@ func (t *Tgbot) sendXrayVersionOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "🚀 <b>Xray 版本管理</b>\n\n请选择要更新的版本：", keyboard)
 }
 
-// 【新增方法】: 批量复制所有入站的客户端链接
+// 批量复制所有入站的客户端链接
 func (t *Tgbot) copyAllLinks(chatId int64) error {
 	t.SendMsgToTgbot(chatId, "📋 正在生成纯链接列表，请稍候...")
 
@@ -352,7 +352,7 @@ func (t *Tgbot) copyAllLinks(chatId int64) error {
 	return nil
 }
 
-// 【新增辅助函数】: 生成通用协议链接（VMess, VLESS, Trojan, ShadowSocks）
+// 生成通用协议链接（VMess, VLESS, Trojan, ShadowSocks）
 func (t *Tgbot) generateGenericLink(inbound *model.Inbound, client model.Client) (string, error) {
 	domain, err := t.getDomain()
 	if err != nil {
@@ -392,7 +392,7 @@ func (t *Tgbot) generateGenericLink(inbound *model.Inbound, client model.Client)
 	}
 }
 
-// 【新增函数】: 显示机器优化选项菜单
+// : 显示机器优化选项菜单
 func (t *Tgbot) sendMachineOptimizationOptions(chatId int64) {
 	optimizationKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -408,7 +408,7 @@ func (t *Tgbot) sendMachineOptimizationOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "⚡ <b>机器优化一键方案</b>\n\n请选择您的机器配置类型：\n\n🖥️ <b>1C1G 机器</b>: 适用于低配VPS的深度优化\n🚀 <b>通用/高配优化</b>: 适用于高配VPS的全面优化", optimizationKeyboard)
 }
 
-// 【新增函数】: 执行1C1G优化前显示确认对话框
+// : 执行1C1G优化前显示确认对话框
 func (t *Tgbot) performOptimization1C1G(chatId int64, messageId int) {
 	confirmKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -426,7 +426,7 @@ func (t *Tgbot) performOptimization1C1G(chatId int64, messageId int) {
 	t.SendMsgToTgbot(chatId, detailMsg)
 }
 
-// 【新增函数】: 执行实际的1C1G优化操作
+// : 执行实际的1C1G优化操作
 func (t *Tgbot) executeOptimization1C1G(chatId int64, messageId int) {
 	t.SendMsgToTgbot(chatId, "🚀 <b>开始执行1C1G机器优化...</b>\n\n⏳ 正在执行优化操作，请稍候...")
 
@@ -446,7 +446,7 @@ func (t *Tgbot) executeOptimization1C1G(chatId int64, messageId int) {
 	}()
 }
 
-// 【新增辅助函数】: 执行实际的1C1G优化操作
+// 执行实际的1C1G优化操作
 func (t *Tgbot) execute1C1GOptimization() (string, error) {
 	// 检查 Root 权限
 	if os.Geteuid() != 0 {
@@ -763,7 +763,7 @@ net.ipv4.tcp_congestion_control = bbr
 	return output.String(), nil
 }
 
-// 【新增函数】: 执行通用/高配优化操作
+// : 执行通用/高配优化操作
 func (t *Tgbot) executeGenericOptimization(chatId int64, messageId int) {
 	t.SendMsgToTgbot(chatId, "🚀 <b>开始执行通用/高配优化...</b>\n\n⏳ 正在执行优化操作，请稍候...")
 
@@ -783,7 +783,7 @@ func (t *Tgbot) executeGenericOptimization(chatId int64, messageId int) {
 	}()
 }
 
-// 【新增辅助函数】: 执行通用/高配优化操作的具体实现
+// 执行通用/高配优化操作的具体实现
 func (t *Tgbot) executeGenericOptimizationInternal() (string, error) {
 	// 检查 Root 权限
 	if os.Geteuid() != 0 {
@@ -953,7 +953,7 @@ root hard nofile 1000000`
 	return output.String(), nil
 }
 
-// 【新增辅助函数】: 获取优化后的系统状态
+// 获取优化后的系统状态
 func (t *Tgbot) getSystemStatusAfterOptimization() string {
 	var status strings.Builder
 
@@ -995,10 +995,10 @@ func (t *Tgbot) getSystemStatusAfterOptimization() string {
 }
 
 // =========================================================================================
-// 【防火墙管理功能】
+// 防火墙管理功能
 // =========================================================================================
 
-// 【新增函数】: 显示防火墙管理主菜单
+// : 显示防火墙管理主菜单
 func (t *Tgbot) sendFirewallMenu(chatId int64) {
 	firewallKeyboard := tu.InlineKeyboard(
 		// ━━━━━━━━━━ 🔍 状态检测 ━━━━━━━━━━
@@ -1032,7 +1032,7 @@ func (t *Tgbot) sendFirewallMenu(chatId int64) {
 	t.SendMsgToTgbot(chatId, "🔥 <b>防火墙管理</b>\n\n请选择操作：", firewallKeyboard)
 }
 
-// 【新增函数】: 检查当前防火墙状态
+// : 检查当前防火墙状态
 func (t *Tgbot) checkFirewallStatus(chatId int64) {
 	go func() {
 		// 检查 Firewalld 状态
@@ -1057,7 +1057,7 @@ func (t *Tgbot) checkFirewallStatus(chatId int64) {
 	}()
 }
 
-// 【新增函数】: 安装 Firewalld
+// : 安装 Firewalld
 func (t *Tgbot) installFirewalld(chatId int64) {
 	go func() {
 		// 检查是否已安装
@@ -1082,7 +1082,7 @@ func (t *Tgbot) installFirewalld(chatId int64) {
 	}()
 }
 
-// 【新增函数】: 安装 Fail2Ban
+// : 安装 Fail2Ban
 func (t *Tgbot) installFail2Ban(chatId int64) {
 	go func() {
 		// 检查是否已安装
@@ -1175,7 +1175,7 @@ EOF`)
 	}()
 }
 
-// 【新增辅助函数】: 获取 Fail2Ban 状态
+// 获取 Fail2Ban 状态
 func (t *Tgbot) getFail2BanStatus() (string, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -1201,7 +1201,7 @@ func (t *Tgbot) getFail2BanStatus() (string, bool) {
 	}
 }
 
-// 【新增函数】: 启用防火墙
+// : 启用防火墙
 func (t *Tgbot) enableFirewall(chatId int64) {
 	go func() {
 		// 先检查当前防火墙状态
@@ -1231,7 +1231,7 @@ func (t *Tgbot) enableFirewall(chatId int64) {
 	}()
 }
 
-// 【新增函数】: 禁用防火墙
+// : 禁用防火墙
 func (t *Tgbot) disableFirewall(chatId int64) {
 	go func() {
 		// 先检查当前防火墙状态
@@ -1261,19 +1261,19 @@ func (t *Tgbot) disableFirewall(chatId int64) {
 	}()
 }
 
-// 【新增函数】: 开放端口
+// : 开放端口
 func (t *Tgbot) openPort(chatId int64) {
 	// 这里简化处理，实际应用中可能需要更复杂的交互
 	t.SendMsgToTgbot(chatId, "🔓 <b>开放端口</b>\n\n⚠️ <b>安全警告</b>: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n<pre>firewall-cmd --permanent --add-port=[端口号]/tcp\nfirewall-cmd --reload</pre>\n\n例如开放 8080 端口：\n<code>firewall-cmd --permanent --add-port=8080/tcp</code>")
 }
 
-// 【新增函数】: 关闭端口
+// : 关闭端口
 func (t *Tgbot) closePort(chatId int64) {
 	// 这里简化处理，实际应用中可能需要更复杂的交互
 	t.SendMsgToTgbot(chatId, "🔒 <b>关闭端口</b>\n\n⚠️ <b>安全警告</b>: 请谨慎操作！\n\n请在 VPS 上手动执行以下命令：\n\n<pre>firewall-cmd --permanent --remove-port=[端口号]/tcp\nfirewall-cmd --reload</pre>\n\n例如关闭 8080 端口：\n<code>firewall-cmd --permanent --remove-port=8080/tcp</code>")
 }
 
-// 【新增函数】: 列出防火墙规则
+// : 列出防火墙规则
 func (t *Tgbot) listFirewallRules(chatId int64) {
 	go func() {
 		var rulesMsg strings.Builder
@@ -1303,7 +1303,7 @@ func (t *Tgbot) listFirewallRules(chatId int64) {
 	}()
 }
 
-// 【新增函数】: 开放 X-Panel 端口
+// : 开放 X-Panel 端口
 func (t *Tgbot) openXPanelPorts(chatId int64) {
 	go func() {
 		t.SendMsgToTgbot(chatId, "🚀 <b>正在开放 X-Panel 所需端口...</b>\n\n请稍候，正在执行端口开放操作。")
@@ -1377,7 +1377,7 @@ func (t *Tgbot) openXPanelPorts(chatId int64) {
 	}()
 }
 
-// 【新增辅助函数】: 获取 Firewalld 状态
+// 获取 Firewalld 状态
 func (t *Tgbot) getFirewalldStatus() (string, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

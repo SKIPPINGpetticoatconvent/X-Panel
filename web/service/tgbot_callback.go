@@ -905,7 +905,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
 						return
 					}
-					// 【新增代码】: 修正参数传递，添加 chatId
+					// 修正参数传递，添加 chatId
 					clients, err := t.getInboundClients(chatId, inboundIdInt)
 					if err != nil {
 						t.sendCallbackAnswerTgBot(callbackQuery.ID, err.Error())
@@ -913,7 +913,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					}
 					t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.chooseClient", "Inbound=="+inbound.Remark), clients)
 				case "copy_inbound_clients":
-					// 【新增代码】: 处理批量复制回调
+					// 处理批量复制回调
 					inboundId := dataArray[1]
 					inboundIdInt, err := strconv.Atoi(inboundId)
 					if err != nil {
@@ -970,7 +970,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				return
 			}
 
-			// 【修复】: 统一使用 decodedQuery 进行 switch 判断，确保哈希策略变更时的兼容性
+			// 统一使用 decodedQuery 进行 switch 判断，确保哈希策略变更时的兼容性
 			switch decodedQuery {
 			case "get_inbounds":
 				inbounds, err := t.getInbounds()
@@ -986,7 +986,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		}
 	}
 
-	// 【修复】: 统一使用 decodedQuery 进行 switch 判断
+	// 统一使用 decodedQuery 进行 switch 判断
 	// 先解码 callbackQuery.Data（对于非管理员用户也需要解码）
 	decodedQueryForAll, decodeErr := t.decodeQuery(callbackQuery.Data)
 	if decodeErr != nil {
@@ -1336,7 +1336,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 		}
 
-	// 【重构后】: 处理分层菜单的回调
+	// 处理分层菜单的回调
 	case "oneclick_options":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请选择配置类型...")
@@ -1376,9 +1376,9 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
 		t.remoteCreateOneClickInbound("switch_vision", chatId)
 
-	// 〔中文注释〕: 【新增回调处理】 - 重启面板、VPS推荐
+	// 重启面板、VPS推荐
 	case "restart_panel":
-		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
+		// 用户从菜单点击重启，删除主菜单并发送确认消息
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请确认操作")
 		confirmKeyboard := tu.InlineKeyboard(
@@ -1392,30 +1392,30 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.SendMsgToTgbot(chatId, "🤔 您“现在的操作”是要确定进行，\n\n重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 
 	case "restart_panel_confirm":
-		// 〔中文注释〕: 用户确认重启
+		// 用户确认重启
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "指令已发送，请稍候...")
 		t.SendMsgToTgbot(chatId, "⏳ 【重启命令】已在 VPS 中远程执行，\n\n正在等待面板恢复（约30秒），并进行验证检查...")
 
-		// 〔中文注释〕: 在后台协程中执行重启，避免阻塞机器人
+		// 在后台协程中执行重启，避免阻塞机器人
 		go func() {
 			err := t.serverService.RestartPanel()
-			// 〔中文注释〕: 等待20秒，让面板有足够的时间重启
+			// 等待20秒，让面板有足够的时间重启
 			time.Sleep(20 * time.Second)
 			if err != nil {
-				// 〔中文注释〕: 如果执行出错，发送失败消息
+				// 如果执行出错，发送失败消息
 				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n\n错误信息已记录到日志，请检查命令或权限。\n\n<code>%v</code>", err))
 			} else {
-				// 〔中文注释〕: 执行成功，发送成功消息
+				// 执行成功，发送成功消息
 				t.SendMsgToTgbot(chatId, "🚀 面板重启成功！服务已成功恢复！")
 			}
 		}()
 
 	case "restart_panel_cancel":
-		// 〔中文注释〕: 用户取消重启
+		// 用户取消重启
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "操作已取消")
-		// 〔中文注释〕: 发送一个临时消息提示用户，3秒后自动删除
+		// 发送一个临时消息提示用户，3秒后自动删除
 		t.SendMsgToTgbotDeleteAfter(chatId, "已取消重启操作。", 3)
 
 	case "vps_recommend":
@@ -1423,7 +1423,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "VPS推荐功能已移除")
 
-	// 【新增代码】: 处理 Xray 版本管理相关回调
+	// 处理 Xray 版本管理相关回调
 	case "xrayversion":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 请选择要更新的版本...")
 		t.sendXrayVersionOptions(chatId)
@@ -1466,7 +1466,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		return
 
-	// 【新增代码】: 处理机器优化一键方案相关回调
+	// 处理机器优化一键方案相关回调
 	case "machine_optimization":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在打开机器优化选项...")
 		t.sendMachineOptimizationOptions(chatId)
@@ -1483,12 +1483,12 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在执行通用/高配优化...")
 		t.executeGenericOptimization(chatId, callbackQuery.Message.GetMessageID())
 
-	// 【新增代码】: 处理防火墙管理相关回调
+	// 处理防火墙管理相关回调
 	case "firewall_menu":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔥 正在打开防火墙管理菜单...")
 		t.sendFirewallMenu(chatId)
 
-	// 【新增代码】: 处理程序更新相关回调
+	// 处理程序更新相关回调
 	case "check_panel_update":
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🔄 正在检查最新版本...")
 		t.checkPanelUpdate(chatId)
@@ -1562,7 +1562,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在开放 X-Panel 端口...")
 		t.openXPanelPorts(chatId)
 
-	// 【新增代码】: 处理 Geo 数据更新相关回调
+	// 处理 Geo 数据更新相关回调
 	case "update_geodata_confirm":
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "✅ 指令已发送")
@@ -2290,7 +2290,7 @@ func (t *Tgbot) getInboundClients(chatId int64, id int) (*telego.InlineKeyboardM
 	}
 	keyboard := tu.InlineKeyboardGrid(tu.InlineKeyboardCols(cols, buttons...))
 
-	// 【新增代码】: 添加批量复制按钮
+	// 添加批量复制按钮
 	// 只有管理员才能看到复制按钮（这里假设能看到用户列表的通常是管理员，或者根据上下文判断）
 	// 注意：当前函数没有 isAdmin 参数，但调用者通常是在检查了权限或者是通过菜单进入的。
 	// 为了安全起见，可以使用 chatID 再次检查管理员权限，或者假设进入此菜单的已通过权限验证。
@@ -2301,7 +2301,7 @@ func (t *Tgbot) getInboundClients(chatId int64, id int) (*telego.InlineKeyboardM
 	return keyboard, nil
 }
 
-// 【新增方法】: 实现批量复制逻辑
+// 实现批量复制逻辑
 func (t *Tgbot) copyInboundClients(chatId int64, inboundId int) error {
 	inbound, err := t.inboundService.GetInbound(inboundId)
 	if err != nil {
@@ -3069,21 +3069,21 @@ func (t *Tgbot) deleteMessageTgBot(chatId int64, messageID int) {
 	}
 }
 
-// 〔中文注释〕: 新增方法，实现 TelegramService 接口。
+// 新增方法，实现 TelegramService 接口。
 // 当设备限制任务需要发送消息时，会调用此方法。
 // 该方法内部调用了已有的 SendMsgToTgbotAdmins 函数，将消息发送给所有管理员。
 func (t *Tgbot) SendMessage(msg string) error {
 	if !t.IsRunning() {
-		// 〔中文注释〕: 如果 Bot 未运行，返回错误，防止程序出错。
+		// 如果 Bot 未运行，返回错误，防止程序出错。
 		return errors.New("telegram bot is not running")
 	}
-	// 〔中文注释〕: 调用现有方法将消息发送给所有已配置的管理员。
+	// 调用现有方法将消息发送给所有已配置的管理员。
 	t.SendMsgToTgbotAdmins(msg)
 	return nil
 }
 
-// 【新增函数】: 发送【一键配置】的选项按钮给用户
-// 【重构后的函数】: 显示主分类菜单
+// 发送【一键配置】的选项按钮给用户
+// 显示主分类菜单
 func (t *Tgbot) sendOneClickOptions(chatId int64) {
 	categoryKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -3096,7 +3096,7 @@ func (t *Tgbot) sendOneClickOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "请选择【一键配置】类型：", categoryKeyboard)
 }
 
-// 【新增函数】: 显示中转类别的具体配置选项
+// 显示中转类别的具体配置选项
 func (t *Tgbot) sendRelayOptions(chatId int64) {
 	relayKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -3112,7 +3112,7 @@ func (t *Tgbot) sendRelayOptions(chatId int64) {
 	t.SendMsgToTgbot(chatId, "【中转】类别 - 适合需要中转的场景：\n\n🛡️ Vless Encryption + XHTTP + TLS: 加密传输，可配合CDN\n🌀 Switch + Vision Seed: 特殊配置（开发中）", relayKeyboard)
 }
 
-// 【新增函数】: 显示直连类别的具体配置选项
+// 显示直连类别的具体配置选项
 func (t *Tgbot) sendDirectOptions(chatId int64) {
 	directKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -3141,9 +3141,9 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		newInbound, ufwWarning, err = t.buildXhttpRealityInbound("")
 	case "tls":
 		newInbound, ufwWarning, err = t.buildTlsInbound()
-	case "switch_vision": // 【新增】: 处理开发中的选项
+	case "switch_vision": // 处理开发中的选项
 		t.SendMsgToTgbot(chatId, "此协议组合的功能还在开发中 ............暂不可用...")
-		return // 【中文注释】: 直接返回，不执行任何创建操作
+		return // 直接返回，不执行任何创建操作
 	default:
 		err = errors.New("未知的配置类型")
 	}
@@ -3153,9 +3153,9 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		return
 	}
 
-	// 〔中文注释〕: 创建一个 InboundService 实例，并将当前的 Tgbot 实例 (t) 作为 tgService 注入进去。
+	// 创建一个 InboundService 实例，并将当前的 Tgbot 实例 (t) 作为 tgService 注入进去。
 	inboundService := InboundService{}
-	// inboundService.SetTelegramService(t) // 【修复】：移除注入，防止 AddInbound 内部重复发送通知
+	// inboundService.SetTelegramService(t) // 移除注入，防止 AddInbound 内部重复发送通知
 
 	createdInbound, _, err := inboundService.AddInbound(newInbound)
 	if err != nil {
@@ -3165,12 +3165,12 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 
 	logger.Infof("TG 机器人远程创建入站 %s 成功！", createdInbound.Remark)
 
-	// 【新增功能】：如果端口放行失败，发送警告
+	// 如果端口放行失败，发送警告
 	if ufwWarning != "" {
 		t.SendMsgToTgbot(chatId, ufwWarning)
 	} // END NEW LOGIC
 
-	// 【调用 TG Bot 专属的通知方法】
+	// 调用 TG Bot 专属的通知方法
 	// inFromPanel 设置为 false，表示这是来自 TG 机器人的操作
 	// 之前 SendOneClickConfig 的 inbound 参数是 *model.Inbound，所以我们传入 createdInbound
 	// 将当前的 chatId 传入，确保配置消息发送给发起指令的用户
@@ -3183,7 +3183,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		// 成功发送二维码/配置消息后，再给用户一个确认提示
 		t.SendMsgToTgbot(chatId, "✅ <b>入站已创建，【二维码/配置链接】已发送至管理员私信。</b>")
 	}
-	// 【新增功能】：发送用法说明消息
+	// 发送用法说明消息
 	// 使用 <b> 粗体标记，并使用多行字符串确保换行显示。
 	usageMessage := "<b>用法说明：</b>\n\n" +
 		"1、该功能已自动生成现今比较主流的入站协议，简单/直接，不用慢慢配置。\n" +
@@ -3195,7 +3195,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	t.SendMsgToTgbot(chatId, usageMessage)
 }
 
-// 【新增函数】: 构建 Reality 配置对象 (1:1 复刻自 inbounds.html)
+// 构建 Reality 配置对象 (1:1 复刻自 inbounds.html)
 func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, string, error) {
 	keyPairMsg, err := t.serverService.GetNewX25519Cert()
 	if err != nil {
@@ -3215,9 +3215,9 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 
 	ufwWarning := "" // NEW
 
-	// 【新增功能】：调用 firewalld 放行端口
+	// 调用 firewalld 放行端口
 	if err := t.openPortWithFirewalld(port); err != nil {
-		// 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
+		// 如果端口放行失败，不中断入站创建流程，但生成警告信息
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
 		ufwWarning = fmt.Sprintf("⚠️ <b>警告：端口放行失败</b>\n\n自动执行 <code>firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload</code> 命令失败，入站创建流程已继续，但请务必<b>手动</b>在您的 VPS 上放行端口 <code>%d</code>，否则服务将无法访问。失败详情：%v", port, port, err)
 	} // END NEW LOGIC
@@ -3315,7 +3315,7 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	}, ufwWarning, nil // MODIFIED RETURN
 }
 
-// 【新增函数】: 构建 TLS 配置对象 (1:1 复刻自 inbounds.html)
+// 构建 TLS 配置对象 (1:1 复刻自 inbounds.html)
 func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签名
 	encMsg, err := t.serverService.GetNewVlessEnc()
 	if err != nil {
@@ -3375,9 +3375,9 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 
 	ufwWarning := "" // NEW
 
-	// 【新增功能】：调用 firewalld 放行端口
+	// 调用 firewalld 放行端口
 	if err := t.openPortWithFirewalld(port); err != nil {
-		// 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
+		// 如果端口放行失败，不中断入站创建流程，但生成警告信息
 		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
 		ufwWarning = fmt.Sprintf("⚠️ <b>警告：端口放行失败</b>\n\n自动执行 <code>firewall-cmd --permanent --add-port=%d/tcp && firewall-cmd --reload</code> 命令失败，入站创建流程已继续，但请务必<b>手动</b>在您的 VPS 上放行端口 <code>%d</code>，否则服务将无法访问。失败详情：%v", port, port, err)
 	} // END NEW LOGIC
@@ -3463,7 +3463,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	}, ufwWarning, nil // MODIFIED RETURN
 }
 
-// 【新增函数】: 构建 VLESS + XHTTP + Reality 配置对象
+// 构建 VLESS + XHTTP + Reality 配置对象
 func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, string, error) {
 	keyPairMsg, err := t.serverService.GetNewX25519Cert()
 	if err != nil {
@@ -3580,9 +3580,9 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	}, ufwWarning, nil
 }
 
-// 【修改后函数】: 发送【一键配置】的专属消息，增加链接类型判断
+// 发送【一键配置】的专属消息，增加链接类型判断
 func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, targetChatId int64) error {
-	// 【修复】: 当 targetChatId 为 0 时（来自面板的一键配置），向所有管理员发送消息
+	// 当 targetChatId 为 0 时（来自面板的一键配置），向所有管理员发送消息
 	if targetChatId == 0 {
 		if len(adminIds) == 0 {
 			return fmt.Errorf("无法发送 TG 通知: 未配置管理员 Chat ID")
@@ -3600,7 +3600,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 	var link string
 	var err error
 	var linkType string
-	var dbLinkType string // 【新增】: 用于存入数据库的类型标识
+	var dbLinkType string // 用于存入数据库的类型标识
 
 	var streamSettings map[string]any
 	_ = json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
@@ -3686,7 +3686,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 	return nil
 }
 
-// 【新增辅助函数】: 生成 Reality 链接
+// 生成 Reality 链接
 func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
 	_ = json.Unmarshal([]byte(inbound.Settings), &settings)
@@ -3735,7 +3735,7 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 		uuid, domain, inbound.Port, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
-// 【新增辅助函数】: 生成 Reality 链接（支持指定客户端）
+// 生成 Reality 链接（支持指定客户端）
 func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client model.Client) (string, error) {
 	uuid := client.ID
 
@@ -3780,7 +3780,7 @@ func (t *Tgbot) generateRealityLinkWithClient(inbound *model.Inbound, client mod
 		uuid, domain, inbound.Port, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
-// 【新增辅助函数】: 生成 TLS 链接
+// 生成 TLS 链接
 func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 	var settings map[string]any
 	_ = json.Unmarshal([]byte(inbound.Settings), &settings)
@@ -3805,12 +3805,12 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 		path, _ = xhttpSettings["path"].(string)
 	}
 
-	// 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式不需要 flow 参数
+	// type 应该是 xhttp，不是 tcp；XHTTP 模式不需要 flow 参数
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=%s&path=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s#%s-%s",
 		uuid, domain, inbound.Port, encryption, url.QueryEscape(path), sni, inbound.Remark, inbound.Remark), nil
 }
 
-// 【新增辅助函数】: 生成 TLS 链接（支持指定客户端）
+// 生成 TLS 链接（支持指定客户端）
 func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.Client) (string, error) {
 	uuid := client.ID
 
@@ -3838,7 +3838,7 @@ func (t *Tgbot) generateTlsLinkWithClient(inbound *model.Inbound, client model.C
 		path, _ = xhttpSettings["path"].(string)
 	}
 
-	// 【修复】: type 应该是 xhttp，不是 tcp；XHTTP 模式flow 参数根据官方要求可能需要，暂保持现状，仅处理 link
+	// type 应该是 xhttp，不是 tcp；XHTTP 模式flow 参数根据官方要求可能需要，暂保持现状，仅处理 link
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=%s&path=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s#%s-%s",
 		uuid, domain, inbound.Port, encryption, url.QueryEscape(path), sni, client.Email, inbound.Remark), nil
 }
@@ -3879,19 +3879,19 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 		return "", err
 	}
 
-	// 【中文注释】: 对所有URL查询参数进行编码
+	// 对所有URL查询参数进行编码
 	escapedPath := url.QueryEscape(path)
 	escapedPublicKey := url.QueryEscape(publicKey)
 	escapedSni := url.QueryEscape(sni)
 	escapedSid := url.QueryEscape(sid)
 	escapedRemark := url.QueryEscape(inbound.Remark)
 
-	// 【中文注释】: 严格按照最新格式构建链接
+	// 严格按照最新格式构建链接
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
-// 【新增辅助函数】: 生成 VLESS + XHTTP + Reality 链接（支持指定客户端）
+// 生成 VLESS + XHTTP + Reality 链接（支持指定客户端）
 func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, client model.Client) (string, error) {
 	uuid := client.ID
 
@@ -3921,19 +3921,19 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 		return "", err
 	}
 
-	// 【中文注释】: 对所有URL查询参数进行编码
+	// 对所有URL查询参数进行编码
 	escapedPath := url.QueryEscape(path)
 	escapedPublicKey := url.QueryEscape(publicKey)
 	escapedSni := url.QueryEscape(sni)
 	escapedSid := url.QueryEscape(sid)
 	escapedRemark := url.QueryEscape(inbound.Remark)
 
-	// 【中文注释】: 严格按照最新格式构建链接
+	// 严格按照最新格式构建链接
 	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
-// 【新增方法】: 检查面板更新
+// 检查面板更新
 func (t *Tgbot) checkPanelUpdate(chatId int64) {
 	// 获取当前版本
 	currentVersion := config.GetVersion()
@@ -3974,7 +3974,7 @@ func (t *Tgbot) checkPanelUpdate(chatId int64) {
 	t.SendMsgToTgbot(chatId, message, confirmKeyboard)
 }
 
-// 【新增辅助函数】: 获取域名（shell 方案）
+// 获取域名（shell 方案）
 func (t *Tgbot) getDomain() (string, error) {
 	cmd := exec.Command("/usr/local/x-ui/x-ui", "setting", "-getCert", "true")
 	output, err := cmd.Output()
@@ -4004,7 +4004,7 @@ func (t *Tgbot) getDomain() (string, error) {
 	return domain, nil
 }
 
-// 【新增辅助函数】: 1:1 复刻自 inbounds.html
+// 1:1 复刻自 inbounds.html
 func (t *Tgbot) generateShortIds() []string {
 	chars := "0123456789abcdef"
 	lengths := []int{2, 4, 6, 8, 10, 12, 14, 16}
@@ -4015,7 +4015,7 @@ func (t *Tgbot) generateShortIds() []string {
 	return shortIds
 }
 
-// 【新增辅助函数】: 随机字符串生成器
+// 随机字符串生成器
 
 // showLogSettings 显示日志设置菜单
 func (t *Tgbot) showLogSettings(chatId int64) {

@@ -27,11 +27,11 @@ type ServerController struct {
 	lastGetVersionsTime time.Time
 }
 
-// 〔中文注释〕: 1. 在函数参数中，增加 serverService service.ServerService，让它可以接收一个服务实例。
+// 1. 在函数参数中，增加 serverService service.ServerService，让它可以接收一个服务实例。
 func NewServerController(g *gin.RouterGroup, serverService *service.ServerService) *ServerController {
 	a := &ServerController{
 		lastGetStatusTime: time.Now(),
-		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。
+		// 2. 将传入的 serverService 赋值给 a.serverService。
 		//    这样一来，这个 Controller 内部使用的就是我们在 main.go 中创建的那个功能完整的服务了。
 		serverService: serverService,
 	}
@@ -328,12 +328,12 @@ func (a *ServerController) saveHistory(c *gin.Context) {
 	err := a.serverService.SaveLinkHistory(req.Type, req.Link)
 	*/
 
-	// 【中文注释】: 修改后的新代码，直接从 POST 表单中获取 'type' 和 'link' 参数
-	// 【中文注释】: 这与其他 POST 方法（如 getLogs, getXrayLogs）的处理方式保持一致，解决了数据格式不匹配的问题。
+	// 修改后的新代码，直接从 POST 表单中获取 'type' 和 'link' 参数
+	// 这与其他 POST 方法（如 getLogs, getXrayLogs）的处理方式保持一致，解决了数据格式不匹配的问题。
 	historyType := c.PostForm("type")
 	link := c.PostForm("link")
 
-	// 【中文注释】: 调用服务层方法来保存历史记录
+	// 调用服务层方法来保存历史记录
 	err := a.serverService.SaveLinkHistory(historyType, link)
 	if err != nil {
 		jsonMsg(c, "Failed to save history", err)
@@ -351,7 +351,7 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 	jsonObj(c, history, nil)
 }
 
-// 【重写】: 前端放行端口（同步执行，返回真实结果）
+// 前端放行端口（同步执行，返回真实结果）
 func (a *ServerController) openPort(c *gin.Context) {
 	// 直接使用 c.PostForm("port") 获取表单数据
 	port := c.PostForm("port")
@@ -362,15 +362,15 @@ func (a *ServerController) openPort(c *gin.Context) {
 		return
 	}
 
-	// 【中文注释】: 2. 调用服务层方法，同步执行并等待结果。
+	// 2. 调用服务层方法，同步执行并等待结果。
 	err := a.serverService.OpenPort(port)
 	if err != nil {
-		// 【中文注释】: 如果端口放行失败，返回错误给前端
+		// 如果端口放行失败，返回错误给前端
 		jsonMsg(c, "端口放行失败", err)
 		return
 	}
 
-	// 【中文注释】: 3. 端口放行成功，返回成功消息
+	// 3. 端口放行成功，返回成功消息
 	jsonMsg(c, "端口放行成功", nil)
 }
 

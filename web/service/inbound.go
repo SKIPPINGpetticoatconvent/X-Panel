@@ -25,12 +25,12 @@ type InboundService struct {
 	cacheMutex    sync.RWMutex
 }
 
-// 【新增方法】: 用于从外部注入 XrayAPI 实例
+// 用于从外部注入 XrayAPI 实例
 func (s *InboundService) SetXrayAPI(api xray.XrayAPI) {
 	s.xrayApi = api
 }
 
-// 【新增方法】: 用于从外部注入 TelegramService 实例
+// 用于从外部注入 TelegramService 实例
 func (s *InboundService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
 }
@@ -216,7 +216,7 @@ func (s *InboundService) checkEmailExistForInbound(inbound *model.Inbound) (stri
 
 // AddInbound adds a new inbound to db
 func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
-	// 中文注释：检查端口是否已存在
+	// 检查端口是否已存在
 	exist, err := s.checkPortExist(inbound.Listen, inbound.Port, 0)
 	if err != nil {
 		return inbound, false, err
@@ -225,7 +225,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, common.NewError("Port already exists:", inbound.Port)
 	}
 
-	// 中文注释：检查邮箱是否重复
+	// 检查邮箱是否重复
 	existEmail, err := s.checkEmailExistForInbound(inbound)
 	if err != nil {
 		return inbound, false, err
@@ -234,13 +234,13 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, common.NewError("Duplicate email:", existEmail)
 	}
 
-	// 中文注释：获取入站规则中的客户端信息
+	// 获取入站规则中的客户端信息
 	clients, err := s.GetClients(inbound)
 	if err != nil {
 		return inbound, false, err
 	}
 
-	// 中文注释：确保客户端设置中包含创建和更新时间戳
+	// 确保客户端设置中包含创建和更新时间戳
 	if len(clients) > 0 {
 		var settings map[string]any
 		if err2 := json.Unmarshal([]byte(inbound.Settings), &settings); err2 == nil && settings != nil {
@@ -264,7 +264,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		}
 	}
 
-	// 中文注释：根据不同协议，验证客户端ID/密码是否为空
+	// 根据不同协议，验证客户端ID/密码是否为空
 	for _, client := range clients {
 		switch inbound.Protocol {
 		case "trojan":
@@ -283,7 +283,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	}
 
 	// =================================================================
-	// 中文注释：【新增逻辑】开始：手动计算和分配 ID
+	// 开始：手动计算和分配 ID
 	// =================================================================
 	// 1. 查询数据库中所有已存在的入站规则的 ID
 	var existingIDs []int
@@ -312,17 +312,17 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 	// 4. 将计算出的可用 ID 赋值给即将创建的入站对象
 	inbound.Id = nextID
 	// =================================================================
-	// 中文注释：【新增逻辑】结束：手动计算和分配 ID
+	// 结束：手动计算和分配 ID
 	// =================================================================
 
-	// 中文注释：开始数据库事务
+	// 开始数据库事务
 	db := database.GetDB()
 	tx := db.Begin()
 	defer func() {
 		if err == nil {
-			// 【修改位置】: 在事务提交前，执行我们的新逻辑
+			// 在事务提交前，执行我们的新逻辑
 			// =================================================================
-			// 〔中文注释〕: 新增逻辑 - 判断是否为【一键配置】创建的入站
+			// 新增逻辑 - 判断是否为【一键配置】创建的入站
 			// 我们通过备注（remark）是否为一个8位的随机字符串来做一个简单识别
 			// 只有来自【一键配置】的添加入站操作，才会触发 TG 通知
 			// =================================================================
@@ -333,7 +333,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 			}
 
 			if isOneClick && s.tgService != nil && s.tgService.IsRunning() {
-				// 〔中文注释〕: 使用 goroutine 异步发送通知，避免阻塞正常的 API 返回
+				// 使用 goroutine 异步发送通知，避免阻塞正常的 API 返回
 				go func(ib *model.Inbound) {
 					defer func() {
 						if r := recover(); r != nil {
@@ -344,15 +344,15 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 					// 等待5秒，确保事务已经完全提交
 					time.Sleep(5 * time.Second)
 
-					// [NEW] 二次检查，防止 Sleep 期间服务已销毁
+					// 二次检查，防止 Sleep 期间服务已销毁
 					if s.tgService == nil || !s.tgService.IsRunning() {
 						return
 					}
 
 					logger.Infof("检测到一键配置创建成功 (备注: %s)，准备发送 TG 通知...", ib.Remark)
 
-					// 【修改位置】: 将 global.TgBot 替换为 s.tgService
-					// 〔中文注释〕: 调用注入的服务实例的方法来发送消息。
+					// 将 global.TgBot 替换为 s.tgService
+					// 调用注入的服务实例的方法来发送消息。
 					err := s.tgService.SendOneClickConfig(ib, true, 0)
 					if err != nil {
 						logger.Warningf("发送【一键配置】TG 通知失败: %v", err)
@@ -360,15 +360,15 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 				}(inbound) // 将 inbound 对象的副本传入 goroutine
 			}
 
-			// 中文注释：如果没有错误，提交事务
+			// 如果没有错误，提交事务
 			tx.Commit()
 		} else {
-			// 中文注释：如果出现错误，回滚事务
+			// 如果出现错误，回滚事务
 			tx.Rollback()
 		}
 	}()
 
-	// 中文注释：保存入站信息到数据库 (此时 inbound 对象已包含我们手动设置的 ID)
+	// 保存入站信息到数据库 (此时 inbound 对象已包含我们手动设置的 ID)
 	err = tx.Save(inbound).Error
 	if err == nil {
 		s.invalidateSettingsCache(inbound.Id)
@@ -381,7 +381,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, err
 	}
 
-	// 中文注释：如果入站规则是启用的，则尝试通过 API 热加载到 Xray-core
+	// 如果入站规则是启用的，则尝试通过 API 热加载到 Xray-core
 	needRestart := false
 	if inbound.Enable {
 		_ = s.xrayApi.Init(p.GetAPIPort())
@@ -394,14 +394,14 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		if err1 == nil {
 			logger.Debug("New inbound added by api:", inbound.Tag)
 		} else {
-			// 中文注释：如果 API 调用失败，则标记需要重启面板以应用更改
+			// 如果 API 调用失败，则标记需要重启面板以应用更改
 			logger.Debug("Unable to add inbound by api:", err1)
 			needRestart = true
 		}
 		s.xrayApi.Close()
 	}
 
-	// 中文注释：返回创建好的入站对象、是否需要重启以及错误信息
+	// 返回创建好的入站对象、是否需要重启以及错误信息
 	return inbound, needRestart, err
 }
 
@@ -541,7 +541,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	oldInbound.Remark = inbound.Remark
 	oldInbound.Enable = inbound.Enable
 	oldInbound.ExpiryTime = inbound.ExpiryTime
-	// 中文注释：确保在更新数据时，将前端传来的 deviceLimit 值赋给从数据库中读出的旧对象。
+	// 确保在更新数据时，将前端传来的 deviceLimit 值赋给从数据库中读出的旧对象。
 	oldInbound.DeviceLimit = inbound.DeviceLimit
 	oldInbound.Listen = inbound.Listen
 	oldInbound.Port = inbound.Port
@@ -654,7 +654,7 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 			// ↓↓↓↓↓↓  【重要补充】在这里手动确保 SpeedLimit 被写入数据库 ↓↓↓↓↓↓
 			// clients[i] 和 interfaceClients[i] 是一一对应的
 			// 我们从强类型的 clients[i] 对象中取出 SpeedLimit，赋值给弱类型的 map
-			cm["speedLimit"] = clients[i].SpeedLimit // 中文注释: 确保批量添加时，speedLimit 的值也被写入数据库。
+			cm["speedLimit"] = clients[i].SpeedLimit // 确保批量添加时，speedLimit 的值也被写入数据库。
 
 			interfaceClients[i] = cm
 		}
@@ -730,7 +730,7 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 					cipher = oldSettings["method"].(string)
 				}
 
-				// 中文注释: 在这里为 API 调用添加 speedLimit 参数。
+				// 在这里为 API 调用添加 speedLimit 参数。
 				clientMap := map[string]any{
 					"email":    client.Email,
 					"id":       client.ID,
@@ -944,7 +944,7 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 			// ↓↓↓↓↓↓  【重要补充】在这里手动确保 SpeedLimit 被写入数据库 ↓↓↓↓↓↓
 			// clients[0] 是从请求中解码出来的强类型对象，它的 SpeedLimit 字段是有值的。
 			// 我们把它手动赋值给即将用于保存的 newMap。
-			newMap["speedLimit"] = clients[0].SpeedLimit // 中文注释：确保将 speedLimit 的值写入将要保存到数据库的 map 中。
+			newMap["speedLimit"] = clients[0].SpeedLimit // 确保将 speedLimit 的值写入将要保存到数据库的 map 中。
 
 			interfaceClients[0] = newMap
 		}
@@ -1014,7 +1014,7 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 				cipher = oldSettings["method"].(string)
 			}
 
-			// 中文注释: 同样，在更新用户时，也必须把新的 speedLimit 值通过 API 传给 Xray-core。
+			// 同样，在更新用户时，也必须把新的 speedLimit 值通过 API 传给 Xray-core。
 			clientMap := map[string]any{
 				"email":    clients[0].Email,
 				"id":       clients[0].ID,
@@ -2349,7 +2349,7 @@ func (s *InboundService) MigrationRequirements() {
 				}
 				c["updated_at"] = time.Now().Unix() * 1000
 
-				// 中文注释: 回填 speedLimit，如果不存在设为 0，确保旧数据有字段，避免显示和配置问题
+				// 回填 speedLimit，如果不存在设为 0，确保旧数据有字段，避免显示和配置问题
 				if _, ok := c["speedLimit"]; !ok {
 					c["speedLimit"] = 0
 				}

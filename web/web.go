@@ -121,7 +121,7 @@ type Server struct {
 	outboundService *service.OutboundService
 	settingService  *service.SettingService
 	tgbotService    service.TelegramService
-	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
+	// 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService *service.ServerService
 
 	cron *cron.Cron
@@ -130,13 +130,13 @@ type Server struct {
 	cancel context.CancelFunc
 }
 
-// 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来
+// 用于 main.go 将创建好的 tgBotService 注入进来
 func (s *Server) SetTelegramService(tgService service.TelegramService) {
 	s.tgbotService = tgService
 }
 
-// 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-// 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
+// 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
+// 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
 func NewServer(serverService *service.ServerService, settingService *service.SettingService, xrayService *service.XrayService, inboundService *service.InboundService, outboundService *service.OutboundService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
@@ -286,7 +286,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	g := engine.Group(basePath)
 
 	s.index = controller.NewIndexController(g)
-	// 〔中文注释〕: 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
+	// 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
 	s.server = controller.NewServerController(g, s.serverService)
 	s.panel = controller.NewXUIController(g, s.serverService)
 	s.api = controller.NewAPIController(g, s.serverService)
@@ -428,7 +428,7 @@ func (s *Server) Start() (err error) {
 			PreferServerCipherSuites: true,
 			// 设置会话缓存以提高性能
 			SessionTicketsDisabled: false,
-			// 【关键修复】: 设置 GetCertificate 回调，确保无论客户端发送什么 SNI（包括 IP 地址或空 SNI），
+			// 设置 GetCertificate 回调，确保无论客户端发送什么 SNI（包括 IP 地址或空 SNI），
 			// 都返回配置的证书，而不是拒绝连接。这解决了通过 IP 访问时 ERR_CONNECTION_CLOSED 的问题。
 			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 				// 无论 SNI 是什么，都返回配置的证书
@@ -447,7 +447,7 @@ func (s *Server) Start() (err error) {
 	// 修改 s.httpServer 的初始化代码
 	s.httpServer = &http.Server{
 		Handler: engine,
-		// 【新增】：设置 120 秒的读写超时，确保 firewalld 命令有足够的时间完成
+		// 设置 120 秒的读写超时，确保 firewalld 命令有足够的时间完成
 		ReadTimeout:  120 * time.Second,
 		WriteTimeout: 120 * time.Second,
 	}

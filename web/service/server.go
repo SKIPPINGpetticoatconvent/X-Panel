@@ -96,7 +96,7 @@ type ServerService struct {
 	cachedIPv4     string
 	cachedIPv6     string
 	noIPv6         bool
-	// 【新增】IP地理位置缓存
+	// IP地理位置缓存
 	cachedCountry    string
 	countryCheckTime time.Time
 	// SNI 域名选择器
@@ -105,7 +105,7 @@ type ServerService struct {
 	geoIPService *GeoIPService
 }
 
-// 【新增方法】: 用于从外部注入 TelegramService 实例
+// 用于从外部注入 TelegramService 实例
 func (s *ServerService) SetTelegramService(tgService TelegramService) {
 	s.tgService = tgService
 }
@@ -1253,14 +1253,14 @@ func (s *ServerService) SaveLinkHistory(historyType, link string) error {
 		CreatedAt: time.Now(),
 	}
 
-	// 【核心修正】: 第一步，调用重构后的 AddLinkHistory 函数。
+	// 第一步，调用重构后的 AddLinkHistory 函数。
 	// 这个函数现在是一个原子事务。如果它没有返回错误，就意味着数据已经成功提交到了 .wal 日志文件。
 	err := database.AddLinkHistory(record)
 	if err != nil {
 		return err // 如果事务失败，直接返回错误，不执行后续操作
 	}
 
-	// 【核心修正】: 第二步，在事务成功提交后，我们在这里调用 Checkpoint。
+	// 第二步，在事务成功提交后，我们在这里调用 Checkpoint。
 	// 此时 .wal 文件中已经包含了我们的新数据，调用 Checkpoint 可以确保这些数据被立即写入主数据库文件。
 	return database.Checkpoint()
 }
@@ -1270,9 +1270,9 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 	return database.GetLinkHistory()
 }
 
-// 【重写】: 与 TG 端 openPortWithFirewalld 采用完全相同的 Shell 脚本执行逻辑。
+// 与 TG 端 openPortWithFirewalld 采用完全相同的 Shell 脚本执行逻辑。
 // OpenPort 供前端调用，自动检查/安装 firewalld 并放行指定的端口。
-// 〔中文注释〕: 改为同步执行，使用完整的 Shell 脚本（与 TG 端一致），确保端口放行操作的可靠性。
+// 改为同步执行，使用完整的 Shell 脚本（与 TG 端一致），确保端口放行操作的可靠性。
 func (s *ServerService) OpenPort(port string) error {
 	// 1. 验证端口号：必须是数字，且在有效范围内 (1-65535)
 	portInt, err := strconv.Atoi(port)
@@ -1280,7 +1280,7 @@ func (s *ServerService) OpenPort(port string) error {
 		return fmt.Errorf("端口号无效，必须是 1-65535 之间的数字: %s", port)
 	}
 
-	// 【中文注释】: 将所有 Shell 逻辑整合为一个命令，与 TG 端 openPortWithFirewalld 完全一致。
+	// 将所有 Shell 逻辑整合为一个命令，与 TG 端 openPortWithFirewalld 完全一致。
 	// 新增了对默认端口列表 (22, 80, 443, 13688, 8443) 的放行逻辑。
 	shellCommand := fmt.Sprintf(`
 	# 定义需要放行的指定端口和一系列默认端口
@@ -1362,36 +1362,36 @@ func (s *ServerService) OpenPort(port string) error {
 	return nil
 }
 
-// 〔中文注释〕: 【新增函数】 - 重启面板服务
+// 重启面板服务
 // 这个函数会执行 /usr/bin/x-ui restart 命令来重启整个面板服务。
 func (s *ServerService) RestartPanel() error {
-	// 〔中文注释〕: 定义脚本的绝对路径，确保执行的命令是正确的。
+	// 定义脚本的绝对路径，确保执行的命令是正确的。
 	scriptPath := "/usr/bin/x-ui"
 
-	// 〔中文注释〕: 检查脚本文件是否存在，增加健壮性。
+	// 检查脚本文件是否存在，增加健壮性。
 	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 		errMsg := fmt.Sprintf("关键脚本文件 `%s` 未找到，无法执行重启。", scriptPath)
 		logger.Error(errMsg)
 		return fmt.Errorf("%s", errMsg)
 	}
 
-	// 〔中文注释〕: 定义要执行的命令和参数。
+	// 定义要执行的命令和参数。
 	cmd := exec.Command(scriptPath, "restart")
 
-	// 〔中文注释〕: 执行命令并捕获组合输出（标准输出和标准错误）。
+	// 执行命令并捕获组合输出（标准输出和标准错误）。
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// 〔中文注释〕: 如果命令执行失败，记录详细日志并返回错误。
+		// 如果命令执行失败，记录详细日志并返回错误。
 		logger.Errorf("执行 '%s restart' 失败: %v, 输出: %s", scriptPath, err, string(output))
 		return fmt.Errorf("命令执行失败: %v", err)
 	}
 
-	// 〔中文注释〕: 如果命令成功执行，记录成功的日志。
+	// 如果命令成功执行，记录成功的日志。
 	logger.Infof("'%s restart' 命令已成功执行。", scriptPath)
 	return nil
 }
 
-// 【新增方法】: 检测服务器IP地理位置
+// 检测服务器IP地理位置
 func (s *ServerService) GetServerLocation() (string, error) {
 	// 检查缓存，如果1小时内已经检测过，直接返回缓存结果
 	if s.cachedCountry != "" && time.Since(s.countryCheckTime) < time.Hour {
@@ -1631,7 +1631,7 @@ func (s *ServerService) readSNIDomainsFromFile(countryCode string) ([]string, er
 	return domains, nil
 }
 
-// 【重构方法】: 获取指定国家的SNI域名列表（优先从文件读取）
+// 获取指定国家的SNI域名列表（优先从文件读取）
 func (s *ServerService) GetCountrySNIDomains(countryCode string) []string {
 	// 将国家代码转换为大写
 	countryCode = strings.ToUpper(countryCode)
@@ -1686,7 +1686,7 @@ func (s *ServerService) removeDuplicatesFromSlice(slice []string) []string {
 
 // getDefaultSNIDomains 获取默认的SNI域名列表（最小化硬编码）
 func (s *ServerService) getDefaultSNIDomains(countryCode string) []string {
-	// 【重构】: 最小化硬编码，只保留最基本的回退域名
+	// 最小化硬编码，只保留最基本的回退域名
 	// 推荐使用 sni/{CountryCode}/sni_domains.txt 文件来配置域名
 	switch countryCode {
 	case "US":
