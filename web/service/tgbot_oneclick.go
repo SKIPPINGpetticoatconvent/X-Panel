@@ -147,9 +147,17 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 	} else {
 		if t.serverService != nil {
 			randomDest = t.serverService.GetNewSNI()
-		} else {
+		}
+		// 如果仍然为空或 realityDests 不为空，使用默认列表
+		if randomDest == "" && len(realityDests) > 0 {
 			randomDest = realityDests[random.Num(len(realityDests))]
 		}
+	}
+
+	// 最终保护：确保 target 不为空
+	if randomDest == "" {
+		randomDest = "tesla.com:443" // 强制使用默认值
+		logger.Warning("Reality target 为空，使用默认值 tesla.com:443")
 	}
 
 	serverNamesList := GenerateRealityServerNames(randomDest)
@@ -176,16 +184,10 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 			"xver":        0,
 			"serverNames": serverNamesList,
 			"settings": map[string]any{
-				"publicKey":     publicKey,
-				"spiderX":       "/",
-				"mldsa65Verify": "",
+				"publicKey":  publicKey,
+				"privateKey": privateKey,
+				"shortIds":   shortIds,
 			},
-			"privateKey":   privateKey,
-			"maxClientVer": "",
-			"minClientVer": "",
-			"maxTimediff":  0,
-			"mldsa65Seed":  "",
-			"shortIds":     shortIds,
 		},
 		"tcpSettings": map[string]any{
 			"acceptProxyProtocol": false,
@@ -406,9 +408,17 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	} else {
 		if t.serverService != nil {
 			randomDest = t.serverService.GetNewSNI()
-		} else {
+		}
+		// 如果仍然为空或 realityDests 不为空，使用默认列表
+		if randomDest == "" && len(realityDests) > 0 {
 			randomDest = realityDests[random.Num(len(realityDests))]
 		}
+	}
+
+	// 最终保护：确保 target 不为空
+	if randomDest == "" {
+		randomDest = "tesla.com:443" // 强制使用默认值
+		logger.Warning("Reality target 为空，使用默认值 tesla.com:443")
 	}
 
 	serverNamesList := GenerateRealityServerNames(randomDest)

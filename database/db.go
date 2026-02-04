@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -107,6 +108,14 @@ func runSeeders(isUsersEmpty bool) error {
 			db.Create(&model.HistoryOfSeeders{SeederName: "XhttpFlowMigration"})
 		}
 
+		if !slices.Contains(seedersHistory, "RealityTargetMigration") {
+			if err := migrateRealityTarget(); err != nil {
+				logger.Errorf("RealityTargetMigration seeder failed: %v", err)
+				return err
+			}
+			db.Create(&model.HistoryOfSeeders{SeederName: "RealityTargetMigration"})
+		}
+
 		if !slices.Contains(seedersHistory, "UserPasswordHash") && !isUsersEmpty {
 			var users []model.User
 			db.Find(&users)
@@ -174,6 +183,11 @@ func InitDB(dbPath string) error {
 
 	if err := initModels(); err != nil {
 		return err
+	}
+
+	// 执行数据库迁移（带自动备份和回滚）
+	if err := RunMigrationsWithBackup(); err != nil {
+		return fmt.Errorf("数据库迁移失败: %v", err)
 	}
 
 	isUsersEmpty, err := isTableEmpty("users")
