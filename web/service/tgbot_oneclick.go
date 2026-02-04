@@ -46,7 +46,31 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		return
 	}
 
+	// 检查端口和 tag 冲突
 	inboundService := InboundService{}
+
+	// 检查端口是否已被使用
+	portExist, err := inboundService.getInboundRepo().CheckPortExist(newInbound.Listen, newInbound.Port, 0)
+	if err != nil {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 检查端口时出错: %v", err))
+		return
+	}
+	if portExist {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 端口 %d 已被使用", newInbound.Port))
+		return
+	}
+
+	// 检查 tag 是否已被使用
+	tagExist, err := inboundService.getInboundRepo().CheckTagExist(newInbound.Tag, 0)
+	if err != nil {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 检查标签时出错: %v", err))
+		return
+	}
+	if tagExist {
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 标签 %s 已被使用", newInbound.Tag))
+		return
+	}
+
 	createdInbound, _, err := inboundService.AddInbound(newInbound)
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))
