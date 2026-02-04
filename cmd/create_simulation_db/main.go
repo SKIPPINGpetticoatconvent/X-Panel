@@ -216,12 +216,12 @@ func insertTestData(db *sql.DB) {
 
 	// 插入用户数据
 	users := [][3]string{
-		{"admin", "$2a$10$92IXUNpkjOzOxxQqyUP1IuV.z/kEaj2Fqs8jI9MkMjI3Esl3RTFdd", "admin@example.com"},
-		{"user1", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user1@example.com"},
-		{"user2", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user2@example.com"},
-		{"user3", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user3@example.com"},
-		{"user4", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user4@example.com"},
-		{"user5", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user5@example.com"},
+		{"admin", "$2a$10$92IXUNpkjOzOxxQqyUP1IuV.z/kEaj2Fqs8jI9MkMjI3Esl3RTFdd", "admin@test.local"},
+		{"user1", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user1@test.local"},
+		{"user2", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user2@test.local"},
+		{"user3", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user3@test.local"},
+		{"user4", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user4@test.local"},
+		{"user5", "$2a$10$N.zmdr9k7uOCQJ379N17O1NedW9n8QI8I9MkMjI3Esl3RTFdd", "user5@test.local"},
 	}
 
 	for _, user := range users {
@@ -293,16 +293,16 @@ func insertTestData(db *sql.DB) {
 
 	// 插入客户端流量数据
 	clientTraffics := [][5]interface{}{
-		{1, "client1@example.com", 1024, 2048, 3072},
-		{2, "client2@example.com", 2048, 4096, 6144},
-		{3, "client3@example.com", 512, 1024, 1536},
-		{4, "client4@example.com", 1024, 2048, 3072},
-		{5, "client5@example.com", 256, 512, 768},
-		{6, "client6@example.com", 128, 256, 384},
-		{7, "client7@example.com", 64, 128, 192},
-		{8, "client8@example.com", 32, 64, 96},
-		{9, "client9@example.com", 16, 32, 48},
-		{10, "client10@example.com", 8, 16, 24},
+		{1, "client1@test.local", 1024, 2048, 3072},
+		{2, "client2@test.local", 2048, 4096, 6144},
+		{3, "client3@test.local", 512, 1024, 1536},
+		{4, "client4@test.local", 1024, 2048, 3072},
+		{5, "client5@test.local", 256, 512, 768},
+		{6, "client6@test.local", 128, 256, 384},
+		{7, "client7@test.local", 64, 128, 192},
+		{8, "client8@test.local", 32, 64, 96},
+		{9, "client9@test.local", 16, 32, 48},
+		{10, "client10@test.local", 8, 16, 24},
 	}
 
 	for _, traffic := range clientTraffics {
