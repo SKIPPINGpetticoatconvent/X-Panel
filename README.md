@@ -103,6 +103,45 @@ Manage the panel via the `x-ui` command:
    go build -o x-ui main.go
    ```
 
+### 🧪 Testing
+
+#### Database Migration Tests
+The project includes comprehensive database migration tests located in `tests/database/`:
+
+```bash
+# Run all database tests
+for dir in tests/database/*/; do
+  echo "Running test in $dir"
+  cd "$dir"
+  if [ -f "main.go" ]; then
+    go run main.go
+  fi
+  cd - > /dev/null
+done
+```
+
+#### Test Categories
+- **Unit Tests**: Core functionality tests (migration status, validation, error handling)
+- **Integration Tests**: Complete migration workflow tests
+- **Compatibility Tests**: Old version database upgrade tests
+- **Validation Tests**: Data consistency and integrity checks
+
+#### Environment Variables for Testing
+```bash
+export XUI_DB_PATH="/path/to/test.db"
+export XUI_MIGRATIONS_PATH="/path/to/migrations"
+export XUI_DB_FOLDER="/path/to/db/folder"
+```
+
+#### E2E Tests
+```bash
+# Run end-to-end tests
+go test ./tests/e2e/ -v
+
+# Run smoke tests
+go test ./tests/ -run Smoke
+```
+
 ## ⚠️ Safe Use Policy
 This project is for educational and technical research purposes only. Users are responsible for complying with local laws and regulations.
 The authors are not responsible for any misuse of this software.
