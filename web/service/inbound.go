@@ -131,6 +131,17 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, common.NewError("port already in use: ", inbound.Port)
 	}
 
+	// 检查 tag 是否已存在
+	if inbound.Tag != "" {
+		tagExist, err := s.getInboundRepo().CheckTagExist(inbound.Tag, 0)
+		if err != nil {
+			return inbound, false, err
+		}
+		if tagExist {
+			return inbound, false, common.NewError("tag already exists: ", inbound.Tag)
+		}
+	}
+
 	existEmail, err := s.checkEmailExistForInbound(inbound)
 	if err != nil {
 		return inbound, false, err
@@ -200,6 +211,17 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	}
 	if exist {
 		return inbound, false, common.NewError("port already in use: ", inbound.Port)
+	}
+
+	// 检查 tag 是否已存在
+	if inbound.Tag != "" {
+		tagExist, err := s.getInboundRepo().CheckTagExist(inbound.Tag, inbound.Id)
+		if err != nil {
+			return inbound, false, err
+		}
+		if tagExist {
+			return inbound, false, common.NewError("tag already exists: ", inbound.Tag)
+		}
 	}
 
 	oldInbound, err := s.GetInbound(inbound.Id)
