@@ -129,6 +129,17 @@ func (t *Tgbot) buildRealityInbound(targetDest ...string) (*model.Inbound, strin
 
 	tag := fmt.Sprintf("inbound-%d", port)
 
+	// 确保 tag 唯一性
+	inboundService := InboundService{}
+	tagExist, err := inboundService.getInboundRepo().CheckTagExist(tag, 0)
+	if err == nil && tagExist {
+		// 如果 tag 已存在，添加更强的随机后缀
+		// 使用时间戳+随机字符串确保唯一性
+		timestamp := time.Now().Unix() % 10000
+		randomSuffix := random.SeqWithCharset(6, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+		tag = fmt.Sprintf("inbound-%d-%d%s", port, timestamp, randomSuffix)
+	}
+
 	realityDests := t.GetRealityDestinations()
 	var randomDest string
 	if len(targetDest) > 0 && targetDest[0] != "" {
@@ -265,6 +276,17 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) {
 	}
 
 	tag := fmt.Sprintf("inbound-%d", port)
+
+	// 确保 tag 唯一性
+	inboundService := InboundService{}
+	tagExist, err := inboundService.getInboundRepo().CheckTagExist(tag, 0)
+	if err == nil && tagExist {
+		// 如果 tag 已存在，添加更强的随机后缀
+		// 使用时间戳+随机字符串确保唯一性
+		timestamp := time.Now().Unix() % 10000
+		randomSuffix := random.SeqWithCharset(6, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+		tag = fmt.Sprintf("inbound-%d-%d%s", port, timestamp, randomSuffix)
+	}
 	path := "/" + random.SeqWithCharset(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 	certPath := fmt.Sprintf("/root/cert/%s/fullchain.pem", domain)
 	keyPath := fmt.Sprintf("/root/cert/%s/privkey.pem", domain)
@@ -365,6 +387,17 @@ func (t *Tgbot) buildXhttpRealityInbound(targetDest ...string) (*model.Inbound, 
 	}
 
 	tag := fmt.Sprintf("inbound-%d", port)
+
+	// 确保 tag 唯一性
+	inboundService := InboundService{}
+	tagExist, err := inboundService.getInboundRepo().CheckTagExist(tag, 0)
+	if err == nil && tagExist {
+		// 如果 tag 已存在，添加更强的随机后缀
+		// 使用时间戳+随机字符串确保唯一性
+		timestamp := time.Now().Unix() % 10000
+		randomSuffix := random.SeqWithCharset(6, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+		tag = fmt.Sprintf("inbound-%d-%d%s", port, timestamp, randomSuffix)
+	}
 
 	realityDests := t.GetRealityDestinations()
 	var randomDest string
