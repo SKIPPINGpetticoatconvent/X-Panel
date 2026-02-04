@@ -12,6 +12,7 @@ import (
 	"x-ui/database/repository"
 	"x-ui/logger"
 	"x-ui/util/common"
+	"x-ui/util/random"
 	"x-ui/xray"
 
 	"gorm.io/gorm"
@@ -173,7 +174,10 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 		// Generate tag if empty
 		if inbound.Tag == "" {
-			inbound.Tag = fmt.Sprintf("inbound-%d", inbound.Id)
+			// 使用更可靠的唯一性保证：时间戳 + 随机字符串
+			timestamp := time.Now().Unix() % 10000
+			randomSuffix := random.SeqWithCharset(4, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+			inbound.Tag = fmt.Sprintf("inbound-%d-%d%s", inbound.Id, timestamp, randomSuffix)
 		}
 
 		if err := tx.Create(inbound).Error; err != nil {
