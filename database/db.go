@@ -185,9 +185,24 @@ func InitDB(dbPath string) error {
 		return err
 	}
 
+	// 检查迁移状态
+	if err := CheckMigrationStatus(); err != nil {
+		return fmt.Errorf("迁移状态检查失败: %v", err)
+	}
+
 	// 执行数据库迁移（带自动备份和回滚）
 	if err := RunMigrationsWithBackup(); err != nil {
-		return fmt.Errorf("数据库迁移失败: %v", err)
+		return handleMigrationError(err)
+	}
+
+	// 验证迁移成功
+	if err := ValidateMigrationSuccess(); err != nil {
+		return fmt.Errorf("迁移验证失败: %v", err)
+	}
+
+	// 严格数据一致性检查
+	if err := StrictDataConsistencyCheck(); err != nil {
+		return handleDataConsistencyError(err)
 	}
 
 	isUsersEmpty, err := isTableEmpty("users")
