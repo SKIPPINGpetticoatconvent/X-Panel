@@ -193,7 +193,7 @@ func (r *inboundRepository) CheckPortExist(listen string, port int, ignoreId int
 
 // CheckTagExist 检查标签是否已存在
 func (r *inboundRepository) CheckTagExist(tag string, ignoreId int) (bool, error) {
-	// 空标签不应该被认为是存在的
+	// tag 不能为空
 	if tag == "" {
 		return false, nil
 	}
