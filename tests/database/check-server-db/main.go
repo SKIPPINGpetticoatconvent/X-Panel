@@ -10,7 +10,9 @@ import (
 
 func main() {
 	// 打开数据库
-	db, err := sql.Open("sqlite3", "/home/ub/X-Panel/database/test_server.db")
+	// 获取数据库文件的绝对路径
+	dbPath := "/home/ub/X-Panel/database/test_simulation.db"
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}

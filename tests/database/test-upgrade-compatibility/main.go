@@ -27,12 +27,12 @@ func main() {
 func testServerDatabaseUpgrade() {
 	log.Println("\n--- 场景1：从服务器数据库升级 ---")
 
-	// 复制原始服务器数据库作为测试基础
-	srcPath := "/home/ub/X-Panel/database/test_server.db"
+	// 获取数据库文件的绝对路径
+	dbPath := "/home/ub/X-Panel/database/test_simulation.db"
 	testPath := "/home/ub/X-Panel/database/test_upgrade_1.db"
 
 	// 复制文件
-	copyFile(srcPath, testPath)
+	copyFile(dbPath, testPath)
 	defer os.Remove(testPath)
 
 	// 设置环境变量

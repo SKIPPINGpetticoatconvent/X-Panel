@@ -27,11 +27,11 @@ func main() {
 func testOldVersionStartup() {
 	log.Println("\n--- 场景1：旧版本数据库启动 ---")
 
-	// 复制原始服务器数据库
-	srcPath := "/home/ub/X-Panel/database/test_server.db"
+	// 获取数据库文件的绝对路径
+	dbPath := "/home/ub/X-Panel/database/test_simulation.db"
 	testPath := "/home/ub/X-Panel/database/test_startup_old.db"
 
-	copyFile(srcPath, testPath)
+	copyFile(dbPath, testPath)
 	defer os.Remove(testPath)
 
 	// 设置环境变量

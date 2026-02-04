@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// 获取数据库文件的绝对路径
-	dbPath := "/home/ub/X-Panel/database/test_server.db"
+	dbPath := "/home/ub/X-Panel/database/test_simulation.db"
 	absPath, err := os.Stat(dbPath)
 	if err != nil {
 		log.Fatalf("数据库文件不存在: %v", err)

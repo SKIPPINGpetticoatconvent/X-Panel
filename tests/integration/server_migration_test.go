@@ -15,7 +15,7 @@ import (
 // TestServerMigrationIntegration 测试服务器数据库迁移集成
 func TestServerMigrationIntegration(t *testing.T) {
 	// 获取服务器数据库文件的绝对路径
-	dbPath := "/home/ub/X-Panel/database/test_server.db"
+	dbPath := "/home/ub/X-Panel/database/test_simulation.db"
 	absPath, err := filepath.Abs(dbPath)
 	require.NoError(t, err)
 
@@ -105,7 +105,7 @@ func TestServerMigrationIntegration(t *testing.T) {
 // TestUpgradeCompatibilityIntegration 测试升级兼容性集成
 func TestUpgradeCompatibilityIntegration(t *testing.T) {
 	// 获取服务器数据库文件的绝对路径
-	dbPath := "/home/ub/X-Panel/database/test_server.db"
+	dbPath := "/home/ub/X-Panel/database/test_simulation.db"
 	absPath, err := filepath.Abs(dbPath)
 	require.NoError(t, err)
 
