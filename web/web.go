@@ -123,6 +123,7 @@ type Server struct {
 	tgbotService    service.TelegramService
 	// 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService *service.ServerService
+	userService   *service.UserService
 
 	cron *cron.Cron
 
@@ -135,9 +136,15 @@ func (s *Server) SetTelegramService(tgService service.TelegramService) {
 	s.tgbotService = tgService
 }
 
-// 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-// 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-func NewServer(serverService *service.ServerService, settingService *service.SettingService, xrayService *service.XrayService, inboundService *service.InboundService, outboundService *service.OutboundService) *Server {
+// NewServer 创建 Web 服务器实例，接收所有必要的服务依赖
+func NewServer(
+	serverService *service.ServerService,
+	settingService *service.SettingService,
+	xrayService *service.XrayService,
+	inboundService *service.InboundService,
+	outboundService *service.OutboundService,
+	userService *service.UserService,
+) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		ctx:             ctx,
@@ -147,6 +154,7 @@ func NewServer(serverService *service.ServerService, settingService *service.Set
 		xrayService:     xrayService,
 		inboundService:  inboundService,
 		outboundService: outboundService,
+		userService:     userService,
 	}
 }
 
@@ -285,7 +293,14 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 
 	g := engine.Group(basePath)
 
-	s.index = controller.NewIndexController(g)
+	// 注入 SettingService, UserService 和 TgBot 到 IndexController
+	var tgbot *service.Tgbot
+	if s.tgbotService != nil {
+		if bot, ok := s.tgbotService.(*service.Tgbot); ok {
+			tgbot = bot
+		}
+	}
+	s.index = controller.NewIndexController(g, s.settingService, s.userService, tgbot)
 	// 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
 	s.server = controller.NewServerController(g, s.serverService)
 	s.panel = controller.NewXUIController(g, s.serverService)

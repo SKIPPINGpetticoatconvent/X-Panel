@@ -28,8 +28,9 @@ func TestNewServer(t *testing.T) {
 	inboundService := &service.InboundService{}
 	outboundService := &service.OutboundService{}
 	settingService := &service.SettingService{}
+	userService := &service.UserService{}
 	// Call NewServer
-	server := NewServer(serverService, settingService, xrayService, inboundService, outboundService)
+	server := NewServer(serverService, settingService, xrayService, inboundService, outboundService, userService)
 
 	// Verify the returned server instance
 	assert.NotNil(t, server, "NewServer should return a non-nil Server instance")
@@ -42,6 +43,7 @@ func TestNewServer(t *testing.T) {
 	assert.Equal(t, inboundService, server.inboundService, "InboundService should be correctly injected")
 	assert.Equal(t, settingService, server.settingService, "SettingService should be correctly injected")
 	assert.Equal(t, outboundService, server.outboundService, "OutboundService should be correctly injected")
+	assert.Equal(t, userService, server.userService, "UserService should be correctly injected")
 
 	// Verify that tgbotService is initially nil (since it's not passed to NewServer)
 	assert.Nil(t, server.tgbotService, "TgbotService should be initially nil")

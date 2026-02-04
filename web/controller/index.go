@@ -27,8 +27,17 @@ type IndexController struct {
 	tgbot          *service.Tgbot
 }
 
-func NewIndexController(g *gin.RouterGroup) *IndexController {
-	a := &IndexController{}
+func NewIndexController(
+	g *gin.RouterGroup,
+	settingService *service.SettingService,
+	userService *service.UserService,
+	tgbot *service.Tgbot,
+) *IndexController {
+	a := &IndexController{
+		settingService: *settingService,
+		userService:    *userService,
+		tgbot:          tgbot,
+	}
 	a.initRouter(g)
 	return a
 }

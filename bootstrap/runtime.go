@@ -72,6 +72,7 @@ func (r *Runtime) StartWebServer() error {
 		r.App.XrayService,
 		r.App.InboundService,
 		r.App.OutboundService,
+		r.App.UserService,
 	)
 
 	if r.TgBotService != nil {
