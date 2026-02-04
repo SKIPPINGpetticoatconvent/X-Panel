@@ -406,6 +406,223 @@ func BenchmarkMigrationManager_Create(b *testing.B) {
 	}
 }
 
+// TestMigrationManager_Up 测试迁移管理器的 Up 方法
+func TestMigrationManager_Up(t *testing.T) {
+	// 创建临时测试数据库
+	tempDir := t.TempDir()
+	testDBPath := filepath.Join(tempDir, "test.db")
+	migrationPath := filepath.Join(tempDir, "migrations")
+
+	// 创建迁移目录
+	err := os.MkdirAll(migrationPath, 0o755)
+	require.NoError(t, err)
+
+	// 创建测试迁移文件
+	upFile := filepath.Join(migrationPath, "001_test.up.sql")
+	downFile := filepath.Join(migrationPath, "001_test.down.sql")
+
+	err = os.WriteFile(upFile, []byte("CREATE TABLE test (id INTEGER);"), 0o644)
+	require.NoError(t, err)
+
+	err = os.WriteFile(downFile, []byte("DROP TABLE IF EXISTS test;"), 0o644)
+	require.NoError(t, err)
+
+	// 创建迁移管理器
+	manager, err := NewMigrationManager(testDBPath)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	// 执行迁移
+	err = manager.Up()
+	assert.NoError(t, err)
+
+	// 验证表是否创建
+	db, err := sql.Open("sqlite3", testDBPath)
+	require.NoError(t, err)
+	defer db.Close()
+
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='test'").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+}
+
+// TestMigrationManager_Down 测试迁移管理器的 Down 方法
+func TestMigrationManager_Down(t *testing.T) {
+	// 创建临时测试数据库
+	tempDir := t.TempDir()
+	testDBPath := filepath.Join(tempDir, "test.db")
+	migrationPath := filepath.Join(tempDir, "migrations")
+
+	// 创建迁移目录
+	err := os.MkdirAll(migrationPath, 0o755)
+	require.NoError(t, err)
+
+	// 创建测试迁移文件
+	upFile := filepath.Join(migrationPath, "001_test.up.sql")
+	downFile := filepath.Join(migrationPath, "001_test.down.sql")
+
+	err = os.WriteFile(upFile, []byte("CREATE TABLE test (id INTEGER);"), 0o644)
+	require.NoError(t, err)
+
+	err = os.WriteFile(downFile, []byte("DROP TABLE IF EXISTS test;"), 0o644)
+	require.NoError(t, err)
+
+	// 创建迁移管理器
+	manager, err := NewMigrationManager(testDBPath)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	// 先执行迁移
+	err = manager.Up()
+	require.NoError(t, err)
+
+	// 验证表存在
+	db, err := sql.Open("sqlite3", testDBPath)
+	require.NoError(t, err)
+	defer db.Close()
+
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='test'").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// 执行回滚
+	err = manager.Down()
+	assert.NoError(t, err)
+
+	// 验证表已删除
+	err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='test'").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
+
+// TestMigrationManager_Status 测试迁移管理器的 Status 方法
+func TestMigrationManager_Status(t *testing.T) {
+	// 创建临时测试数据库
+	tempDir := t.TempDir()
+	testDBPath := filepath.Join(tempDir, "test.db")
+	migrationPath := filepath.Join(tempDir, "migrations")
+
+	// 创建迁移目录
+	err := os.MkdirAll(migrationPath, 0o755)
+	require.NoError(t, err)
+
+	// 创建测试迁移文件
+	upFile := filepath.Join(migrationPath, "001_test.up.sql")
+	downFile := filepath.Join(migrationPath, "001_test.down.sql")
+
+	err = os.WriteFile(upFile, []byte("CREATE TABLE test (id INTEGER);"), 0o644)
+	require.NoError(t, err)
+
+	err = os.WriteFile(downFile, []byte("DROP TABLE IF EXISTS test;"), 0o644)
+	require.NoError(t, err)
+
+	// 创建迁移管理器
+	manager, err := NewMigrationManager(testDBPath)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	// 检查状态（应该显示未迁移）
+	err = manager.Status()
+	assert.NoError(t, err)
+
+	// 执行迁移
+	err = manager.Up()
+	require.NoError(t, err)
+
+	// 再次检查状态（应该显示已迁移）
+	err = manager.Status()
+	assert.NoError(t, err)
+}
+
+// TestMigrationManager_Force 测试迁移管理器的 Force 方法
+func TestMigrationManager_Force(t *testing.T) {
+	// 创建临时测试数据库
+	tempDir := t.TempDir()
+	testDBPath := filepath.Join(tempDir, "test.db")
+	migrationPath := filepath.Join(tempDir, "migrations")
+
+	// 创建迁移目录
+	err := os.MkdirAll(migrationPath, 0o755)
+	require.NoError(t, err)
+
+	// 创建测试迁移文件
+	upFile := filepath.Join(migrationPath, "001_test.up.sql")
+	downFile := filepath.Join(migrationPath, "001_test.down.sql")
+
+	err = os.WriteFile(upFile, []byte("CREATE TABLE test (id INTEGER);"), 0o644)
+	require.NoError(t, err)
+
+	err = os.WriteFile(downFile, []byte("DROP TABLE IF EXISTS test;"), 0o644)
+	require.NoError(t, err)
+
+	// 创建迁移管理器
+	manager, err := NewMigrationManager(testDBPath)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	// 强制设置版本
+	err = manager.Force(1)
+	assert.NoError(t, err)
+
+	// 验证版本是否设置成功
+	db, err := sql.Open("sqlite3", testDBPath)
+	require.NoError(t, err)
+	defer db.Close()
+
+	var version int
+	err = db.QueryRow("SELECT version FROM schema_migrations").Scan(&version)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, version)
+}
+
+// TestMigrationManager_Steps 测试迁移管理器的 Steps 方法
+func TestMigrationManager_Steps(t *testing.T) {
+	// 创建临时测试数据库
+	tempDir := t.TempDir()
+	testDBPath := filepath.Join(tempDir, "test.db")
+
+	// 创建迁移管理器
+	manager, err := NewMigrationManager(testDBPath)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	// 获取待执行步数
+	steps, err := manager.Steps()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, steps) // 简化实现总是返回 0
+}
+
+// TestMigrationManager_ErrorHandling 测试迁移管理器的错误处理
+func TestMigrationManager_ErrorHandling(t *testing.T) {
+	// 测试无效数据库路径
+	manager, err := NewMigrationManager("/invalid/path/test.db")
+	assert.Error(t, err)
+	assert.Nil(t, manager)
+
+	// 测试不存在的迁移目录
+	tempDir := t.TempDir()
+	testDBPath := filepath.Join(tempDir, "test.db")
+	invalidMigrationPath := filepath.Join(tempDir, "nonexistent")
+
+	// 设置环境变量指向不存在的迁移目录
+	originalPath := os.Getenv("XUI_MIGRATIONS_PATH")
+	defer func() {
+		if originalPath != "" {
+			os.Setenv("XUI_MIGRATIONS_PATH", originalPath)
+		} else {
+			os.Unsetenv("XUI_MIGRATIONS_PATH")
+		}
+	}()
+
+	os.Setenv("XUI_MIGRATIONS_PATH", invalidMigrationPath)
+
+	manager, err = NewMigrationManager(testDBPath)
+	assert.Error(t, err)
+	assert.Nil(t, manager)
+}
+
 // BenchmarkBackupDatabase 性能测试：数据库备份
 func BenchmarkBackupDatabase(b *testing.B) {
 	// 创建测试数据库文件
