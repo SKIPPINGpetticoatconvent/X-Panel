@@ -805,31 +805,64 @@ func (t *Tgbot) generateXhttpRealityLinkWithClient(inbound *model.Inbound, clien
 // ================== 辅助函数 ==================
 
 func (t *Tgbot) getDomain() (string, error) {
-	cmd := exec.Command("/usr/local/x-ui/x-ui", "setting", "-getCert", "true")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", common.NewError("执行命令获取证书路径失败，请确保已为面板配置 SSL 证书")
+	// 1. 优先检查本地缓存 (TTL 30分钟)
+	if t.cachedDomain != "" && time.Since(t.domainCacheTime) < 30*time.Minute {
+		return t.cachedDomain, nil
 	}
 
-	lines := strings.Split(string(output), "\n")
-	certLine := ""
-	for _, line := range lines {
-		if strings.HasPrefix(line, "cert:") {
-			certLine = line
-			break
+	var domain string
+
+	// 2. 尝试从面板设置中获取 webDomain
+	if t.settingService != nil {
+		settingDomain, _ := t.settingService.GetWebDomain()
+		if settingDomain != "" {
+			domain = settingDomain
 		}
 	}
 
-	if certLine == "" {
-		return "", common.NewError("无法从 x-ui 命令输出中找到证书路径")
+	// 3. 如果设置为空，尝试从证书路径解析
+	if domain == "" {
+		cmd := exec.Command("/usr/local/x-ui/x-ui", "setting", "-getCert", "true")
+		output, err := cmd.Output()
+		if err == nil {
+			lines := strings.Split(string(output), "\n")
+			certPath := ""
+			for _, line := range lines {
+				if strings.HasPrefix(line, "cert:") {
+					certPath = strings.TrimSpace(strings.TrimPrefix(line, "cert:"))
+					break
+				}
+			}
+			if certPath != "" {
+				parsedDomain := filepath.Base(filepath.Dir(certPath))
+				// 核心修复：如果解析结果是 "ip"，说明使用的是 IP 证书，不能作为域名使用
+				if parsedDomain != "" && parsedDomain != "." && parsedDomain != "ip" {
+					domain = parsedDomain
+				}
+			}
+		}
 	}
 
-	certPath := strings.TrimSpace(strings.TrimPrefix(certLine, "cert:"))
-	if certPath == "" {
-		return "", common.NewError("证书路径为空，请确保已为面板配置 SSL 证书")
+	// 4. 如果以上方式都失败或结果为 "ip"，回退到服务器真实的公网 IP
+	if domain == "" || domain == "ip" {
+		if t.serverService != nil {
+			// 触发一次 IP 更新（如果缓存为空）
+			status := t.serverService.GetStatus(nil)
+			if status.PublicIP.IPv4 != "" && status.PublicIP.IPv4 != "N/A" {
+				domain = status.PublicIP.IPv4
+			}
+		}
 	}
 
-	domain := filepath.Base(filepath.Dir(certPath))
+	// 5. 最后的兜底方案：如果彻底无法获取，返回空并报错
+	if domain == "" {
+		return "", common.NewError("无法获取有效的域名或公网 IP，请在面板设置中配置 '面板域名' 或确保服务器网络正常")
+	}
+
+	// 更新缓存
+	t.cachedDomain = domain
+	t.domainCacheTime = time.Now()
+
 	return domain, nil
 }
 

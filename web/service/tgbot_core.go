@@ -85,6 +85,10 @@ type Tgbot struct {
 	// state 封装了 Bot 的运行时状态（新架构）
 	// 目前保持向后兼容，逐步将全局变量迁移到此处
 	state *BotState
+
+	// 缓存解析后的域名/IP
+	cachedDomain    string
+	domainCacheTime time.Time
 }
 
 // GetRealityDestinations 方法 - 提供智能的 SNI 域名列表
