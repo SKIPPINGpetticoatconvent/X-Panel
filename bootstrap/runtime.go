@@ -1,8 +1,10 @@
 package bootstrap
 
 import (
+	"context"
 	"log"
 	"sync"
+	"time"
 
 	"x-ui/sub"
 	"x-ui/web"
@@ -13,13 +15,14 @@ import (
 
 // Runtime 封装应用运行时状态
 type Runtime struct {
-	App          *App
-	WebServer    *web.Server
-	SubServer    *sub.Server
-	JobManager   *job.Manager
-	TgBotService service.TelegramService
-	LogForwarder *service.LogForwarder
-	MonitorJob   *job.CertMonitorJob
+	App              *App
+	WebServer        *web.Server
+	SubServer        *sub.Server
+	JobManager       *job.Manager
+	LifecycleManager *LifecycleManager
+	TgBotService     service.TelegramService
+	LogForwarder     *service.LogForwarder
+	MonitorJob       *job.CertMonitorJob
 
 	tgMu sync.RWMutex
 }
@@ -27,10 +30,28 @@ type Runtime struct {
 // NewRuntime 创建运行时实例
 func NewRuntime(app *App) *Runtime {
 	return &Runtime{
-		App:        app,
-		JobManager: job.NewManager(),
+		App:              app,
+		JobManager:       job.NewManager(),
+		LifecycleManager: NewLifecycleManager(),
 	}
 }
+
+// JobComponent 适配器：将 job.Manager 包装为 Component
+type JobComponent struct {
+	manager *job.Manager
+}
+
+func (j *JobComponent) Name() string { return "BackgroundJobs" }
+func (j *JobComponent) Start(ctx context.Context) error {
+	j.manager.StartAll()
+	return nil
+}
+
+func (j *JobComponent) Stop(ctx context.Context) error {
+	j.manager.StopAll()
+	return nil
+}
+func (j *JobComponent) Status() Status { return StatusRunning }
 
 // InitTelegramBot 初始化 Telegram Bot 服务
 func (r *Runtime) InitTelegramBot() error {
@@ -102,11 +123,21 @@ func (r *Runtime) StartLogForwarder() {
 // StartJobs 注册并启动所有后台任务
 func (r *Runtime) StartJobs() {
 	r.MonitorJob = RegisterJobs(r.JobManager, r.App, r.TgBotService)
+
+	// 并行接入新生命周期中心
+	r.LifecycleManager.Register(&JobComponent{manager: r.JobManager})
+
 	r.JobManager.StartAll()
 }
 
 // StopAll 停止所有服务
 func (r *Runtime) StopAll() {
+	// 核心改进：优先调用新生命周期管理
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	r.LifecycleManager.StopAll(ctx)
+
+	// 以下为旧有 Runtime 逻辑，与新 Lifecycle Manager 并行
 	r.JobManager.StopAll()
 
 	if r.LogForwarder != nil {

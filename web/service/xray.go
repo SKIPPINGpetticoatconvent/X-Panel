@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"x-ui/logger"
 	"x-ui/util/common"
@@ -468,7 +469,12 @@ func (s *XrayService) RestartXray(isForce bool) error {
 			logger.Debug("It does not need to restart Xray")
 			return nil
 		}
-		_ = s.process.Stop()
+		err := s.process.Stop()
+		if err != nil {
+			logger.Warning("Error stopping Xray:", err)
+		}
+		// Give some time for OS to release the port
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	s.process = xray.NewProcess(xrayConfig)

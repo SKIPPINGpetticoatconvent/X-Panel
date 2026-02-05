@@ -250,10 +250,32 @@ func (p *process) Stop() error {
 		return errors.New("xray is not running")
 	}
 
+	var err error
 	if runtime.GOOS == "windows" {
-		return p.cmd.Process.Kill()
+		err = p.cmd.Process.Kill()
 	} else {
-		return p.cmd.Process.Signal(syscall.SIGTERM)
+		err = p.cmd.Process.Signal(syscall.SIGTERM)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Wait for the process to exit with a timeout
+	done := make(chan error, 1)
+	go func() {
+		done <- p.cmd.Wait()
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(2 * time.Second):
+		if p.IsRunning() {
+			logger.Warning("Xray process did not stop in time, killing it...")
+			return p.cmd.Process.Kill()
+		}
+		return nil
 	}
 }
 
