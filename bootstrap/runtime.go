@@ -51,7 +51,7 @@ func (j *JobComponent) Stop(ctx context.Context) error {
 	j.manager.StopAll()
 	return nil
 }
-func (j *JobComponent) Status() Status { return StatusRunning }
+func (j *JobComponent) State() State { return StateRunning }
 
 // InitTelegramBot 初始化 Telegram Bot 服务
 func (r *Runtime) InitTelegramBot() error {
