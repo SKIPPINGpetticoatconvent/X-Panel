@@ -500,6 +500,9 @@ ssh_forwarding() {
     echo ""
     existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
     domain=$(basename "$(dirname "$existing_cert")")
+    if [[ ${domain} == "ip" ]]; then
+      domain=${v4:-$v6}
+    fi
     print_ok "登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
   fi
   echo ""

@@ -356,6 +356,9 @@ check_config() {
     local existing_cert
     existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
     domain=$(basename "$(dirname "$existing_cert")")
+    if [[ ${domain} == "ip" ]]; then
+      domain=${v4:-$v6}
+    fi
     echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
   fi
   echo ""
@@ -819,16 +822,122 @@ install_acme() {
   fi
 
   LOGI "正在安装 acme.sh..."
-  cd ~ || return 1 # 确保可以切换到主目录
+  cd ~ || return 1
 
-  if ! curl -s https://get.acme.sh | sh; then
-    LOGE "安装 acme.sh 失败。"
-    return 1
+  # 预安装cron依赖
+  LOGI "检查并安装cron依赖..."
+  install_cron_dependency
+
+  # 尝试标准安装
+  if curl -s https://get.acme.sh | sh; then
+    LOGI "标准安装尝试完成"
   else
-    LOGI "安装 acme.sh 成功。"
+    LOGE "标准安装失败，尝试强制安装..."
+    # 尝试强制安装
+    if curl -s https://get.acme.sh | sh -s -- --force; then
+      LOGI "强制安装尝试完成"
+    else
+      LOGE "强制安装失败，尝试手动安装..."
+      manual_install_acme
+    fi
   fi
 
-  return 0
+  # 验证安装结果
+  if command -v ~/.acme.sh/acme.sh &>/dev/null; then
+    LOGI "安装 acme.sh 成功。"
+    return 0
+  else
+    LOGE "安装 acme.sh 失败。"
+    return 1
+  fi
+}
+
+install_cron_dependency() {
+  LOGI "检查系统cron服务..."
+
+  case "${release}" in
+  ubuntu | debian | armbian)
+    if ! command -v crontab &>/dev/null; then
+      LOGI "安装cron服务 (Ubuntu/Debian)..."
+      if apt update && apt install cron -y; then
+        LOGI "cron服务安装成功"
+        # 确保cron服务启动
+        systemctl enable cron 2>/dev/null || true
+        systemctl start cron 2>/dev/null || true
+      else
+        LOGE "cron服务安装失败"
+      fi
+    else
+      LOGI "cron服务已存在"
+    fi
+    ;;
+  centos | rhel | almalinux | rocky | ol)
+    if ! command -v crontab &>/dev/null; then
+      LOGI "安装cron服务 (CentOS/RHEL)..."
+      if yum -y install cronie; then
+        LOGI "cron服务安装成功"
+        systemctl enable crond 2>/dev/null || true
+        systemctl start crond 2>/dev/null || true
+      else
+        LOGE "cron服务安装失败"
+      fi
+    else
+      LOGI "cron服务已存在"
+    fi
+    ;;
+  fedora | amzn | virtuozzo)
+    if ! command -v crontab &>/dev/null; then
+      LOGI "安装cron服务 (Fedora)..."
+      if dnf -y install cronie; then
+        LOGI "cron服务安装成功"
+        systemctl enable crond 2>/dev/null || true
+        systemctl start crond 2>/dev/null || true
+      else
+        LOGE "cron服务安装失败"
+      fi
+    else
+      LOGI "cron服务已存在"
+    fi
+    ;;
+  *)
+    LOGW "未识别的系统类型，跳过cron依赖安装"
+    ;;
+  esac
+}
+
+manual_install_acme() {
+  LOGI "尝试手动下载安装acme.sh..."
+
+  # 清理可能存在的残留文件
+  rm -f ~/acme.sh.tar.gz
+  rm -rf ~/acme.sh-master
+
+  # 下载最新版本
+  if ! curl -L -o ~/acme.sh.tar.gz https://github.com/acmesh-official/acme.sh/archive/master.tar.gz; then
+    LOGE "下载acme.sh失败"
+    return 1
+  fi
+
+  # 解压
+  if ! tar -xzf ~/acme.sh.tar.gz; then
+    LOGE "解压acme.sh失败"
+    rm -f ~/acme.sh.tar.gz
+    return 1
+  fi
+
+  # 安装
+  cd ~/acme.sh-master || return 1
+  if ! ./acme.sh --install --force; then
+    LOGE "手动安装acme.sh失败"
+    cd ~ || exit
+    rm -rf ~/acme.sh-master ~/acme.sh.tar.gz
+    return 1
+  fi
+
+  cd ~ || exit
+  rm -rf ~/acme.sh-master ~/acme.sh.tar.gz
+
+  LOGI "手动安装acme.sh完成"
 }
 
 ssl_cert_issue_main() {
@@ -913,7 +1022,14 @@ ssl_cert_issue_main() {
       echo "未找到证书。"
     else
       echo "可用域名："
-      echo "$domains"
+      # 显示域名，如果是ip则显示更友好的说明
+      for domain in $domains; do
+        if [[ $domain == "ip" ]]; then
+          echo "  ip (服务器IP证书)"
+        else
+          echo "  $domain"
+        fi
+      done
       read -rp "请选择要为面板设置路径的域名：" domain
 
       if echo "$domains" | grep -qw "$domain"; then
@@ -922,9 +1038,26 @@ ssl_cert_issue_main() {
 
         if [[ -f ${webCertFile} && -f ${webKeyFile} ]]; then
           /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile"
+
+          # 如果是IP证书，获取实际IP地址用于显示
+          local display_domain="$domain"
+          if [[ $domain == "ip" ]]; then
+            # 获取服务器IP地址
+            display_domain=$(curl -s4m8 https://api.ipify.org -k 2>/dev/null)
+            if [[ -z ${display_domain} ]]; then
+              display_domain=$(curl -s4m8 https://ip.sb -k 2>/dev/null)
+            fi
+            if [[ -z ${display_domain} ]]; then
+              display_domain="$domain" # 如果无法获取IP，回退到原始显示
+            fi
+          fi
+
           echo "已为域名设置面板路径：$domain"
           echo "  - 证书文件：$webCertFile"
           echo "  - 私钥文件：$webKeyFile"
+          echo "  - 访问地址: https://${display_domain}:$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port[^:]*: .+' | awk '{print $2}')$(
+            /usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath[^:]*: .+' | awk '{print $2}'
+          )"
           restart
         else
           echo "未找到域名的证书或私钥：$domain"
@@ -1116,7 +1249,15 @@ ssl_cert_issue() {
       LOGI "  - 证书文件: $webCertFile"
       LOGI "  - 私钥文件: $webKeyFile"
       echo ""
-      echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+      local display_domain="${domain}"
+      if [[ ${display_domain} == "ip" ]]; then
+        local v4
+        v4=$(curl -s4m8 http://ip.sb -k)
+        local v6
+        v6=$(curl -s6m8 http://ip.sb -k)
+        display_domain=${v4:-$v6}
+      fi
+      echo -e "${green}登录访问面板URL: https://${display_domain}:${existing_port}${green}${existing_webBasePath}${plain}"
       echo ""
       echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
       echo ""
@@ -1253,7 +1394,15 @@ ssl_cert_issue_CF() {
         LOGI "  - 证书文件: $webCertFile"
         LOGI "  - 私钥文件: $webKeyFile"
         echo ""
-        echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+        local display_domain="${CF_Domain}"
+        if [[ ${display_domain} == "ip" ]]; then
+          local v4
+          v4=$(curl -s4m8 http://ip.sb -k)
+          local v6
+          v6=$(curl -s6m8 http://ip.sb -k)
+          display_domain=${v4:-$v6}
+        fi
+        echo -e "${green}登录访问面板URL: https://${display_domain}:${existing_port}${green}${existing_webBasePath}${plain}"
         echo ""
         echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
         echo ""
@@ -1301,9 +1450,19 @@ ssl_cert_issue_for_ip() {
   if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then
     LOGI "未找到 acme.sh，正在安装..."
     if ! install_acme; then
-      LOGE "acme.sh 安装失败"
+      LOGE "acme.sh 安装失败，SSL证书申请无法继续"
       return 1
     fi
+
+    # 再次验证acme.sh是否可用
+    if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then
+      LOGE "acme.sh 安装后仍不可用，请检查系统环境"
+      return 1
+    fi
+
+    LOGI "acme.sh 安装完成并验证可用"
+  else
+    LOGI "acme.sh 已存在"
   fi
 
   # 检查 socat
